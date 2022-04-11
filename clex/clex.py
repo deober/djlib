@@ -838,6 +838,7 @@ def cross_validate_stan_model(
             "training_set": train_index.tolist(),
             "test_set": test_index.tolist(),
             "eci_variance_args": eci_variance_args,
+            "likelihood_variance_args": likelihood_variance_args,
             "data_source": data_file,
             "random_seed": random_seed,
         }
