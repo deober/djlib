@@ -675,10 +675,9 @@ model
         energies ~ normal(corr * eci, sigma);
     }"""
         )
-        model_template = ce_model.substitute(
-            formatted_sigma=formatted_sigma,
-            formatted_eci_variance=formatted_eci_variance,
-        )
+    model_template = ce_model.substitute(
+        formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance,
+    )
     # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
     return model_template
 
