@@ -318,10 +318,7 @@ def run_eci_monte_carlo(
 
 
 def find_proposed_ground_states(
-    corr,
-    comp,
-    formation_energy,
-    eci_set,
+    corr, comp, formation_energy, eci_set,
 ):
     """Collects indices of configurations that fall 'below the cluster expansion prediction of DFT-determined hull configurations'.
 
@@ -582,19 +579,27 @@ def format_stan_model(
     likelihood_variance_args,
     eci_prior="normal",
     eci_variance_prior="gamma",
-    likelihood_variance_prior= "gamma"
+    likelihood_variance_prior="gamma",
+    fixed_variance=False,
 ):
     """
     Parameters
     ----------
     eci_variance_args: tuple
-        arguments for gamma distribution as a tuple. eg. eci_variance_args = (1,1)
+        if fixed_variance is True, this should be a single float for eci variance. eg. eci_variance_args = 0.0016
+        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
     likelihood_variance_args: tuple
-        arguments for gamma distribution as a tuple. eg. eci_variance_args = (1,1)
+        if fixed_variance is True, this should be a single float for the model variance. eg. likelihood_variance_args = 0.005
+        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
     eci_prior: string
         Distribution type for ECI priors
     eci_variance_prior: string
         Distribution type for ECI variance prior
+    likelihood_variance_prior: string
+        Distribution type for model variance prior
+    fixed_variance: Bool
+        If True, model and ECI variance are fixed values. If false, they follow a distribution governed by hyperparameters. 
+        This choice will affect the eci and likelihood variance arg inputs; please read documentation for both. 
 
     Returns
     -------
@@ -617,13 +622,39 @@ def format_stan_model(
     assert (
         likelihood_variance_prior in supported_model_variance_priors
     ), "Specified model variance prior is not supported."
-    formatted_sigma = likelihood_variance_prior + str(likelihood_variance_args)
+    # TODO: make this a single string that can be modified to allow any combination of fixed / non-fixed ECI and model variance priors.
 
-    formatted_eci_variance = eci_variance_prior + str(eci_variance_args)
+    if fixed_variance:
+        # If model and ECI variance are fixed to scalar values
+        formatted_sigma = str(likelihood_variance_args)
+        formatted_eci_variance = str(eci_variance_args)
 
-    # used to have  sigma ~ $formatted_sigma ;
-    ce_model = Template(
-        """data {
+        ce_model = Template(
+            """data {
+        int K; 
+        int n_configs;
+        matrix[n_configs, K] corr;
+        vector[n_configs] energies;
+    }
+parameters {
+        vector[K] eci;
+    }
+model 
+    {
+        sigma = $formatted_sigma;
+        for (k in 1:K){
+            eci_variance[k] = $formatted_eci_variance ;
+            eci[k] ~ normal(0,eci_variance[k]);
+        }
+        energies ~ normal(corr * eci, sigma);
+    }"""
+        )
+    else:
+        # If model and ECI variance are not fixed (follows a distribution)
+        formatted_sigma = likelihood_variance_prior + str(likelihood_variance_args)
+        formatted_eci_variance = eci_variance_prior + str(eci_variance_args)
+        ce_model = Template(
+            """data {
         int K; 
         int n_configs;
         matrix[n_configs, K] corr;
@@ -643,9 +674,12 @@ model
         }
         energies ~ normal(corr * eci, sigma);
     }"""
-    )
-    model_template = ce_model.substitute(formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance)
-    #model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
+        )
+        model_template = ce_model.substitute(
+            formatted_sigma=formatted_sigma,
+            formatted_eci_variance=formatted_eci_variance,
+        )
+    # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
     return model_template
 
 
@@ -728,7 +762,7 @@ def cross_validate_stan_model(
     random_seed=5,
     eci_prior="normal",
     eci_variance_prior="gamma",
-    likelihood_variance_prior='gamma',
+    likelihood_variance_prior="gamma",
     stan_model_file="stan_model.txt",
     eci_output_file="results.pkl",
     energy_tag="formation_energy",
@@ -814,7 +848,10 @@ def cross_validate_stan_model(
 
         # format and write stan model
         formatted_stan_model = format_stan_model(
-            eci_variance_args=eci_variance_args, eci_prior=eci_prior, eci_variance_prior=eci_variance_prior,likelihood_variance_args=likelihood_variance_args
+            eci_variance_args=eci_variance_args,
+            eci_prior=eci_prior,
+            eci_variance_prior=eci_variance_prior,
+            likelihood_variance_args=likelihood_variance_args,
         )
         with open(os.path.join(this_run_path, stan_model_file), "w") as f:
             f.write(formatted_stan_model)
