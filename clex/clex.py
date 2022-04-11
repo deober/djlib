@@ -853,7 +853,7 @@ def cross_validate_stan_model(
             eci_prior=eci_prior,
             eci_variance_prior=eci_variance_prior,
             likelihood_variance_args=likelihood_variance_args,
-            fixed_variance=False,
+            fixed_variance=fixed_variance,
         )
         with open(os.path.join(this_run_path, stan_model_file), "w") as f:
             f.write(formatted_stan_model)
