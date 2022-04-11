@@ -769,6 +769,7 @@ def cross_validate_stan_model(
     num_chains=1,
     kfold=5,
     submit_with_slurm=True,
+    fixed_variance=False,
 ):
     """Perform kfold cross validation on a specific stan model. Wraps around format_stan_model() and format_stan_executable_script().
 
@@ -852,6 +853,7 @@ def cross_validate_stan_model(
             eci_prior=eci_prior,
             eci_variance_prior=eci_variance_prior,
             likelihood_variance_args=likelihood_variance_args,
+            fixed_variance=False,
         )
         with open(os.path.join(this_run_path, stan_model_file), "w") as f:
             f.write(formatted_stan_model)
