@@ -641,10 +641,9 @@ parameters {
     }
 model 
     {
-        sigma = $formatted_sigma;
+        real sigma = $formatted_sigma;
         for (k in 1:K){
-            eci_variance[k] = $formatted_eci_variance ;
-            eci[k] ~ normal(0,eci_variance[k]);
+            eci[k] ~ normal(0,$formatted_eci_variance);
         }
         energies ~ normal(corr * eci, sigma);
     }"""
