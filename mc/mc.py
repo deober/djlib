@@ -738,6 +738,7 @@ def format_pbs_job(
 
 def submit_slurm_job(run_dir):
     submit_file = os.path.join(run_dir, "submit_slurm.sh")
+    os.system("cd %s" % run_dir)
     os.system("sbatch %s" % submit_file)
 
 
