@@ -859,10 +859,10 @@ def cross_validate_stan_model(
 
         # format and write stan executable python script
         formatted_stan_script = format_stan_executable_script(
-            data_file,
-            stan_model_file,
-            eci_output_file,
-            num_samples,
+            data_file=training_data_path,
+            stan_model_file=stan_model_file,
+            eci_output_file=eci_output_file,
+            num_samples=num_samples,
             energy_tag=energy_tag,
             num_chains=1,
         )
