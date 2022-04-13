@@ -746,7 +746,7 @@ def format_slurm_job(
     jobname, hours, user_command, output_dir, delete_submit_script=False
 ):
     """
-    Formats a slurm job sumbission script. Assumes that the task only needs one thread.
+    Formats a slurm job submission script. Assumes that the task only needs one thread.
     Args:
         jobname(str): Name of the slurm job.
         hours(int): number of hours to run the job. Only accepts integer values.

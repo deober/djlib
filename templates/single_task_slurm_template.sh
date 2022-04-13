@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1                   # Number of processes
 #SBATCH --ntasks-per-core=1
 #SBATCH --time={hours}:00:00              # Time limit hrs:min:sec
-#SBATCH --output=slurmjob_%j.log # Standard output and error log
+#SBATCH --output={rundir}/slurmjob_%j.log # Standard output and error log
 
 cd {rundir}
 
