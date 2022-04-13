@@ -151,3 +151,73 @@ def move_calctype_dirs(casm_root_dir):
                     % os.path.join(config, "calctype.default/calctype.default")
                 )
 
+
+def submit_slurm_job(run_dir):
+    submit_file = os.path.join(run_dir, "submit_slurm.sh")
+    os.system("cd %s" % run_dir)
+    os.system("sbatch %s" % submit_file)
+
+
+def format_slurm_job(
+    jobname, hours, user_command, output_dir, delete_submit_script=False
+):
+    """
+    Formats a slurm job submission script. Assumes that the task only needs one thread.
+    Args:
+        jobname(str): Name of the slurm job.
+        hours(int): number of hours to run the job. Only accepts integer values.
+        user_command(str): command line command submitted by the user as a string.
+        output_dir(str): Path to the directory that will contain the submit file. Assumes that submit file will be named "submit.sh"
+        delete_submit_script(bool): Whether the submission script should delete itself upon completion.
+    Returns:
+        None.
+    """
+    submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
+    templates_path = os.path.join(mc_lib_dir, "../templates")
+    with open(os.path.join(templates_path, "single_task_slurm_template.sh")) as f:
+        template = f.read()
+
+        if delete_submit_script:
+            delete_submit_script = "rm %s" % submit_file_path
+        else:
+            delete_submit_script = ""
+
+        hours = int(m.ceil(hours))
+        s = template.format(
+            jobname=jobname,
+            rundir=output_dir,
+            hours=hours,
+            user_command=user_command,
+            delete_submit_script=delete_submit_script,
+        )
+    with open(submit_file_path, "w") as f:
+        f.write(s)
+    os.system("chmod 755 %s " % submit_file_path)
+
+
+def run_submitter(
+    run_directory,
+    output_file_name="results.pkl",
+    slurm_submit_script_name="submit_slurm.sh",
+):
+    """Checks if calculation output file exists. If slurm submission script exists, but calculation output does not, run the submission script.
+
+    Parameters:
+    -----------
+    run_directory: str
+        Path to the run directory.
+    output_file_name: str
+        Name of the output file (e.g. results.pkl). This is not a path, only the filename.
+    slurm_subnmit_script_name: str
+        Name of the slurm submit scriptfile (e.g. submit_slurm.sh)
+    Returns:
+    --------
+    None.
+    """
+    output_exists = os.path.isfile(os.path.join(run_directory, output_file_name))
+    slurm_script_exists = os.path.isfile(
+        os.path.join(run_directory, slurm_submit_script_name)
+    )
+
+    if output_exists == False and slurm_script_exists == True:
+        submit_slurm_job(run_dir=run_directory)
