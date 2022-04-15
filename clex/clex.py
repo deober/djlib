@@ -877,14 +877,14 @@ def cross_validate_stan_model(
             eci_name = eci_variance_args[1]
         else:
             eci_name = str(eci_variance_args)
-        dj.mc.format_slurm_job(
+        dj.format_slurm_job(
             jobname="eci_var_" + eci_name + "_crossval_" + str(count),
             hours=20,
             user_command=user_command,
             output_dir=this_run_path,
         )
         if submit_with_slurm:
-            dj.mc.submit_slurm_job(this_run_path)
+            dj.submit_slurm_job(this_run_path)
         count += 1
 
 

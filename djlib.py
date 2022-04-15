@@ -173,7 +173,7 @@ def format_slurm_job(
         None.
     """
     submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
-    templates_path = os.path.join(mc_lib_dir, "../templates")
+    templates_path = os.path.join(libpath, "templates")
     with open(os.path.join(templates_path, "single_task_slurm_template.sh")) as f:
         template = f.read()
 
