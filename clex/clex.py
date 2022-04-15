@@ -1020,8 +1020,8 @@ def plot_eci_uncertainty(eci, title=False):
     std = stats[:, 1]
     index = list(range(eci.shape[0]))
 
-    plt.scatter(index, means, color="xkcd:crimson")
-    plt.errorbar(index, means, std, ls="none", color="k")
+    plt.scatter(index, means, color="xkcd:crimson", label="Means")
+    plt.errorbar(index, means, std, ls="none", color="k", label="Stddev")
 
     plt.xlabel("ECI index (arbitrary)", fontsize=22)
     plt.ylabel("ECI magnitude (eV)", fontsize=22)
@@ -1029,6 +1029,7 @@ def plot_eci_uncertainty(eci, title=False):
         plt.title(title, fontsize=30)
     else:
         plt.title("STAN ECI", fontsize=30)
+        plt.legend(fontsize=21)
     fig = plt.gcf()
     fig.set_size_inches(15, 10)
 
