@@ -8,6 +8,7 @@ import numpy as np
 from glob import glob
 import pathlib
 import math as m
+import djlib as dj
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
@@ -365,14 +366,14 @@ def run_cooling_from_const_temperature(
             # Run MC cooling
             if job_scheduler == "slurm":
                 user_command = "casm monte -s mc_settings.json > mc_results.out"
-                format_slurm_job(
+                dj.format_slurm_job(
                     jobname="cool_" + run_name,
                     hours=20,
                     user_command=user_command,
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_slurm_job(current_dir)
+                dj.submit_slurm_job(current_dir)
             elif job_scheduler == "braid":
                 user_command = "casm monte -s mc_settings.json > mc_results.out"
                 format_pbs_job(
@@ -428,14 +429,14 @@ def run_heating(
             # Run MC heating
             user_command = "casm monte -s mc_settings.json > mc_results.out"
             if scheduler == "slurm":
-                format_slurm_job(
+                dj.format_slurm_job(
                     jobname="heat_" + run_name,
                     hours=20,
                     user_command=user_command,
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_slurm_job(current_dir)
+                dj.submit_slurm_job(current_dir)
             elif scheduler == "pbs":
                 format_pbs_job(
                     jobname=run_name,
@@ -736,50 +737,15 @@ def format_pbs_job(
     os.system("chmod +x %s " % submit_file_path)
 
 
-def submit_slurm_job(run_dir):
-    submit_file = os.path.join(run_dir, "submit_slurm.sh")
-    os.system("cd %s" % run_dir)
-    os.system("sbatch %s" % submit_file)
-
-
-def format_slurm_job(
-    jobname, hours, user_command, output_dir, delete_submit_script=False
+def setup_dos_calculation(
+    config_name,
+    training_dir,
+    hours,
+    spin=1,
+    slurm=True,
+    run_jobs=False,
+    delete_submit_script=False,
 ):
-    """
-    Formats a slurm job submission script. Assumes that the task only needs one thread.
-    Args:
-        jobname(str): Name of the slurm job.
-        hours(int): number of hours to run the job. Only accepts integer values.
-        user_command(str): command line command submitted by the user as a string.
-        output_dir(str): Path to the directory that will contain the submit file. Assumes that submit file will be named "submit.sh"
-        delete_submit_script(bool): Whether the submission script should delete itself upon completion.
-    Returns:
-        None.
-    """
-    submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
-    templates_path = os.path.join(mc_lib_dir, "../templates")
-    with open(os.path.join(templates_path, "single_task_slurm_template.sh")) as f:
-        template = f.read()
-
-        if delete_submit_script:
-            delete_submit_script = "rm %s" % submit_file_path
-        else:
-            delete_submit_script = ""
-
-        hours = int(m.ceil(hours))
-        s = template.format(
-            jobname=jobname,
-            rundir=output_dir,
-            hours=hours,
-            user_command=user_command,
-            delete_submit_script=delete_submit_script,
-        )
-    with open(submit_file_path, "w") as f:
-        f.write(s)
-    os.system("chmod 755 %s " % submit_file_path)
-
-
-def setup_dos_calculation(config_name, training_dir, hours, spin=1, slurm=True, run_jobs=False, delete_submit_script=False):
     """
     Runs a static DOS calculation for a relaxed configuration. (Should have a run.final relaxation already in the folder)
 
@@ -798,54 +764,69 @@ def setup_dos_calculation(config_name, training_dir, hours, spin=1, slurm=True, 
     -------
     None.
     """
-    #TODO: finish implementation
+    # TODO: finish implementation
     pass
 
     print("Setting up DOS calculation for")
 
     calc_dir = os.path.join(training_dir, config_name, "calctype.default")
-    os.makedirs(os.path.join(calc_dir,"static_charge_calc"))
+    os.makedirs(os.path.join(calc_dir, "static_charge_calc"))
     templates_path = os.path.join(mc_lib_dir, "../templates")
-    #format INCAR
+    # format INCAR
     with open(os.path.join(templates_path, "INCAR_static_charge.template")) as f:
         template = f.read()
 
         with open(os.path.join(calc_dir, "run_final", "INCAR")) as g:
             incar = g.readlines()
-        
+
         for line in incar:
             if "ENCUT" in line:
                 encut = line.split("=")[1].strip()
-        
-        s = template.format(
-            encut=encut,
-            spin=spin,
-        )
-    
+
+        s = template.format(encut=encut, spin=spin,)
+
     with open(os.path.join(calc_dir, "static_charge_calc", "INCAR"), "w") as f:
         f.write(s)
-    
-    #format KPOINTS
-    os.system("cp %s %s" % (os.path.join(calc_dir,"run.final/KPOINTS"), os.path.join(calc_dir, "static_charge_calc", "KPOINTS")))
 
-    #format POTCAR
-    os.system("cp %s %s" % (os.path.join(calc_dir,"run.final/POTCAR"), os.path.join(calc_dir, "static_charge_calc", "POTCAR")))
+    # format KPOINTS
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(calc_dir, "run.final/KPOINTS"),
+            os.path.join(calc_dir, "static_charge_calc", "KPOINTS"),
+        )
+    )
 
-    #format POSCAR
-    os.system("cp %s %s" % (os.path.join(calc_dir,"run.final/CONTCAR"), os.path.join(calc_dir, "static_charge_calc", "POSCAR")))
-    
-    #define user command
-    #script will submit static charge calc, then copy chgcar and results to DOS calc [changing INCAR as needed]
+    # format POTCAR
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(calc_dir, "run.final/POTCAR"),
+            os.path.join(calc_dir, "static_charge_calc", "POTCAR"),
+        )
+    )
+
+    # format POSCAR
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(calc_dir, "run.final/CONTCAR"),
+            os.path.join(calc_dir, "static_charge_calc", "POSCAR"),
+        )
+    )
+
+    # define user command
+    # script will submit static charge calc, then copy chgcar and results to DOS calc [changing INCAR as needed]
 
     user_command = ""
 
-    #format submit script
+    # format submit script
     if slurm:
-        format_slurm_job(
+        dj.format_slurm_job(
             jobname=config_name,
             hours=hours,
             user_command=user_command,
             output_dir=calc_dir,
             delete_submit_script=delete_submit_script,
         )
-    
+
