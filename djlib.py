@@ -42,6 +42,8 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
         comp = np.array(results["comp"])
         if len(comp.shape) > 2:
             results["comp"] = np.squeeze(comp).tolist()
+    if "corr" in results.keys():
+        results["corr"] = np.squeeze(results["corr"]).tolist()
     return results
 
 
