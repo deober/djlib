@@ -1,6 +1,6 @@
 ISTART = 0
 ICHARG = 2
-ISMEAR = 0
+ISMEAR = {ismear}
 SIGMA = 0.1
 ENCUT = {encut}
 ALGO = NORMAL

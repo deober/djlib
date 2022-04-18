@@ -764,8 +764,7 @@ def setup_dos_calculation(
     -------
     None.
     """
-    # TODO: finish implementation
-    pass
+    # TODO: check for bugs
 
     print("Setting up DOS calculation for")
 
@@ -782,8 +781,10 @@ def setup_dos_calculation(
         for line in incar:
             if "ENCUT" in line:
                 encut = line.split("=")[1].strip()
+            if "ISMEAR" in line:
+                ismear = line.split("=")[1].strip()
 
-        s = template.format(encut=encut, spin=spin,)
+        s = template.format(encut=encut, spin=spin, ismear=ismear)
 
     with open(os.path.join(calc_dir, "static_charge_calc", "INCAR"), "w") as f:
         f.write(s)
@@ -816,9 +817,33 @@ def setup_dos_calculation(
     )
 
     # define user command
+    
     # script will submit static charge calc, then copy chgcar and results to DOS calc [changing INCAR as needed]
 
-    user_command = ""
+    user_command = """cd %s
+    info_file=test.info
+    echo \"HOSTNAME=$(hostname)\" >> $info_file
+    echo \"STARTTIME=$(date --iso-8601=ns)\" >> $info_file
+
+    mpirun vasp >& vasp.out
+
+    cd ..
+    mkdir dos_calc
+
+    cp static_charge_calc/CONTCAR dos_calc/POSCAR
+    cp static_charge_calc/INCAR dos_calc/INCAR
+    cp static_charge_calc/POTCAR dos_calc/POTCAR
+    cp static_charge_calc/KPOINTS dos_calc/KPOINTS
+    cp static_charge_calc/CHGCAR dos_calc/CHGCAR
+
+    cd dos_calc
+
+    sed -i \"s/LORBIT.*/LORBIT = 11/g\" INCAR
+    sed -i \"s/ICHARG.*/ICHARG = 11/g\" INCAR
+
+    mpirun vasp >& vasp.out
+
+    """ % (os.path.join(calc_dir,"static_charge_calc"))
 
     # format submit script
     if slurm:
@@ -829,4 +854,7 @@ def setup_dos_calculation(
             output_dir=calc_dir,
             delete_submit_script=delete_submit_script,
         )
+        
+        if run_jobs:
+            dj.submit_slurm_jobs()
 
