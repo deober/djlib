@@ -766,16 +766,17 @@ def setup_dos_calculation(
     """
     # TODO: check for bugs
 
-    print("Setting up DOS calculation for")
+    print("Setting up DOS calculation for %s" % config_name)
 
     calc_dir = os.path.join(training_dir, config_name, "calctype.default")
-    os.makedirs(os.path.join(calc_dir, "static_charge_calc"))
+    print("Making static_charge_calc directory in %s" % calc_dir)
+    os.makedirs(os.path.join(calc_dir, "static_charge_calc"), exist_ok=True)
     templates_path = os.path.join(mc_lib_dir, "../templates")
     # format INCAR
     with open(os.path.join(templates_path, "INCAR_static_charge.template")) as f:
         template = f.read()
 
-        with open(os.path.join(calc_dir, "run_final", "INCAR")) as g:
+        with open(os.path.join(calc_dir, "run.final", "INCAR")) as g:
             incar = g.readlines()
 
         for line in incar:
