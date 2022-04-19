@@ -857,5 +857,5 @@ def setup_dos_calculation(
         )
         
         if run_jobs:
-            dj.submit_slurm_jobs(calc_dir)
+            dj.submit_slurm_job(calc_dir)
 

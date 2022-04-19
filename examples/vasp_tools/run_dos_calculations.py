@@ -8,7 +8,7 @@ each of FCC and HCP are structured as the training_data folder in CASM, with onl
 ex. HfN_full/ground_states/FCC/SCEL1_1_1_1_0_0_0/1/calctype.default/ is a path
 """
 
-root_dir = '/home/jonnyli/pod_experiments/HfN_full/ground_states'
+root_dir = '/home/jonnyli/experiments/HfN_full/ground_states'
 xtals = ['FCC','HCP']
 
 for xtal in xtals:
@@ -21,6 +21,6 @@ for xtal in xtals:
         hours=10,
         spin=1,
         slurm=True,
-        run_jobs=False,
+        run_jobs=True,
         delete_submit_script=False,
     )

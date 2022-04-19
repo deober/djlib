@@ -9,7 +9,7 @@ setup(
     packages=["casmcalls", "clex", "mc", "vasputils"],
     install_requires=[
         "cupy-cuda114>=9.5.0",
-        "httpstan>=4.6.1",
+        "httpstan",
         "json5>=0.9.6",
         "jsonschema>=4.1.0",
         "matplotlib>=3.4.3",
