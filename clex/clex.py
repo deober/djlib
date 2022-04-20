@@ -743,8 +743,8 @@ with open('$eci_output_file', "wb") as f:
     executable_file = template.substitute(
         data_file=data_file,
         stan_model_file=stan_model_file,
-        num_chains=num_chains,
-        num_samples=num_samples,
+        num_chains=int(num_chains),
+        num_samples=int(num_samples),
         eci_output_file=eci_output_file,
         energy_tag=energy_tag,
     )
