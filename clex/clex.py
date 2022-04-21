@@ -1070,7 +1070,7 @@ def write_eci_json(eci, basis_json_path):
     return data
 
 
-def general_convex_hull_plotter(composition, true_energies, predicted_energies=[None]):
+def general_binary_convex_hull_plotter(composition, true_energies, predicted_energies=[None]):
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
     Parameters:
