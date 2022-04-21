@@ -1071,7 +1071,7 @@ def write_eci_json(eci, basis_json_path):
     return data
 
 
-def general_convex_hull_plotter(composition, true_energies, predicted_energies=None):
+def general_convex_hull_plotter(composition, true_energies, predicted_energies=[None]):
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
     Parameters:
@@ -1111,20 +1111,23 @@ def general_convex_hull_plotter(composition, true_energies, predicted_energies=N
         )
 
     dft_lower_hull_vertices = dj.clex.lower_hull(dft_hull)[1]
-    ridge_lower_hull_vertices = dj.clex.lower_hull(predicted_hull)[1]
+    if any(predicted_energies):
+        predicted_lower_hull_vertices = dj.clex.lower_hull(predicted_hull)[1]
 
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
-    ridge_lower_hull = dj.column_sort(
-        predicted_hull.points[ridge_lower_hull_vertices], 0
-    )
+
+    if any(predicted_energies):
+        predicted_lower_hull = dj.column_sort(
+            predicted_hull.points[predicted_lower_hull_vertices], 0
+        )
 
     plt.plot(
         dft_lower_hull[:, 0], dft_lower_hull[:, 1], marker="D", markersize=15, color="k"
     )
     if any(predicted_energies):
         plt.plot(
-            ridge_lower_hull[:, 0],
-            ridge_lower_hull[:, 1],
+            predicted_lower_hull[:, 0],
+            predicted_lower_hull[:, 1],
             marker="D",
             markersize=10,
             color=predicted_color,
