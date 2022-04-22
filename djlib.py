@@ -46,6 +46,27 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
         results["corr"] = np.squeeze(results["corr"]).tolist()
     return results
 
+def trim_unknown_energies(casm_query_json,keyword="energy"):
+    """
+    Given a data dictionary from a casm query sorted by property, removes data with null/None values in the designated key
+    Parameters
+    ----------
+    casm_query_json : list of dicts
+        A dictionary from a casm query sorted by property. Loaded directly from query json.
+    key : str
+        The key in the data dictionary that corresponds to the value you want to base entry removal. Defaults to 'energy_per_atom'.
+    
+    Returns
+    -------
+    denulled_data: dict
+        A dictionary with the same keys as the input data, but with entries removed for which the key value is null.
+    """
+    initial_length = len(casm_query_json)
+    denulled_data = [entry for entry in casm_query_json if entry[keyword] is not None]#
+    final_length = len(denulled_data)
+    print("Removed %d entries with null values with key: %s" % (initial_length - final_length, keyword))
+    return denulled_data
+
 
 def get_dj_dir():
     libpath = pathlib.Path(__file__).parent.resolve()
