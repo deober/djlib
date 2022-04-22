@@ -743,8 +743,8 @@ with open('$eci_output_file', "wb") as f:
     executable_file = template.substitute(
         data_file=data_file,
         stan_model_file=stan_model_file,
-        num_chains=num_chains,
-        num_samples=num_samples,
+        num_chains=int(num_chains),
+        num_samples=int(num_samples),
         eci_output_file=eci_output_file,
         energy_tag=energy_tag,
     )
@@ -962,6 +962,7 @@ def bayes_train_test_analysis(run_dir):
             "training_rms": training_rms,
             "testing_rms": testing_rms,
             "eci_mean_testing_rms": eci_mean_rms,
+            "eci_means": eci_mean,
         }
     )
     kfold_data.update(run_info)
@@ -986,6 +987,8 @@ def kfold_analysis(kfold_dir):
     train_rms_values = []
     test_rms_values = []
     eci_mean_testing_rms = []
+    eci_mean = None
+
     kfold_subdirs = glob(os.path.join(kfold_dir, "*"))
     for run_dir in kfold_subdirs:
         if os.path.isdir(run_dir):
@@ -995,11 +998,16 @@ def kfold_analysis(kfold_dir):
                 train_rms_values.append(np.mean(run_data["training_rms"]))
                 test_rms_values.append(np.mean(run_data["testing_rms"]))
                 eci_mean_testing_rms.append(run_data["eci_mean_testing_rms"])
+                if eci_mean == None:
+                    eci_mean = run_data["eci_means"]
+                else:
+                    eci_mean = (eci_mean + run_data["eci_means"]) / 2
     eci_mean_testing_rms = np.mean(np.array(eci_mean_testing_rms), axis=0)
     return {
         "train_rms": train_rms_values,
         "test_rms": test_rms_values,
         "eci_mean_testing_rms": eci_mean_testing_rms,
+        "kfold_avg_eci_mean": eci_mean,
     }
 
 
@@ -1060,3 +1068,82 @@ def write_eci_json(eci, basis_json_path):
         data["orbits"][index]["cluster_functions"]["eci"] = eci[index]
 
     return data
+
+
+def general_binary_convex_hull_plotter(composition, true_energies, predicted_energies=[None]):
+    """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
+
+    Parameters:
+    -----------
+    composition: numpy.ndarray
+        Vector of composition values, same length as true_energies. 
+    true_energies: numpy.ndarray
+        Vector of formation energies. Required. 
+    predicted_energies: numpy.ndarray
+        None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported. 
+    """
+
+    predicted_color = "red"
+    predicted_label = "Predicted Energies"
+
+    plt.scatter(
+        composition, true_energies, color="k", marker="x", label='"True" Energies'
+    )
+    if any(predicted_energies):
+        plt.scatter(
+            composition,
+            predicted_energies,
+            color="red",
+            marker="x",
+            label=predicted_label,
+        )
+
+    dft_hull = ConvexHull(
+        np.hstack((composition.reshape(-1, 1), np.reshape(true_energies, (-1, 1))))
+    )
+
+    if any(predicted_energies):
+        predicted_hull = ConvexHull(
+            np.hstack(
+                (composition.reshape(-1, 1), np.reshape(predicted_energies, (-1, 1)))
+            )
+        )
+
+    dft_lower_hull_vertices = dj.clex.lower_hull(dft_hull)[1]
+    if any(predicted_energies):
+        predicted_lower_hull_vertices = dj.clex.lower_hull(predicted_hull)[1]
+
+    dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
+
+    if any(predicted_energies):
+        predicted_lower_hull = dj.column_sort(
+            predicted_hull.points[predicted_lower_hull_vertices], 0
+        )
+
+    plt.plot(
+        dft_lower_hull[:, 0], dft_lower_hull[:, 1], marker="D", markersize=15, color="k"
+    )
+    if any(predicted_energies):
+        plt.plot(
+            predicted_lower_hull[:, 0],
+            predicted_lower_hull[:, 1],
+            marker="D",
+            markersize=10,
+            color=predicted_color,
+        )
+
+        rmse = np.sqrt(mean_squared_error(true_energies, predicted_energies))
+        plt.text(
+            min(composition),
+            0.9 * min(np.concatenate((true_energies, predicted_energies))),
+            "RMSE: " + str(rmse) + " eV",
+            fontsize=21,
+        )
+
+    plt.xlabel("Composition X", fontsize=21)
+    plt.ylabel("Formation Energy (eV)", fontsize=21)
+    plt.legend(fontsize=21)
+
+    fig = plt.gcf()
+    fig.set_size_inches(19, 14)
+
