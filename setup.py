@@ -19,7 +19,6 @@ setup(
         "scikit-learn>=1.0",
         "scipy>=1.7.1",
         "seaborn>=0.11.2",
-        "tensorflow>=2.6.0",
         "tinc>=0.9.52",
         "tqdm>=4.62.2",
     ],
