@@ -8,7 +8,6 @@ setup(
     license="MIT License",
     packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils"],
     install_requires=[
-        "cupy-cuda114>=9.5.0",
         "httpstan",
         "json5>=0.9.6",
         "jsonschema>=4.1.0",
