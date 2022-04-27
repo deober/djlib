@@ -627,12 +627,12 @@ def cross_validate_stan_model(
         # format and write slurm submission file
         user_command = "python run_stan.py"
 
-        if type(eci_variance_args) == type(tuple):
+        if type(eci_variance_args) == type(tuple([1])):
             eci_name = eci_variance_args[1]
         else:
             eci_name = str(eci_variance_args)
         dj.format_slurm_job(
-            jobname="eci_var_" + eci_name + "_crossval_" + str(count),
+            jobname="eci_var_" + str(eci_name) + "_crossval_" + str(count),
             hours=20,
             user_command=user_command,
             output_dir=this_run_path,
