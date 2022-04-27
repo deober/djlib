@@ -22,5 +22,6 @@ setup(
         "tinc>=0.9.52",
         "tqdm>=4.62.2",
     ],
+    include_package_data=True,
 )
 

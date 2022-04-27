@@ -1,0 +1,16 @@
+ISTART = 0
+ICHARG = 2
+ISMEAR = {ismear}
+SIGMA = 0.1
+ENCUT = {encut}
+ALGO = NORMAL
+EDIFF = 1e-05
+PREC = Accurate
+ISPIN = {spin}
+LREAL = AUTO
+IBRION = -1
+EDIFFG = 0.02
+LORBIT = None #11 = writes decomposed DOSCAR
+LWAVE = .TRUE.
+LCHARG = .TRUE.
+NCORE = 1
