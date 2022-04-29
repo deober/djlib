@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="djlib",
-    version="0.1.0",
+    version="0.2.0",
     description="General utility package for AVDV people.",
     author="Derick Ober, Jonathan Li",
     license="MIT License",
