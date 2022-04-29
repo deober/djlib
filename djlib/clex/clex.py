@@ -1,4 +1,5 @@
-import djlib as dj
+import djlib.djlib as dj
+import djlib.clex.clex as cl
 import json
 import os
 import numpy as np
@@ -11,7 +12,6 @@ import csv
 from glob import glob
 import pickle
 from string import Template
-import djlib.clex.clex as cl
 from sklearn.model_selection import ShuffleSplit
 
 
@@ -466,8 +466,8 @@ def format_stan_executable_script(
         """
 import pickle 
 import stan
-import djlib as dj
-import djlib.clex as cl
+import djlib.djlib as dj
+import djlib.clex.clex as cl
 import numpy as np
 
 # Load Casm Data

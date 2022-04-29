@@ -8,7 +8,7 @@ import numpy as np
 from glob import glob
 import pathlib
 import math as m
-import djlib as dj
+import djlib.djlib as dj
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 

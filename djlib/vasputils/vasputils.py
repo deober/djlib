@@ -3,7 +3,7 @@ import numpy as np
 import os
 import json
 import matplotlib.pyplot as plt
-import djlib as dj
+import djlib.djlib as dj
 
 
 class poscar:
@@ -91,6 +91,7 @@ class poscar:
                         newPoscar.write(str(element) + " ")
                     newPoscar.write("\n")
         newPoscar.close()
+
 
 def parse_outcar(outcar):
     """
