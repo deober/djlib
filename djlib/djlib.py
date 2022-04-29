@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import os
 import pathlib
@@ -47,7 +48,7 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
     return results
 
 
-def trim_unknown_energies(casm_query_json, keyword="energy"):
+def trim_unknown_energies(casm_query_json: list, keyword="energy"):
     """
     Given a data dictionary from a casm query sorted by property, removes data with null/None values in the designated key
     Parameters
@@ -79,7 +80,7 @@ def get_dj_dir():
     return libpath
 
 
-def column_sort(matrix, column_index):
+def column_sort(matrix: np.ndarray, column_index: int) -> np.ndarray:
     """Sorts a matrix by the values of a specific column. Far left column is column 0.
     Args:
         matrix(numpy_array): mxn numpy array.
@@ -90,7 +91,7 @@ def column_sort(matrix, column_index):
     return sorted_matrix
 
 
-def find(lst, a):
+def find(lst: list, a: float):
     """Finds the index of an element that matches a specified value.
     Args:
         a(float): The value to search for
@@ -109,7 +110,7 @@ def find(lst, a):
         print("Search value does not match any value in the provided list.")
 
 
-def update_properties_files(casm_root_dir):
+def update_properties_files(casm_root_dir: str):
     """Updates json key of property.calc.json files to allow imports.
 
     Parameters
@@ -151,7 +152,7 @@ def update_properties_files(casm_root_dir):
                 print("Could not find %s" % properties_path)
 
 
-def move_calctype_dirs(casm_root_dir):
+def move_calctype_dirs(casm_root_dir: str):
     """Meant to fix casm import issue where calctype_default is copied within new calctype_default directory. Shifts all the data up one directory.
 
     Parameters
@@ -181,14 +182,18 @@ def move_calctype_dirs(casm_root_dir):
                 )
 
 
-def submit_slurm_job(run_dir):
+def submit_slurm_job(run_dir: str):
     submit_file = os.path.join(run_dir, "submit_slurm.sh")
     os.system("cd %s" % run_dir)
     os.system("sbatch %s" % submit_file)
 
 
 def format_slurm_job(
-    jobname, hours, user_command, output_dir, delete_submit_script=False
+    jobname: str,
+    hours: int,
+    user_command: str,
+    output_dir: str,
+    delete_submit_script=False,
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
@@ -225,7 +230,7 @@ def format_slurm_job(
 
 
 def run_submitter(
-    run_directory,
+    run_directory: str,
     output_file_name="results.pkl",
     slurm_submit_script_name="submit_slurm.sh",
 ):
@@ -250,3 +255,23 @@ def run_submitter(
 
     if output_exists == False and slurm_script_exists == True:
         submit_slurm_job(run_dir=run_directory)
+
+
+def mode(vec: np.ndarray) -> float:
+    """Calculates and returns the mode of a vector of continuous data.
+
+    Parameters:
+    -----------
+    vec: numpy.ndarray
+        Vector of floats
+
+    Returns:
+    --------
+    hist_mode: float
+        Value corresponding to the peak of the histogram.
+    """
+
+    hist = np.histogram(vec, bins="auto")
+    max_index = np.where(hist[0] == max(hist[0]))[0]
+    hist_mode = np.mean((hist[1][max_index], hist[1][max_index + 1]))
+    return hist_mode

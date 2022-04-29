@@ -1,4 +1,5 @@
 import djlib.djlib as dj
+from __future__ import annotations
 import djlib.clex.clex as cl
 import json
 import os
@@ -15,7 +16,7 @@ from string import Template
 from sklearn.model_selection import ShuffleSplit
 
 
-def lower_hull(hull, energy_index=-2):
+def lower_hull(hull: ConvexHull, energy_index=-2):
     """Returns the lower convex hull (with respect to energy direction) given  complete convex hull.
     Parameters
     ----------
@@ -38,7 +39,12 @@ def lower_hull(hull, energy_index=-2):
     return (lower_hull_simplices, lower_hull_vertices)
 
 
-def checkhull(hull_comps, hull_energies, test_comp, test_energy):
+def checkhull(
+    hull_comps: np.ndarray,
+    hull_energies: np.ndarray,
+    test_comp: np.ndarray,
+    test_energy: np.ndarray,
+):
     """Find if specified coordinates are above, on or below the specified lower convex hull.
     Parameters
     ----------
@@ -63,7 +69,7 @@ def checkhull(hull_comps, hull_energies, test_comp, test_energy):
     return np.ravel(np.array(hull_dist))
 
 
-def run_lassocv(corr, formation_energy):
+def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
     reg = LassoCV(fit_intercept=False, n_jobs=4, max_iter=50000).fit(
         corr, formation_energy
     )
@@ -72,8 +78,11 @@ def run_lassocv(corr, formation_energy):
 
 
 def find_proposed_ground_states(
-    corr, comp, formation_energy, eci_set,
-):
+    corr: np.ndarray,
+    comp: np.ndarray,
+    formation_energy: np.ndarray,
+    eci_set: np.ndarray,
+) -> np.ndarray:
     """Collects indices of configurations that fall 'below the cluster expansion prediction of DFT-determined hull configurations'.
 
     Parameters
@@ -335,7 +344,7 @@ def format_stan_model(
     eci_variance_prior="gamma",
     likelihood_variance_prior="gamma",
     fixed_variance=False,
-):
+) -> str:
     """
     Parameters
     ----------
@@ -436,13 +445,13 @@ model
 
 
 def format_stan_executable_script(
-    data_file,
-    stan_model_file,
-    eci_output_file,
-    num_samples,
+    data_file: str,
+    stan_model_file: str,
+    eci_output_file: str,
+    num_samples: int,
     energy_tag="formation_energy",
     num_chains=1,
-):
+) -> str:
     """
     Parameters
     ----------
@@ -506,11 +515,11 @@ with open('$eci_output_file', "wb") as f:
 
 
 def cross_validate_stan_model(
-    data_file,
-    num_samples,
+    data_file: str,
+    num_samples: int,
     eci_variance_args,
     likelihood_variance_args,
-    cross_val_directory,
+    cross_val_directory: str,
     random_seed=5,
     eci_prior="normal",
     eci_variance_prior="gamma",
@@ -642,7 +651,7 @@ def cross_validate_stan_model(
         count += 1
 
 
-def bayes_train_test_analysis(run_dir):
+def bayes_train_test_analysis(run_dir: str) -> dict:
     """Calculates training and testing rms for cross validated fitting.
 
     Parameters:
@@ -723,7 +732,7 @@ def bayes_train_test_analysis(run_dir):
     return kfold_data
 
 
-def kfold_analysis(kfold_dir):
+def kfold_analysis(kfold_dir: str) -> dict:
     """Collects statistics across k fits.
 
     Parameters:
@@ -765,7 +774,7 @@ def kfold_analysis(kfold_dir):
     }
 
 
-def plot_eci_uncertainty(eci, title=False):
+def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     """
     Parameters
     ----------
@@ -798,7 +807,7 @@ def plot_eci_uncertainty(eci, title=False):
     return fig
 
 
-def write_eci_json(eci, basis_json_path):
+def write_eci_json(eci:np.ndarray, basis_json_path:str):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
     Parameters:
@@ -825,7 +834,7 @@ def write_eci_json(eci, basis_json_path):
 
 
 def general_binary_convex_hull_plotter(
-    composition, true_energies, predicted_energies=[None]
+    composition:np.ndarray, true_energies:np.ndarray, predicted_energies=[None]
 ):
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 

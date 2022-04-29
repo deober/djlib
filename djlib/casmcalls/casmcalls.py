@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 
 """Clunky collection of casm cli calls that are frequently used
