@@ -450,7 +450,7 @@ def format_stan_executable_script(
     eci_output_file: str,
     num_samples: int,
     energy_tag="formation_energy",
-    num_chains=1,
+    num_chains=4,
 ) -> str:
     """
     Parameters
@@ -496,11 +496,10 @@ posterior = stan.build(ce_model, data=ce_data)
 
 # Run MCMC
 fit = posterior.sample(num_chains=$num_chains, num_samples=$num_samples)
-eci = fit["eci"]
 
 # Write results
 with open('$eci_output_file', "wb") as f:
-    pickle.dump({"eci": eci}, f, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(fit, f, protocol=pickle.HIGHEST_PROTOCOL)
 """
     )
     executable_file = template.substitute(
@@ -527,7 +526,7 @@ def cross_validate_stan_model(
     stan_model_file="stan_model.txt",
     eci_output_file="results.pkl",
     energy_tag="formation_energy",
-    num_chains=1,
+    num_chains=4,
     kfold=5,
     submit_with_slurm=True,
     fixed_variance=False,
@@ -627,7 +626,7 @@ def cross_validate_stan_model(
             eci_output_file=eci_output_file,
             num_samples=num_samples,
             energy_tag=energy_tag,
-            num_chains=1,
+            num_chains=4,
         )
 
         with open(os.path.join(this_run_path, "run_stan.py"), "w") as f:
@@ -807,7 +806,7 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     return fig
 
 
-def write_eci_json(eci:np.ndarray, basis_json_path:str):
+def write_eci_json(eci: np.ndarray, basis_json_path: str):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
     Parameters:
@@ -834,7 +833,7 @@ def write_eci_json(eci:np.ndarray, basis_json_path:str):
 
 
 def general_binary_convex_hull_plotter(
-    composition:np.ndarray, true_energies:np.ndarray, predicted_energies=[None]
+    composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None]
 ):
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
