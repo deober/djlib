@@ -478,6 +478,10 @@ import stan
 import djlib.djlib as dj
 import djlib.clex.clex as cl
 import numpy as np
+import time
+
+# Time the process
+start_time = time.time()
 
 # Load Casm Data
 data_file = '$data_file'
@@ -500,6 +504,10 @@ fit = posterior.sample(num_chains=$num_chains, num_samples=$num_samples)
 # Write results
 with open('$eci_output_file', "wb") as f:
     pickle.dump(fit, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+# Print execution time
+end_time = time.time()
+print("Run time is: ", end_time - start_time, " seconds")
 """
     )
     executable_file = template.substitute(
