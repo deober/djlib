@@ -768,7 +768,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
                 train_rms_values.append(np.mean(run_data["training_rms"]))
                 test_rms_values.append(np.mean(run_data["testing_rms"]))
                 eci_mean_testing_rms.append(run_data["eci_mean_testing_rms"])
-                if eci_mean == None:
+                if type(eci_mean) == type(None):
                     eci_mean = run_data["eci_means"]
                 else:
                     eci_mean = (eci_mean + run_data["eci_means"]) / 2
