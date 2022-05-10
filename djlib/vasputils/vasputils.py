@@ -571,7 +571,7 @@ def setup_scan_calculation_from_existing_run(config_name,
     os.system(
         "cp %s %s"
         % (
-            os.path.join(calc_dir, "run.final/CONTCAR"),
+            os.path.join(default_calc_dir, "run.final/CONTCAR"),
             os.path.join(calc_dir, "POSCAR"),
         )
     )
