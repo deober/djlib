@@ -481,6 +481,7 @@ def setup_scan_calculation_from_existing_run(config_name,
     from_settings=False,
     slurm=True,
     run_jobs=False,
+    queue="batch",
     delete_submit_script=False,
     encut=500,
     ismear=1,
@@ -504,6 +505,8 @@ def setup_scan_calculation_from_existing_run(config_name,
         Whether to submit the job with slurm. 
     run_jobs: bool
         Whether to run the job. If False, will only setup the folders and submit scripts.
+    queue: str
+        Queue to submit the job to. Defaults to "batch". Options: short, batch
     delete_submit_script: bool
         Whether to delete the submit script after submitting the job. Default: False
     encut: int
@@ -642,6 +645,7 @@ def setup_scan_calculation_from_existing_run(config_name,
             user_command=user_command,
             output_dir=calc_dir,
             delete_submit_script=delete_submit_script,
+            queue="short",
         )
 
         if run_jobs:

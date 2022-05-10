@@ -194,6 +194,7 @@ def format_slurm_job(
     user_command: str,
     output_dir: str,
     delete_submit_script=False,
+    queue="batch",
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
@@ -203,12 +204,17 @@ def format_slurm_job(
         user_command(str): command line command submitted by the user as a string.
         output_dir(str): Path to the directory that will contain the submit file. Assumes that submit file will be named "submit.sh"
         delete_submit_script(bool): Whether the submission script should delete itself upon completion.
+        queue(str): Queue to submit the job to. "batch" or "short"
     Returns:
         None.
     """
     submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
     templates_path = os.path.join(libpath, "templates")
-    with open(os.path.join(templates_path, "single_task_slurm_template.sh")) as f:
+    if queue == "batch":
+        slurm_template_file = "single_task_slurm_template.sh"
+    elif queue == "short":
+        slurm_template_file = "short_queue_single_task_slurm_template.sh"
+    with open(os.path.join(templates_path, slurm_template_file)) as f:
         template = f.read()
 
         if delete_submit_script:
