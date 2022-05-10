@@ -1,4 +1,4 @@
-from djlib import mc
+from djlib import vasputils
 import os
 
 """
@@ -16,7 +16,7 @@ for xtal in xtals:
     configs_list = os.path.join(root_dir,(xtal+"_gs.txt"))
     for config in open(configs_list):
         print("Config = ",config)
-        mc.setup_dos_calculation(config.strip(),
+        vasputils.setup_dos_calculation(config.strip(),
         training_dir,
         hours=10,
         spin=1,

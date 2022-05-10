@@ -772,7 +772,7 @@ def setup_dos_calculation(
     calc_dir = os.path.join(training_dir, config_name, "calctype.default")
     print("Making static_charge_calc directory in %s" % calc_dir)
     os.makedirs(os.path.join(calc_dir, "static_charge_calc"), exist_ok=True)
-    templates_path = os.path.join(mc_lib_dir, "../templates")
+    templates_path = os.path.join(mc_lib_dir, "../../templates")
     # format INCAR
     with open(os.path.join(templates_path, "INCAR_static_charge.template")) as f:
         template = f.read()

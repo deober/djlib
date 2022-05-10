@@ -1,0 +1,34 @@
+#General System Params
+LREAL = AUTO
+LWAVE = FALSE
+LCHARG = FALSE
+ADDGRID = TRUE
+
+#Spin
+ISPIN = {spin}
+
+#SCAN
+METAGGA = SCAN
+LASPH = TRUE
+ALGO = ALL #better convergence
+
+#Electronic stuff
+ENCUT = {encut}
+PREC = Accurate
+EDIFF = 1e-05
+ICHARG = 2
+
+#Ionic stuff
+ISTART = 0
+IBRION = -1
+NSW = 60
+ISIF = 3
+EDIFFG = -0.02
+
+#DOS stuff
+ISMEAR = {ismear}
+SIGMA = 0.05
+LORBIT = None #11 = writes decomposed DOSCAR
+
+## Parallelizing ##
+NCORE = 2
