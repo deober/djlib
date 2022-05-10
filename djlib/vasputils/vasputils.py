@@ -526,7 +526,7 @@ def setup_scan_calculation_from_existing_run(config_name,
     calc_dir = os.path.join(training_dir, config_name, "calctype.%s" % calctype)
     print("Setting up inputs in %s" % calc_dir)
     os.makedirs(os.path.join(calc_dir, "inputs"), exist_ok=True)
-    templates_path = os.path.join(vasputils_lib_dir, "../../templates")
+    templates_path = os.path.join(vasputils_lib_dir, "../templates")
     
     # format INCAR
     with open(os.path.join(templates_path, "INCAR_SCAN.template")) as f:
