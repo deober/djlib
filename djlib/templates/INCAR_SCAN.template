@@ -28,7 +28,6 @@ EDIFFG = -0.02
 #DOS stuff
 ISMEAR = {ismear}
 SIGMA = 0.05
-LORBIT = None #11 = writes decomposed DOSCAR
 
 ## Parallelizing ##
 NCORE = 2
