@@ -1,0 +1,6 @@
+~/experiments/TiNO_full/ground_states/FCC/
+~/experiments/TiNO_full/near_hull/FCC/
+~/experiments/TiO_full/ground_states/FCC/
+~/experiments/TiO_full/ground_states/HCP/
+~/experiments/TiN_full/ground_states/FCC/
+~/experiments/TiN_full/ground_states/HCP/
