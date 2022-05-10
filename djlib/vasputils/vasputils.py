@@ -473,3 +473,176 @@ def setup_dos_calculation(
 
         if run_jobs:
             dj.submit_slurm_job(calc_dir)
+
+def setup_scan_calculation_from_existing_run(config_name,
+    training_dir,
+    hours,
+    calctype='SCAN',
+    from_settings=False,
+    slurm=True,
+    run_jobs=False,
+    delete_submit_script=False,
+    encut=500,
+    ismear=1,
+    spin=1,
+    max_relax_steps=20,
+    ):
+    """
+    Sets up a SCAN relax to static calculation in VASP for a specific configuration. (Will search for a preexisting calculation in calctype.default)
+
+    Parameters
+    ----------
+    config_name: str
+        Name of the configuration to run the DOS calculation on.
+    training_dir: str
+        Path to the training directory (contains the configuration[s])
+    hours: int
+        Number of hours to run the job for.
+    calctype: str
+        Defines which calctype folder to run the calculation in. Defaults to "SCAN" for calctype.SCAN.
+    slurm: bool
+        Whether to submit the job with slurm. 
+    run_jobs: bool
+        Whether to run the job. If False, will only setup the folders and submit scripts.
+    delete_submit_script: bool
+        Whether to delete the submit script after submitting the job. Default: False
+    encut: int
+        Energy cutoff for the calculation. Default: 500
+    ismear: int
+        Smearing type for the calculation. Default: 1
+    spin: int
+        Spin polarization for the calculation. Default: 1
+    max_relax_steps: int
+        Maximum number of relaxation steps. Default: 20
+
+    Returns
+    -------
+    None.
+    """
+    
+
+    print("Setting up SCAN calculation for %s" % config_name)
+    default_calc_dir = os.path.join(training_dir, config_name, "calctype.default")
+    calc_dir = os.path.join(training_dir, config_name, "calctype.%s" % calctype)
+    print("Setting up inputs in %s" % calc_dir)
+    os.makedirs(os.path.join(calc_dir, "inputs"), exist_ok=True)
+    templates_path = os.path.join(vasputils_lib_dir, "../../templates")
+    
+    # format INCAR
+    with open(os.path.join(templates_path, "INCAR_SCAN.template")) as f:
+        template = f.read()
+
+    # load information from existing run TODO: assumed to be calctype.default
+        with open(os.path.join(default_calc_dir, "run.0", "INCAR")) as g:
+            incar = g.readlines()
+
+        for line in incar:
+            if "ENCUT" in line:
+                encut = line.split("=")[1].strip()
+            if "ISMEAR" in line:
+                ismear = line.split("=")[1].strip()
+            if "ISPIN" in line:
+                spin = line.split("=")[1].strip()
+
+        s = template.format(encut=encut, spin=spin, ismear=ismear)
+
+    with open(os.path.join(calc_dir, "INCAR"), "w") as f:
+        f.write(s)
+
+    # format KPOINTS
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(default_calc_dir, "run.final/KPOINTS"),
+            os.path.join(calc_dir, "KPOINTS"),
+        )
+    )
+
+    # format POTCAR
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(default_calc_dir, "run.final/POTCAR"),
+            os.path.join(calc_dir, "POTCAR"),
+        )
+    )
+
+    # format POSCAR
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(calc_dir, "run.final/CONTCAR"),
+            os.path.join(calc_dir, "POSCAR"),
+        )
+    )
+
+    # define user command
+
+    # script will submit a relax to static calculation
+
+    user_command = """cd %s
+    info_file=test.info
+    echo \"HOSTNAME=$(hostname)\" >> $info_file
+    echo \"STARTTIME=$(date --iso-8601=ns)\" >> $info_file
+
+    IMAX=%i #max number of vasp runs after initial relaxation    
+    printf "STARTED\n" > STATUS
+
+    mkdir run.0
+    cp POSCAR run.0/POSCAR
+    cp INCAR run.0/INCAR
+    cp KPOINTS run.0/KPOINTS
+    cp POTCAR run.0/POTCAR
+    cd run.0
+    mpirun vasp >& vasp.out
+
+    NSTEPS=$(cat vasp.out | grep E0 | wc -l)
+    grep "reached required accuracy" OUTCAR
+    if [ $? -ne 0 ] ; then printf "FAILED TO RELAX\n" >> ../STATUS ; exit ; fi
+    cd ../
+    
+    while [ $NSTEPS -ne 1 ] && [ $I -lt $IMAX ]
+    do
+        printf "Run $I had $NSTEPS steps.\n" >> ../../STATUS
+        I=$(($I+1))
+        cp -r run.$(($I-1)) run.$I
+        cd run.$I
+        cp CONTCAR POSCAR
+        mpirun vasp >& vasp.out
+        NSTEPS=$(cat vasp.out | grep E0 | wc -l)
+        grep "reached required accuracy" OUTCAR
+        if [ $? -ne 0 ] ; then printf "FAILED TO RELAX\n" >> ../STATUS ; exit ; fi
+        cd ../
+    done
+
+    I=$(($I+1))
+    cp -r run.$(($I-1)) run.final
+    cd run.final
+    cp CONTCAR POSCAR
+
+    sed -i "s/LREAL.*/LREAL = .FALSE./g" INCAR
+    sed -i "s/IBRION.*/IBRION = -1/g" INCAR
+    sed -i "s/NSW.*/NSW = 0/g" INCAR
+    sed -i "s/ISIF.*/ISIF = 0/g" INCAR
+    sed -i "s/ISMEAR.*/ISMEAR = -5/g" INCAR
+
+    mpirun vasp >& vasp.out
+
+    cd ../
+    
+    """ % (
+        os.path.join(calc_dir),max_relax_steps
+    )
+
+    # format submit script
+    if slurm:
+        dj.format_slurm_job(
+            jobname=config_name,
+            hours=hours,
+            user_command=user_command,
+            output_dir=calc_dir,
+            delete_submit_script=delete_submit_script,
+        )
+
+        if run_jobs:
+            dj.submit_slurm_job(calc_dir)
