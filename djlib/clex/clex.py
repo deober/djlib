@@ -14,6 +14,7 @@ from glob import glob
 import pickle
 from string import Template
 from sklearn.model_selection import ShuffleSplit
+import arviz as ar
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2):
@@ -69,7 +70,7 @@ def checkhull(
     return np.ravel(np.array(hull_dist))
 
 
-def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
+def run_lassocv(corr: numpy.ndarray, formation_energy: numpy.ndarray) -> numpy.ndarray:
     reg = LassoCV(fit_intercept=False, n_jobs=4, max_iter=50000).fit(
         corr, formation_energy
     )
@@ -78,11 +79,11 @@ def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
 
 
 def find_proposed_ground_states(
-    corr: np.ndarray,
-    comp: np.ndarray,
-    formation_energy: np.ndarray,
-    eci_set: np.ndarray,
-) -> np.ndarray:
+    corr: numpy.ndarray,
+    comp: numpy.ndarray,
+    formation_energy: numpy.ndarray,
+    eci_set: numpy.ndarray,
+) -> numpy.ndarray:
     """Collects indices of configurations that fall 'below the cluster expansion prediction of DFT-determined hull configurations'.
 
     Parameters
@@ -437,8 +438,7 @@ model
     }"""
         )
     model_template = ce_model.substitute(
-        formatted_sigma=formatted_sigma,
-        formatted_eci_variance=formatted_eci_variance,
+        formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance,
     )
     # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
     return model_template
@@ -797,7 +797,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
     }
 
 
-def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
+def plot_eci_uncertainty(eci: numpy.ndarray, title=False) -> plt.figure:
     """
     Parameters
     ----------
@@ -830,7 +830,7 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     return fig
 
 
-def write_eci_json(eci: np.ndarray, basis_json_path: str):
+def write_eci_json(eci: numpy.ndarray, basis_json_path: str):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
     Parameters:
@@ -934,3 +934,42 @@ def general_binary_convex_hull_plotter(
 
     fig = plt.gcf()
     fig.set_size_inches(19, 14)
+
+
+def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
+    """Counts the number of stan parameters with rha values greater than the provided rhat_tolerance.
+    
+    Parameters:
+    -----------
+    posterior_fit_object: stan.fit.Fit
+        Posterior fit object from stan. 
+    rhat_tolerance: float
+        Value to compare rhat metrics against. Default is 1.05
+    
+
+     
+    
+    Returns: 
+    --------
+    rhat_summary: dict{
+        total_count: int
+            total number of parameters above rhat_tolerance. 
+        *_count: int
+            Number of parameters in parameter vector * which are above the rhat tolerance. * is representative of a posterior parameter vector. 
+    }
+
+    Notes:
+    ------
+    The rhat metric describes sampling convergence across the posterior distribution. Rhat values greater than 1.05 indicate that those parameters are not reasonably converged. Rhat below 1.05 is okay, but closer to 1.0 indicates better convergence.
+    """
+    rhat = ar.rhat(posterior_fit_object)
+    rhat_keys = list(rhat.keys())
+    total_count = 0
+    rhat_summary = {}
+    for key in rhat_keys:
+        tally = np.count_nonzero(rhat[key] > rhat_tolerance)
+        rhat_summary[key + "_count"] = tally
+        total_count += tally
+    rhat_summary["total_count"] = total_count
+    return rhat_summary
+
