@@ -1,3 +1,3 @@
-from . import clex 
+from . import clex
 
 __all__ = ["clex"]

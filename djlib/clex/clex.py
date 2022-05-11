@@ -361,8 +361,8 @@ def format_stan_model(
     likelihood_variance_prior: string
         Distribution type for model variance prior
     fixed_variance: Bool
-        If True, model and ECI variance are fixed values. If false, they follow a distribution governed by hyperparameters. 
-        This choice will affect the eci and likelihood variance arg inputs; please read documentation for both. 
+        If True, model and ECI variance are fixed values. If false, they follow a distribution governed by hyperparameters.
+        This choice will affect the eci and likelihood variance arg inputs; please read documentation for both.
 
     Returns
     -------
@@ -438,7 +438,8 @@ model
     }"""
         )
     model_template = ce_model.substitute(
-        formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance,
+        formatted_sigma=formatted_sigma,
+        formatted_eci_variance=formatted_eci_variance,
     )
     # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
     return model_template
@@ -848,11 +849,11 @@ def general_binary_convex_hull_plotter(
     Parameters:
     -----------
     composition: numpy.ndarray
-        Vector of composition values, same length as true_energies. 
+        Vector of composition values, same length as true_energies.
     true_energies: numpy.ndarray
-        Vector of formation energies. Required. 
+        Vector of formation energies. Required.
     predicted_energies: numpy.ndarray
-        None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported. 
+        None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported.
     """
 
     predicted_color = "red"
@@ -918,4 +919,3 @@ def general_binary_convex_hull_plotter(
 
     fig = plt.gcf()
     fig.set_size_inches(19, 14)
-

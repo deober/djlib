@@ -9,6 +9,7 @@ import pathlib
 
 vasputils_lib_dir = pathlib.Path(__file__).parent.resolve()
 
+
 class poscar:
     def __init__(self, poscar_file_path):
         self.poscar_file_path = poscar_file_path
@@ -288,13 +289,13 @@ def collect_final_contcars(config_list_json_path, casm_root_path, deposit_direct
     Parameters:
     -----------
     config_list_json_path: str
-        Path to a casm query output json containing the configurations of interest. 
-    
+        Path to a casm query output json containing the configurations of interest.
+
     casm_root_path: str
-        Path to the main directory of a CASM project. 
-    
+        Path to the main directory of a CASM project.
+
     deposit_directory: str
-        Path to the directory where the CONTCARs should be copied. 
+        Path to the directory where the CONTCARs should be copied.
 
     Returns:
     --------
@@ -329,9 +330,9 @@ def reset_calc_staus(unknowns_file, casm_root):
     Parameters:
     -----------
     unknowns_file: str
-        Path to casm query output of configurations to be reset. 
+        Path to casm query output of configurations to be reset.
     casm_root: str
-        Path to casm project root. 
+        Path to casm project root.
 
     Returns:
     --------
@@ -349,6 +350,7 @@ def reset_calc_staus(unknowns_file, casm_root):
         status["status"] = "not_submitted"
         with open(status_file, "w") as f:
             json.dump(status, f)
+
 
 def setup_dos_calculation(
     config_name,
@@ -369,7 +371,7 @@ def setup_dos_calculation(
     training_dir: str
         Path to the training directory (contains the configuration[s])
     slurm: bool
-        Whether to submit the job with slurm. 
+        Whether to submit the job with slurm.
     run_jobs: bool
         Whether to run the job. If False, will only setup the folders and submit scripts.
 
@@ -474,10 +476,12 @@ def setup_dos_calculation(
         if run_jobs:
             dj.submit_slurm_job(calc_dir)
 
-def setup_scan_calculation_from_existing_run(config_name,
+
+def setup_scan_calculation_from_existing_run(
+    config_name,
     training_dir,
     hours,
-    calctype='SCAN',
+    calctype="SCAN",
     from_settings=False,
     slurm=True,
     run_jobs=False,
@@ -487,7 +491,7 @@ def setup_scan_calculation_from_existing_run(config_name,
     ismear=1,
     spin=1,
     max_relax_steps=20,
-    ):
+):
     """
     Sets up a SCAN relax to static calculation in VASP for a specific configuration. (Will search for a preexisting calculation in calctype.default)
 
@@ -502,7 +506,7 @@ def setup_scan_calculation_from_existing_run(config_name,
     calctype: str
         Defines which calctype folder to run the calculation in. Defaults to "SCAN" for calctype.SCAN.
     slurm: bool
-        Whether to submit the job with slurm. 
+        Whether to submit the job with slurm.
     run_jobs: bool
         Whether to run the job. If False, will only setup the folders and submit scripts.
     queue: str
@@ -522,7 +526,6 @@ def setup_scan_calculation_from_existing_run(config_name,
     -------
     None.
     """
-    
 
     print("Setting up SCAN calculation for %s" % config_name)
     default_calc_dir = os.path.join(training_dir, config_name, "calctype.default")
@@ -530,12 +533,12 @@ def setup_scan_calculation_from_existing_run(config_name,
     print("Setting up inputs in %s" % calc_dir)
     os.makedirs(os.path.join(calc_dir, "inputs"), exist_ok=True)
     templates_path = os.path.join(vasputils_lib_dir, "../templates")
-    
+
     # format INCAR
     with open(os.path.join(templates_path, "INCAR_SCAN.template")) as f:
         template = f.read()
 
-    # load information from existing run TODO: assumed to be calctype.default
+        # load information from existing run TODO: assumed to be calctype.default
         with open(os.path.join(default_calc_dir, "run.0", "INCAR")) as g:
             incar = g.readlines()
 
@@ -634,7 +637,8 @@ mpirun vasp >& vasp.out
 cd ../
     
     """ % (
-        os.path.join(calc_dir),max_relax_steps
+        os.path.join(calc_dir),
+        max_relax_steps,
     )
 
     # format submit script

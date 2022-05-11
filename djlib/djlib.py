@@ -10,7 +10,7 @@ libpath = pathlib.Path(__file__).parent.resolve()
 
 
 def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
-    """Reads keys and values from casm query json dictionary. 
+    """Reads keys and values from casm query json dictionary.
     Parameters:
     -----------
     casm_query_json_path: str
@@ -19,7 +19,7 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
     casm_query_json_data: dict
         Can also directly take the casm query json dictionary.
         Default is None.
-    
+
     Returns:
     results: dict
         Dictionary of all data grouped by keys (not grouped by configuraton)
@@ -57,7 +57,7 @@ def trim_unknown_energies(casm_query_json: list, keyword="energy"):
         A dictionary from a casm query sorted by property. Loaded directly from query json.
     key : str
         The key in the data dictionary that corresponds to the value you want to base entry removal. Defaults to 'energy_per_atom'.
-    
+
     Returns
     -------
     denulled_data: dict
