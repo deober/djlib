@@ -1,3 +1,3 @@
-from .  import casmcalls
+from . import casmcalls
 
 __all__ = ["casmcalls"]

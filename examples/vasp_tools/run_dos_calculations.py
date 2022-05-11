@@ -8,19 +8,20 @@ each of FCC and HCP are structured as the training_data folder in CASM, with onl
 ex. HfN_full/ground_states/FCC/SCEL1_1_1_1_0_0_0/1/calctype.default/ is a path
 """
 
-root_dir = '/home/jonnyli/experiments/HfN_full/ground_states'
-xtals = ['FCC','HCP']
+root_dir = "/home/jonnyli/experiments/HfN_full/ground_states"
+xtals = ["FCC", "HCP"]
 
 for xtal in xtals:
-    training_dir = os.path.join(root_dir,xtal)
-    configs_list = os.path.join(root_dir,(xtal+"_gs.txt"))
+    training_dir = os.path.join(root_dir, xtal)
+    configs_list = os.path.join(root_dir, (xtal + "_gs.txt"))
     for config in open(configs_list):
-        print("Config = ",config)
-        vasputils.setup_dos_calculation(config.strip(),
-        training_dir,
-        hours=10,
-        spin=1,
-        slurm=True,
-        run_jobs=True,
-        delete_submit_script=False,
-    )
+        print("Config = ", config)
+        vasputils.setup_dos_calculation(
+            config.strip(),
+            training_dir,
+            hours=10,
+            spin=1,
+            slurm=True,
+            run_jobs=True,
+            delete_submit_script=False,
+        )

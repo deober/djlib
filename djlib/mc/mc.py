@@ -736,4 +736,3 @@ def format_pbs_job(
     with open(submit_file_path, "w") as f:
         f.write(s)
     os.system("chmod +x %s " % submit_file_path)
-
