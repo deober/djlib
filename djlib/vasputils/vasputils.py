@@ -645,7 +645,7 @@ def setup_scan_calculation_from_existing_run(config_name,
             user_command=user_command,
             output_dir=calc_dir,
             delete_submit_script=delete_submit_script,
-            queue="short",
+            queue=queue,
         )
 
         if run_jobs:
