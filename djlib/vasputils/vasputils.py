@@ -584,54 +584,54 @@ def setup_scan_calculation_from_existing_run(config_name,
     # script will submit a relax to static calculation
 
     user_command = """cd %s
-    info_file=test.info
-    echo \"HOSTNAME=$(hostname)\" >> $info_file
-    echo \"STARTTIME=$(date --iso-8601=ns)\" >> $info_file
+info_file=test.info
+echo \"HOSTNAME=$(hostname)\" >> $info_file
+echo \"STARTTIME=$(date --iso-8601=ns)\" >> $info_file
 
-    IMAX=%i #max number of vasp runs after initial relaxation    
-    printf "STARTED\n" > STATUS
+IMAX=%i #max number of vasp runs after initial relaxation    
+printf "STARTED\n" > STATUS
 
-    mkdir run.0
-    cp POSCAR run.0/POSCAR
-    cp INCAR run.0/INCAR
-    cp KPOINTS run.0/KPOINTS
-    cp POTCAR run.0/POTCAR
-    cd run.0
+mkdir run.0
+cp POSCAR run.0/POSCAR
+cp INCAR run.0/INCAR
+cp KPOINTS run.0/KPOINTS
+cp POTCAR run.0/POTCAR
+cd run.0
+mpirun vasp >& vasp.out
+
+NSTEPS=$(cat vasp.out | grep E0 | wc -l)
+grep "reached required accuracy" OUTCAR
+if [ $? -ne 0 ] ; then printf "FAILED TO RELAX\n" >> ../STATUS ; exit ; fi
+cd ../
+
+while [ $NSTEPS -ne 1 ] && [ $I -lt $IMAX ]
+do
+    printf "Run $I had $NSTEPS steps.\n" >> ../../STATUS
+    I=$(($I+1))
+    cp -r run.$(($I-1)) run.$I
+    cd run.$I
+    cp CONTCAR POSCAR
     mpirun vasp >& vasp.out
-
     NSTEPS=$(cat vasp.out | grep E0 | wc -l)
     grep "reached required accuracy" OUTCAR
     if [ $? -ne 0 ] ; then printf "FAILED TO RELAX\n" >> ../STATUS ; exit ; fi
     cd ../
-    
-    while [ $NSTEPS -ne 1 ] && [ $I -lt $IMAX ]
-    do
-        printf "Run $I had $NSTEPS steps.\n" >> ../../STATUS
-        I=$(($I+1))
-        cp -r run.$(($I-1)) run.$I
-        cd run.$I
-        cp CONTCAR POSCAR
-        mpirun vasp >& vasp.out
-        NSTEPS=$(cat vasp.out | grep E0 | wc -l)
-        grep "reached required accuracy" OUTCAR
-        if [ $? -ne 0 ] ; then printf "FAILED TO RELAX\n" >> ../STATUS ; exit ; fi
-        cd ../
-    done
+done
 
-    I=$(($I+1))
-    cp -r run.$(($I-1)) run.final
-    cd run.final
-    cp CONTCAR POSCAR
+I=$(($I+1))
+cp -r run.$(($I-1)) run.final
+cd run.final
+cp CONTCAR POSCAR
 
-    sed -i "s/LREAL.*/LREAL = .FALSE./g" INCAR
-    sed -i "s/IBRION.*/IBRION = -1/g" INCAR
-    sed -i "s/NSW.*/NSW = 0/g" INCAR
-    sed -i "s/ISIF.*/ISIF = 0/g" INCAR
-    sed -i "s/ISMEAR.*/ISMEAR = -5/g" INCAR
+sed -i "s/LREAL.*/LREAL = .FALSE./g" INCAR
+sed -i "s/IBRION.*/IBRION = -1/g" INCAR
+sed -i "s/NSW.*/NSW = 0/g" INCAR
+sed -i "s/ISIF.*/ISIF = 0/g" INCAR
+sed -i "s/ISMEAR.*/ISMEAR = -5/g" INCAR
 
-    mpirun vasp >& vasp.out
+mpirun vasp >& vasp.out
 
-    cd ../
+cd ../
     
     """ % (
         os.path.join(calc_dir),max_relax_steps
