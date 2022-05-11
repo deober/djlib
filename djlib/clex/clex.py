@@ -413,7 +413,7 @@ model
         )
     else:
         # If model and ECI variance are not fixed (follows a distribution)
-        formatted_sigma = likelihood_variance_prior + str(likelihood_variance_args)
+        formatted_sigma = str(likelihood_variance_args)
         formatted_eci_variance = eci_variance_prior + str(eci_variance_args)
         ce_model = Template(
             """data {
@@ -425,11 +425,10 @@ model
 parameters {
         vector[K] eci;
         vector<lower=0>[K] eci_variance;
-        real<lower=0> sigma;
     }
 model 
     {
-        sigma ~ $formatted_sigma;
+        real sigma = $formatted_sigma;
         for (k in 1:K){
             eci_variance[k] ~ $formatted_eci_variance ;
             eci[k] ~ normal(0,eci_variance[k]);
@@ -643,12 +642,18 @@ def cross_validate_stan_model(
         # format and write slurm submission file
         user_command = "python run_stan.py"
 
+        likelihood_variance_name = str(likelihood_variance_args)
         if type(eci_variance_args) == type(tuple([1])):
             eci_name = eci_variance_args[1]
         else:
             eci_name = str(eci_variance_args)
         dj.format_slurm_job(
-            jobname="eci_var_" + str(eci_name) + "_crossval_" + str(count),
+            jobname="eci_var_"
+            + str(eci_name)
+            + "likelihood_"
+            + likelihood_variance_name
+            + "_crossval_"
+            + str(count),
             hours=20,
             user_command=user_command,
             output_dir=this_run_path,
@@ -686,9 +691,19 @@ def bayes_train_test_analysis(run_dir: str) -> dict:
     }
     """
 
+    # Load run information to access query data file and train / test indices
+    with open(os.path.join(run_dir, "run_info.json"), "r") as f:
+        run_info = json.load(f)
+    with open(run_info["data_source"], "r") as f:
+        query_data = np.array(json.load(f))
+
     # Load training and testing data
-    testing_data = dj.casm_query_reader(os.path.join(run_dir, "testing_data.json"))
-    training_data = dj.casm_query_reader(os.path.join(run_dir, "training_data.json"))
+    testing_data = dj.casm_query_reader(
+        casm_query_json_data=query_data[run_info["test_set"]]
+    )
+    training_data = dj.casm_query_reader(
+        casm_query_json_data=query_data[run_info["training_set"]]
+    )
 
     training_corr = np.squeeze(np.array(training_data["corr"]))
     training_energies = np.array(training_data["formation_energy"])
