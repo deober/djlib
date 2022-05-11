@@ -15,6 +15,7 @@ for training_dir in open(training_dir_path_list):
             hours=10,
             slurm=True,
             run_jobs=False,
+            queue="batch",
             delete_submit_script=False,
             max_relax_steps=20,
         )
