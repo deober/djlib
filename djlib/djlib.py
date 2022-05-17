@@ -152,34 +152,42 @@ def update_properties_files(casm_root_dir: str):
                 print("Could not find %s" % properties_path)
 
 
-def move_calctype_dirs(casm_root_dir: str):
+def move_calctype_dirs(casm_root_dir: str, calctype="default"):
     """Meant to fix casm import issue where calctype_default is copied within new calctype_default directory. Shifts all the data up one directory.
 
     Parameters
     ----------
     casm_root_dir : str
         Path to casm project root.
+    calctype : str
+        Calctype to check for. Defaults to "default"
 
     Returns
     -------
     None.
     """
+    calctype_string = "calctype."+calctype
     scels = glob(os.path.join(casm_root_dir, "training_data/SCEL*"))
     for scel in scels:
         configs = glob(os.path.join(scel, "*"))
 
         for config in configs:
 
-            if os.path.isdir(os.path.join(config, "calctype.default/calctype.default")):
+            if os.path.isdir(os.path.join(config, "%s/%s" % (calctype_string,calctype_string)):
                 nested_calctype_data = os.path.join(
-                    config, "calctype.default/calctype.default/*"
+                    config, "%s/%s/*" % (calctype_string,calctype_string)
                 )
-                calctype_path = os.path.join(config, "calctype.default")
+                calctype_path = os.path.join(config, calctype_string)
                 os.system("mv %s %s" % (nested_calctype_data, calctype_path))
                 os.system(
                     "rm -r %s"
-                    % os.path.join(config, "calctype.default/calctype.default")
+                    % os.path.join(config, "%s/%s" % (calctype_string,calctype_string))
                 )
+            if os.path.isdir(os.path.join(config, calctype_string, "relax_loop_to_static")):
+                calctype_path = os.path.join(config, calctype_string)
+                nested_relax_loop = os.path.join(calctype_path, "relax_loop_to_static/*")
+                os.system("mv %s %s" % (nested_relax_loop, calctype_path))
+                os.system("rm -r %s" % os.path.join(calctype_path, "relax_loop_to_static"))
 
 
 def submit_slurm_job(run_dir: str):
