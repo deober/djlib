@@ -173,7 +173,7 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
 
         for config in configs:
 
-            if os.path.isdir(os.path.join(config, "%s/%s" % (calctype_string,calctype_string)):
+            if os.path.isdir(os.path.join(config, "%s/%s" % (calctype_string,calctype_string))):
                 nested_calctype_data = os.path.join(
                     config, "%s/%s/*" % (calctype_string,calctype_string)
                 )
