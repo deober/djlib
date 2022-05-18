@@ -1,7 +1,6 @@
-from lib2to3.pytree import convert
 import numpy as np
 from scipy.spatial import ConvexHull
-import thermofitting as tfit
+import djlib.clex.clex as cl
 
 
 def collect_ground_state_indices(
@@ -23,7 +22,7 @@ def collect_ground_state_indices(
     for index, energy_set in enumerate(predicted_energies):
         points = np.hstack(comp, energy_set.reshape(-1, 1))
         hull = ConvexHull(points)
-        hull_vertices, hull_simplices = tfit.hull.lower_hull(hull)
+        hull_simplices, hull_vertices = cl.lower_hull(hull)
         ground_state_indices.append(hull_vertices)
     return ground_state_indices
 
