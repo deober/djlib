@@ -282,15 +282,15 @@ class cooling_run:
 
 
 def format_mc_settings(
-    superdupercell,
-    mu_init,
-    mu_final,
-    mu_increment,
-    temp_init,
-    temp_final,
-    temp_increment,
-    output_file,
-    start_config_path,
+    superdupercell: list,
+    mu_init: float,
+    mu_final: float,
+    mu_increment: float,
+    temp_init: float,
+    temp_final: float,
+    temp_increment: float,
+    output_file: str,
+    start_config_path=False,
 ):
 
     templates_path = os.path.join(mc_lib_dir, "../templates")
