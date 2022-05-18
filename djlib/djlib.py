@@ -40,9 +40,12 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
 
     results = dict(zip(keys, data_collect))
     if "comp" in results.keys():
-        comp = np.array(results["comp"])
-        if len(comp.shape) > 2:
-            results["comp"] = np.squeeze(comp).tolist()
+        results["comp"] = np.array(results["comp"])
+        if len(results["comp"].shape) > 2:
+            results["comp"] = np.squeeze(results["comp"])
+        if len(results["comp"].shape) == 1:
+            results["comp"] = np.reshape(results["comp"], (-1, 1))
+        results["comp"] = results["comp"].tolist()
     if "corr" in results.keys():
         results["corr"] = np.squeeze(results["corr"]).tolist()
     return results
@@ -166,28 +169,36 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
     -------
     None.
     """
-    calctype_string = "calctype."+calctype
+    calctype_string = "calctype." + calctype
     scels = glob(os.path.join(casm_root_dir, "training_data/SCEL*"))
     for scel in scels:
         configs = glob(os.path.join(scel, "*"))
 
         for config in configs:
 
-            if os.path.isdir(os.path.join(config, "%s/%s" % (calctype_string,calctype_string))):
+            if os.path.isdir(
+                os.path.join(config, "%s/%s" % (calctype_string, calctype_string))
+            ):
                 nested_calctype_data = os.path.join(
-                    config, "%s/%s/*" % (calctype_string,calctype_string)
+                    config, "%s/%s/*" % (calctype_string, calctype_string)
                 )
                 calctype_path = os.path.join(config, calctype_string)
                 os.system("mv %s %s" % (nested_calctype_data, calctype_path))
                 os.system(
                     "rm -r %s"
-                    % os.path.join(config, "%s/%s" % (calctype_string,calctype_string))
+                    % os.path.join(config, "%s/%s" % (calctype_string, calctype_string))
                 )
-            if os.path.isdir(os.path.join(config, calctype_string, "relax_loop_to_static")):
+            if os.path.isdir(
+                os.path.join(config, calctype_string, "relax_loop_to_static")
+            ):
                 calctype_path = os.path.join(config, calctype_string)
-                nested_relax_loop = os.path.join(calctype_path, "relax_loop_to_static/*")
+                nested_relax_loop = os.path.join(
+                    calctype_path, "relax_loop_to_static/*"
+                )
                 os.system("mv %s %s" % (nested_relax_loop, calctype_path))
-                os.system("rm -r %s" % os.path.join(calctype_path, "relax_loop_to_static"))
+                os.system(
+                    "rm -r %s" % os.path.join(calctype_path, "relax_loop_to_static")
+                )
 
 
 def submit_slurm_job(run_dir: str):

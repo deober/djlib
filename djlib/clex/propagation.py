@@ -20,7 +20,7 @@ def collect_ground_state_indices(
     """
     ground_state_indices = []
     for index, energy_set in enumerate(predicted_energies):
-        points = np.hstack(comp, energy_set.reshape(-1, 1))
+        points = np.hstack((comp, np.reshape(energy_set, (-1, 1))))
         hull = ConvexHull(points)
         hull_simplices, hull_vertices = cl.lower_hull(hull)
         ground_state_indices.append(hull_vertices)
