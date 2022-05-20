@@ -992,8 +992,6 @@ def calculate_hulldist_corr(
         nxk matrix of effective correlations describing hull distance instead of absolute formation energy. n is the number of configurations and k is the number of ECI.
     """
 
-    # WARNING: This function is not working properly.
-
     # Build convex hull
     points = np.hstack((comp, formation_energy.reshape(-1, 1)))
     hull = ConvexHull(points)
