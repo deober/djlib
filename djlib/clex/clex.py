@@ -1028,8 +1028,9 @@ def calculate_hulldist_corr(
         weights = interior_point @ np.linalg.pinv(simplex_corners)
 
         # Form the hull distance correlations by taking a linear combination of simplex corners.
+
         hulldist_corr[config_index] = (
-            weights @ corr[hull.simplices[relevant_simplex_index]]
+            corr[config_index] - weights @ corr[hull.simplices[relevant_simplex_index]]
         )
 
     return hulldist_corr
