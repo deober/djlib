@@ -1,5 +1,4 @@
 from __future__ import annotations
-import re
 import djlib.djlib as dj
 import djlib.clex.clex as cl
 import json
@@ -17,6 +16,7 @@ from string import Template
 from sklearn.model_selection import ShuffleSplit
 import arviz as ar
 import thermofitting.hull.lower_hull as thull
+import pathlib
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2):
@@ -340,6 +340,97 @@ def plot_clex_hull_data_1_x(
     return fig
 
 
+def stan_model_formatter(
+    eci_variance_is_fixed: bool,
+    model_variance_is_fixed: bool,
+    eci_parameters: list,
+    model_parameters: list,
+    sigma_indices: list,
+) -> str:
+    """
+    """
+
+    clex_lib_dir = pathlib.Path(__file__).parent.resolve()
+    templates = os.path.join(clex_lib_dir, "../templates")
+    assert all(type(x) == str for x in eci_parameters)
+    assert all(type(x) == str for x in model_parameters)
+
+    # Template parameters section
+    parameters_string = "\t" + "vector[K] eci;\n"
+    if eci_variance_is_fixed == False:
+        parameters_string += "\t" + "vector<lower=0>[K] eci_variance;\n"
+    if model_variance_is_fixed == False:
+        parameters_string += "\t" + "vector<lower=0>[n_configs] sigma;"
+
+    # Template model section
+    model_string = ""
+    optimize_eci_miultiply = False
+    optimize_model_multiply = False
+    if len(eci_parameters) == 1:
+        optimize_eci_miultiply = True
+    if len(model_parameters) == 1:
+        # Use a single model variance for all configurations, allowing for a matrix multiply
+        optimize_model_multiply = True
+
+    if optimize_eci_miultiply:
+        model_string += """for (k in 1:K){\n"""
+        if eci_variance_is_fixed:
+            model_string += "\t\t" + "eci[k] " + eci_parameters[0] + ";\n\t}\n"
+        else:
+            model_string += "\t\t" + "eci_variance[K] " + eci_parameters[0] + ";\n"
+            model_string += "\t\t" + "eci[K] ~ normal(0,eci_variance[k]);\n\t}\n"
+    else:
+        if eci_variance_is_fixed:
+            for i, parameter in enumerate(eci_parameters):
+                model_string += "\t" + "eci[{i}] ".format(i=i) + parameter + ";\n"
+        else:
+            for i, parameter in enumerate(eci_parameters):
+                model_string += (
+                    "\t\t" + "eci_variance[{i}] ".format(i) + parameter + ";\n"
+                )
+                model_string += (
+                    "\t\t"
+                    + "eci[{i}] ~ normal(0,eci_variance[{i}]);\n\t}\n".format(i=i)
+                )
+
+    if optimize_model_multiply:
+        if model_variance_is_fixed:
+            model_string += "\t" + "real sigma = " + str(model_parameters[0]) + ";\n"
+        else:
+            model_string += "\t" + "sigma " + model_parameters[0] + ";\n"
+        model_string += "\t" + "energies ~ normal(corr * eci, sigma);\n"
+    else:
+        if model_variance_is_fixed:
+            for config_index, sigma_index in enumerate(sigma_indices):
+                model_string += (
+                    "energies[{i}] ~ normal(corr[{i}]*eci, {sigma}) ".format(
+                        i=config_index, sigma=model_parameters[sigma_index]
+                    )
+                    + ";\n"
+                )
+        else:
+            for sigma_index, model_param in enumerate(model_parameters):
+                model_string += (
+                    "sigma[{sigma_index}] ".format(sigma_index=sigma_index)
+                    + model_param
+                    + ";\n"
+                )
+            for config_index, sigma_index in enumerate(sigma_indices):
+                model_string += (
+                    "energies[{i}] ~ normal(corr[{i}]*eci, sigma[{sigma_index}]) ".format(
+                        i=config_index, sigma_index=sigma_index
+                    )
+                    + ";\n"
+                )
+
+    with open(os.path.join(templates, "stan_model_template.txt"), "r") as f:
+        template = Template(f.read())
+    return template.substitute(
+        formatted_parameters=parameters_string, formatted_model=model_string
+    )
+
+
+# format_stan_model is deprecated. Use stan_model_formatter instead.
 def format_stan_model(
     eci_variance_args,
     likelihood_variance_args,

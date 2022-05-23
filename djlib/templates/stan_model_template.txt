@@ -1,0 +1,12 @@
+"""data {
+        int K; 
+        int n_configs;
+        matrix[n_configs, K] corr;
+        vector[n_configs] energies;
+    }
+parameters{
+$formatted_parameters
+    }
+model{
+$formatted_model
+    }"""

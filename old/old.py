@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+from string import Template
 
 
 def generate_rand_eci_vec(num_eci: int, stdev: float, normalization: float):
