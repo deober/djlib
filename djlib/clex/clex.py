@@ -348,10 +348,48 @@ def stan_model_formatter(
     model_parameters: list,
     sigma_indices: list,
 ) -> str:
-    """
+    """Formats the Stan model for use in the Stan Fit class.
+    Parameters:
+    -----------
+    eci_variance_is_fixed: bool
+        If True, the function will not create any eci variance variables. 
+        If False, the function will create eci variance variables. 
+    model_variance_is_fixed: bool
+        If True, the function will not create any model variance variables.
+        If False, the function will create model variance variables.
+    eci_parameters: list
+        A list of ECI parameters; each element is a string. 
+    model_parameters: list
+        A list of model parameters; each element is a string.
+    sigma_indices: list
+        A 1-D list of indices, length equal to the number of configurations. Each element is an index of the sigma parameter to use for the corresponding configuration.
+        Only used if there is more than one element in model_parameters.
+    
+    Returns:
+    --------
+    stan_model_template: str
+        Formatted Stan model template, ready to be passed to the Stan Fit class.
+
+
+    Notes:
+    ------
+    eci_parameters:
+        If eci_variance_is_fixed == True, each element should describe the prior distribution for ECI. If only one element is provided, it will be used as the prior for all ECI.
+        If eci_variance_is_fixed == False, each element should describe the hyperdistribution for the ECI variance.
+        If only one element is provided, it will be used as the prior for all ECI.
+        Otherwise, there should be one element for each ECI. 
+        example: eci_variance_is_fixed==True: ['~ normal(0, #)']
+        example: eci_variance_is_fixed==False: ['~ gamma(1, #)']
+    model_parameters:
+        If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance. 
+        If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
+        If only one element is provided, it will be used as the prior for all model variances.
+        If more than one element is provided, the user must specify a sigma_indices list to match each configuration to a model variance.
+    sigma_indices:
+        Only used if more than one sigma is provided in the model_parameters list. Identifies which sigma to use for each configuration.
+
     """
 
-    clex_lib_dir = pathlib.Path(__file__).parent.resolve()
     templates = os.path.join(clex_lib_dir, "../templates")
     assert all(type(x) == str for x in eci_parameters)
     assert all(type(x) == str for x in model_parameters)
@@ -368,12 +406,14 @@ def stan_model_formatter(
     optimize_eci_miultiply = False
     optimize_model_multiply = False
     if len(eci_parameters) == 1:
+        # Assign ECI in a for loop with the same prior.
         optimize_eci_miultiply = True
     if len(model_parameters) == 1:
         # Use a single model variance for all configurations, allowing for a matrix multiply
         optimize_model_multiply = True
 
     if optimize_eci_miultiply:
+        # If all ECI priors are the same
         model_string += """for (k in 1:K){\n"""
         if eci_variance_is_fixed:
             model_string += "\t\t" + "eci[k] " + eci_parameters[0] + ";\n\t}\n"
@@ -381,6 +421,7 @@ def stan_model_formatter(
             model_string += "\t\t" + "eci_variance[K] " + eci_parameters[0] + ";\n"
             model_string += "\t\t" + "eci[K] ~ normal(0,eci_variance[k]);\n\t}\n"
     else:
+        # If ECI priors are different
         if eci_variance_is_fixed:
             for i, parameter in enumerate(eci_parameters):
                 model_string += "\t" + "eci[{i}] ".format(i=i) + parameter + ";\n"
@@ -395,12 +436,14 @@ def stan_model_formatter(
                 )
 
     if optimize_model_multiply:
+        # If there is only one model variance sigma^2
         if model_variance_is_fixed:
             model_string += "\t" + "real sigma = " + str(model_parameters[0]) + ";\n"
         else:
             model_string += "\t" + "sigma " + model_parameters[0] + ";\n"
         model_string += "\t" + "energies ~ normal(corr * eci, sigma);\n"
     else:
+        # If there are multiple model variances
         if model_variance_is_fixed:
             for config_index, sigma_index in enumerate(sigma_indices):
                 model_string += (
@@ -423,7 +466,8 @@ def stan_model_formatter(
                     )
                     + ";\n"
                 )
-
+    # Load template from templates directory
+    clex_lib_dir = pathlib.Path(__file__).parent.resolve()
     with open(os.path.join(templates, "stan_model_template.txt"), "r") as f:
         template = Template(f.read())
     return template.substitute(
