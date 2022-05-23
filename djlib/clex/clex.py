@@ -390,7 +390,6 @@ def stan_model_formatter(
 
     """
 
-    templates = os.path.join(clex_lib_dir, "../templates")
     assert all(type(x) == str for x in eci_parameters)
     assert all(type(x) == str for x in model_parameters)
 
@@ -418,21 +417,21 @@ def stan_model_formatter(
         if eci_variance_is_fixed:
             model_string += "\t\t" + "eci[k] " + eci_parameters[0] + ";\n\t}\n"
         else:
-            model_string += "\t\t" + "eci_variance[K] " + eci_parameters[0] + ";\n"
-            model_string += "\t\t" + "eci[K] ~ normal(0,eci_variance[k]);\n\t}\n"
+            model_string += "\t\t" + "eci_variance[k] " + eci_parameters[0] + ";\n"
+            model_string += "\t\t" + "eci[k] ~ normal(0,eci_variance[k]);\n\t}\n"
     else:
         # If ECI priors are different
         if eci_variance_is_fixed:
             for i, parameter in enumerate(eci_parameters):
-                model_string += "\t" + "eci[{i}] ".format(i=i) + parameter + ";\n"
+                model_string += "\t" + "eci[{i}] ".format(i=i + 1) + parameter + ";\n"
         else:
             for i, parameter in enumerate(eci_parameters):
                 model_string += (
-                    "\t\t" + "eci_variance[{i}] ".format(i) + parameter + ";\n"
+                    "\t\t" + "eci_variance[{i}] ".format(i=i + 1) + parameter + ";\n"
                 )
                 model_string += (
                     "\t\t"
-                    + "eci[{i}] ~ normal(0,eci_variance[{i}]);\n\t}\n".format(i=i)
+                    + "eci[{i}] ~ normal(0,eci_variance[{i}]);\n\t}\n".format(i=i + 1)
                 )
 
     if optimize_model_multiply:
@@ -448,26 +447,28 @@ def stan_model_formatter(
             for config_index, sigma_index in enumerate(sigma_indices):
                 model_string += (
                     "energies[{i}] ~ normal(corr[{i}]*eci, {sigma}) ".format(
-                        i=config_index, sigma=model_parameters[sigma_index]
+                        i=config_index + 1, sigma=model_parameters[sigma_index]
                     )
                     + ";\n"
                 )
         else:
             for sigma_index, model_param in enumerate(model_parameters):
                 model_string += (
-                    "sigma[{sigma_index}] ".format(sigma_index=sigma_index)
+                    "sigma[{sigma_index}] ".format(sigma_index=sigma_index + 1)
                     + model_param
                     + ";\n"
                 )
             for config_index, sigma_index in enumerate(sigma_indices):
                 model_string += (
                     "energies[{i}] ~ normal(corr[{i}]*eci, sigma[{sigma_index}]) ".format(
-                        i=config_index, sigma_index=sigma_index
+                        i=config_index + 1, sigma_index=sigma_index + 1
                     )
                     + ";\n"
                 )
     # Load template from templates directory
     clex_lib_dir = pathlib.Path(__file__).parent.resolve()
+    templates = os.path.join(clex_lib_dir, "../templates")
+
     with open(os.path.join(templates, "stan_model_template.txt"), "r") as f:
         template = Template(f.read())
     return template.substitute(
