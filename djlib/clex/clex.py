@@ -17,6 +17,7 @@ from sklearn.model_selection import ShuffleSplit
 import arviz as ar
 import thermofitting.hull.lower_hull as thull
 import pathlib
+from warnings import warn
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2):
@@ -463,6 +464,10 @@ def format_stan_model(
     model_template : str
         Formatted stan model template
     """
+    warn(
+        'This functinon "format_stan_model() is deprecated. Use "stan_model_formatter()" instead.',
+        DeprecationWarning,
+    )
 
     # Old args:
     # TODO: Add filter on string arguments
