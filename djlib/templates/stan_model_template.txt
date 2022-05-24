@@ -1,4 +1,4 @@
-"""data {
+data {
         int K; 
         int n_configs;
         matrix[n_configs, K] corr;
@@ -9,4 +9,4 @@ $formatted_parameters
     }
 model{
 $formatted_model
-    }"""
+    }
