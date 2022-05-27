@@ -303,7 +303,7 @@ def collect_final_contcars(config_list_json_path, casm_root_path, deposit_direct
     """
 
     os.makedirs(deposit_directory, exist_ok=True)
-    query_data = casm_query_reader(config_list_json_path)
+    query_data = dj.casm_query_reader(config_list_json_path)
     config_names = query_data["name"]
 
     for name in config_names:
@@ -338,7 +338,7 @@ def reset_calc_staus(unknowns_file, casm_root):
     --------
     None.
     """
-    query_data = casm_query_reader(unknowns_file)
+    query_data = dj.casm_query_reader(unknowns_file)
     names = query_data["name"]
 
     for name in names:
