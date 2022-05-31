@@ -15,6 +15,9 @@ import pickle
 from string import Template
 from sklearn.model_selection import ShuffleSplit
 import arviz as ar
+import thermofitting.hull.lower_hull as thull
+import pathlib
+from warnings import warn
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2):
@@ -70,7 +73,7 @@ def checkhull(
     return np.ravel(np.array(hull_dist))
 
 
-def run_lassocv(corr: numpy.ndarray, formation_energy: numpy.ndarray) -> numpy.ndarray:
+def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
     reg = LassoCV(fit_intercept=False, n_jobs=4, max_iter=50000).fit(
         corr, formation_energy
     )
@@ -338,6 +341,142 @@ def plot_clex_hull_data_1_x(
     return fig
 
 
+def stan_model_formatter(
+    eci_variance_is_fixed: bool,
+    model_variance_is_fixed: bool,
+    eci_parameters: list,
+    model_parameters: list,
+    sigma_indices: list,
+) -> str:
+    """Formats the Stan model for use in the Stan Fit class.
+    Parameters:
+    -----------
+    eci_variance_is_fixed: bool
+        If True, the function will not create any eci variance variables. 
+        If False, the function will create eci variance variables. 
+    model_variance_is_fixed: bool
+        If True, the function will not create any model variance variables.
+        If False, the function will create model variance variables.
+    eci_parameters: list
+        A list of ECI parameters; each element is a string. 
+    model_parameters: list
+        A list of model parameters; each element is a string.
+    sigma_indices: list
+        A 1-D list of indices, length equal to the number of configurations. Each element is an index of the sigma parameter to use for the corresponding configuration.
+        Only used if there is more than one element in model_parameters.
+    
+    Returns:
+    --------
+    stan_model_template: str
+        Formatted Stan model template, ready to be passed to the Stan Fit class.
+
+
+    Notes:
+    ------
+    eci_parameters:
+        If eci_variance_is_fixed == True, each element should describe the prior distribution for ECI. If only one element is provided, it will be used as the prior for all ECI.
+        If eci_variance_is_fixed == False, each element should describe the hyperdistribution for the ECI variance.
+        If only one element is provided, it will be used as the prior for all ECI.
+        Otherwise, there should be one element for each ECI. 
+        example: eci_variance_is_fixed==True: ['~ normal(0, #)']
+        example: eci_variance_is_fixed==False: ['~ gamma(1, #)']
+    model_parameters:
+        If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance. 
+        If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
+        If only one element is provided, it will be used as the prior for all model variances.
+        If more than one element is provided, the user must specify a sigma_indices list to match each configuration to a model variance.
+    sigma_indices:
+        Only used if more than one sigma is provided in the model_parameters list. Identifies which sigma to use for each configuration.
+
+    """
+
+    assert all(type(x) == str for x in eci_parameters)
+    assert all(type(x) == str for x in model_parameters)
+
+    # Template parameters section
+    parameters_string = "\t" + "vector[K] eci;\n"
+    if eci_variance_is_fixed == False:
+        parameters_string += "\t" + "vector<lower=0>[K] eci_variance;\n"
+    if model_variance_is_fixed == False:
+        parameters_string += "\t" + "vector<lower=0>[n_configs] sigma;"
+
+    # Template model section
+    model_string = ""
+    optimize_eci_miultiply = False
+    optimize_model_multiply = False
+    if len(eci_parameters) == 1:
+        # Assign ECI in a for loop with the same prior.
+        optimize_eci_miultiply = True
+    if len(model_parameters) == 1:
+        # Use a single model variance for all configurations, allowing for a matrix multiply
+        optimize_model_multiply = True
+
+    if optimize_eci_miultiply:
+        # If all ECI priors are the same
+        model_string += """for (k in 1:K){\n"""
+        if eci_variance_is_fixed:
+            model_string += "\t\t" + "eci[k] " + eci_parameters[0] + ";\n\t}\n"
+        else:
+            model_string += "\t\t" + "eci_variance[k] " + eci_parameters[0] + ";\n"
+            model_string += "\t\t" + "eci[k] ~ normal(0,eci_variance[k]);\n\t}\n"
+    else:
+        # If ECI priors are different
+        if eci_variance_is_fixed:
+            for i, parameter in enumerate(eci_parameters):
+                model_string += "\t" + "eci[{i}] ".format(i=i + 1) + parameter + ";\n"
+        else:
+            for i, parameter in enumerate(eci_parameters):
+                model_string += (
+                    "\t\t" + "eci_variance[{i}] ".format(i=i + 1) + parameter + ";\n"
+                )
+                model_string += (
+                    "\t\t"
+                    + "eci[{i}] ~ normal(0,eci_variance[{i}]);\n\t}\n".format(i=i + 1)
+                )
+
+    if optimize_model_multiply:
+        # If there is only one model variance sigma^2
+        if model_variance_is_fixed:
+            model_string += "\t" + "real sigma = " + str(model_parameters[0]) + ";\n"
+        else:
+            model_string += "\t" + "sigma " + model_parameters[0] + ";\n"
+        model_string += "\t" + "energies ~ normal(corr * eci, sigma);\n"
+    else:
+        # If there are multiple model variances
+        if model_variance_is_fixed:
+            for config_index, sigma_index in enumerate(sigma_indices):
+                model_string += (
+                    "energies[{i}] ~ normal(corr[{i}]*eci, {sigma}) ".format(
+                        i=config_index + 1, sigma=model_parameters[sigma_index]
+                    )
+                    + ";\n"
+                )
+        else:
+            for sigma_index, model_param in enumerate(model_parameters):
+                model_string += (
+                    "sigma[{sigma_index}] ".format(sigma_index=sigma_index + 1)
+                    + model_param
+                    + ";\n"
+                )
+            for config_index, sigma_index in enumerate(sigma_indices):
+                model_string += (
+                    "energies[{i}] ~ normal(corr[{i}]*eci, sigma[{sigma_index}]) ".format(
+                        i=config_index + 1, sigma_index=sigma_index + 1
+                    )
+                    + ";\n"
+                )
+    # Load template from templates directory
+    clex_lib_dir = pathlib.Path(__file__).parent.resolve()
+    templates = os.path.join(clex_lib_dir, "../templates")
+
+    with open(os.path.join(templates, "stan_model_template.txt"), "r") as f:
+        template = Template(f.read())
+    return template.substitute(
+        formatted_parameters=parameters_string, formatted_model=model_string
+    )
+
+
+# format_stan_model is deprecated. Use stan_model_formatter instead.
 def format_stan_model(
     eci_variance_args,
     likelihood_variance_args,
@@ -370,6 +509,10 @@ def format_stan_model(
     model_template : str
         Formatted stan model template
     """
+    warn(
+        'This functinon "format_stan_model() is deprecated. Use "stan_model_formatter()" instead.',
+        DeprecationWarning,
+    )
 
     # Old args:
     # TODO: Add filter on string arguments
@@ -797,7 +940,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
     }
 
 
-def plot_eci_uncertainty(eci: numpy.ndarray, title=False) -> plt.figure:
+def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     """
     Parameters
     ----------
@@ -830,7 +973,7 @@ def plot_eci_uncertainty(eci: numpy.ndarray, title=False) -> plt.figure:
     return fig
 
 
-def write_eci_json(eci: numpy.ndarray, basis_json_path: str):
+def write_eci_json(eci: np.ndarray, basis_json: dict):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
     Parameters:
@@ -847,13 +990,10 @@ def write_eci_json(eci: numpy.ndarray, basis_json_path: str):
         basis.json dictionary formatted with provided eci's
     """
 
-    with open(basis_json_path) as f:
-        data = json.load(f)
+    for index, orbit in enumerate(basis_json["orbits"]):
+        basis_json["orbits"][index]["cluster_functions"][0]["eci"] = eci[index]
 
-    for index, orbit in enumerate(data["orbits"]):
-        data["orbits"][index]["cluster_functions"]["eci"] = eci[index]
-
-    return data
+    return basis_json
 
 
 def general_binary_convex_hull_plotter(
@@ -877,14 +1017,6 @@ def general_binary_convex_hull_plotter(
     plt.scatter(
         composition, true_energies, color="k", marker="x", label='"True" Energies'
     )
-    if any(predicted_energies):
-        plt.scatter(
-            composition,
-            predicted_energies,
-            color="red",
-            marker="x",
-            label=predicted_label,
-        )
 
     dft_hull = ConvexHull(
         np.hstack((composition.reshape(-1, 1), np.reshape(true_energies, (-1, 1))))
@@ -918,6 +1050,14 @@ def general_binary_convex_hull_plotter(
             marker="D",
             markersize=10,
             color=predicted_color,
+        )
+    if any(predicted_energies):
+        plt.scatter(
+            composition,
+            predicted_energies,
+            color="red",
+            marker="x",
+            label=predicted_label,
         )
 
         rmse = np.sqrt(mean_squared_error(true_energies, predicted_energies))
@@ -972,4 +1112,93 @@ def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
         total_count += tally
     rhat_summary["total_count"] = total_count
     return rhat_summary
+
+
+def simplex_corner_weights(
+    interior_point: np.ndarray, corner_points: np.ndarray
+) -> np.ndarray:
+    """Calculates the linear combination of simplex corners required to produce a point within the simplex. 
+
+    Parameters:
+    -----------
+    interior_point: numpy.ndarray
+        Composition row vector of a point within a hull simplex.
+    corner_points: numpy.ndarray
+        Matrix of composition row vectors of all corner points of a hull simplex.
+
+    Returns:
+    --------
+    weights: numpy.ndarray
+        Vector of weights for each corner point. Matrix multiplying wieghts @ corner_corr_matrix will give the linear combination of simplex correlation vectors which, 
+        when multiplied with ECI, gives the hull distance of the correlation represented by interior_point. 
+    """
+    # Add a 1 to the end of interior_point and a column of ones to simplex_corners to enforce that the sum of weights is 1.
+    interior_point = np.array(interior_point).reshape(1, -1)
+    simplex_corners = np.hstack((corner_points, np.ones((simplex_corners.shape[0], 1))))
+
+    # Calculate the weights for each simplex corner point.
+    weights = interior_point @ np.linalg.pinv(simplex_corners)
+
+    return weights
+
+
+def calculate_hulldist_corr(
+    corr: np.ndarray, comp: np.ndarray, formation_energy: np.ndarray
+) -> np.ndarray:
+    """Calculated the effective correlations to predict hull distance instead of absolute formation energy. 
+    Parameters:
+    -----------
+    corr: np.array
+        nxk correlation matrix, where n is the number of configurations and k is the number of ECI. 
+    comp: np.array
+        nxc matrix of compositions, where n is the number of configurations and c is the number of composition axes. 
+    formation_energy: np.array
+        nx1 matrix of formation energies.
+
+    Returns:
+    --------
+    hulldist_corr: np.array
+        nxk matrix of effective correlations describing hull distance instead of absolute formation energy. n is the number of configurations and k is the number of ECI.
+    """
+
+    # Build convex hull
+    points = np.hstack((comp, formation_energy.reshape(-1, 1)))
+    hull = ConvexHull(points)
+
+    # Get convex hull simplices
+    lower_vertices, lower_simplices = thull.lower_hull(hull)
+
+    hulldist_corr = np.zeros(corr.shape)
+
+    for config_index in list(range(corr.shape[0])):
+
+        # Find the simplex that contains the current configuration's composition, and find the hull energy for that composition
+        relevant_simplex_index, hull_energy = thull.lower_hull_simplex_containing(
+            compositions=comp[config_index].reshape(1, -1),
+            convex_hull=hull,
+            lower_hull_simplex_indices=lower_simplices,
+        )
+
+        relevant_simplex_index = relevant_simplex_index[0]
+
+        # Find vectors defining the corners of the simplex which contains the curent configuration's composition.
+        simplex_corners = comp[hull.simplices[relevant_simplex_index]]
+        interior_point = np.array(comp[config_index]).reshape(1, -1)
+
+        # Enforce that the sum of weights is equal to 1.
+        simplex_corners = np.hstack(
+            (simplex_corners, np.ones((simplex_corners.shape[0], 1)))
+        )
+        interior_point = np.hstack((interior_point, np.ones((1, 1))))
+
+        # Project the interior point onto the vectors that define the simplex corners.
+        weights = interior_point @ np.linalg.pinv(simplex_corners)
+
+        # Form the hull distance correlations by taking a linear combination of simplex corners.
+
+        hulldist_corr[config_index] = (
+            corr[config_index] - weights @ corr[hull.simplices[relevant_simplex_index]]
+        )
+
+    return hulldist_corr
 

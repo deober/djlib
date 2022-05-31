@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+from string import Template
 
 
 def generate_rand_eci_vec(num_eci: int, stdev: float, normalization: float):
@@ -245,3 +246,109 @@ def run_eci_monte_carlo(
             pickle.dump(results, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     return results
+
+
+def format_stan_model(
+    eci_variance_args,
+    likelihood_variance_args,
+    eci_prior="normal",
+    eci_variance_prior="gamma",
+    likelihood_variance_prior="gamma",
+    fixed_variance=False,
+) -> str:
+    """
+    Parameters
+    ----------
+    eci_variance_args: tuple
+        if fixed_variance is True, this should be a single float for eci variance. eg. eci_variance_args = 0.0016
+        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
+    likelihood_variance_args: tuple
+        if fixed_variance is True, this should be a single float for the model variance. eg. likelihood_variance_args = 0.005
+        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
+    eci_prior: string
+        Distribution type for ECI priors
+    eci_variance_prior: string
+        Distribution type for ECI variance prior
+    likelihood_variance_prior: string
+        Distribution type for model variance prior
+    fixed_variance: Bool
+        If True, model and ECI variance are fixed values. If false, they follow a distribution governed by hyperparameters.
+        This choice will affect the eci and likelihood variance arg inputs; please read documentation for both.
+
+    Returns
+    -------
+    model_template : str
+        Formatted stan model template
+    """
+
+    # Old args:
+    # TODO: Add filter on string arguments
+
+    supported_eci_priors = ["normal"]
+    supported_eci_variance_priors = ["gamma"]
+    supported_model_variance_priors = ["gamma"]
+
+    assert eci_prior in supported_eci_priors, "Specified ECI prior is not suported."
+    assert (
+        eci_variance_prior in supported_eci_variance_priors
+    ), "Specified ECI variance prior is not supported."
+
+    assert (
+        likelihood_variance_prior in supported_model_variance_priors
+    ), "Specified model variance prior is not supported."
+    # TODO: make this a single string that can be modified to allow any combination of fixed / non-fixed ECI and model variance priors.
+
+    if fixed_variance:
+        # If model and ECI variance are fixed to scalar values
+        formatted_sigma = str(likelihood_variance_args)
+        formatted_eci_variance = str(eci_variance_args)
+
+        ce_model = Template(
+            """data {
+        int K; 
+        int n_configs;
+        matrix[n_configs, K] corr;
+        vector[n_configs] energies;
+    }
+parameters {
+        vector[K] eci;
+    }
+model 
+    {
+        real sigma = $formatted_sigma;
+        for (k in 1:K){
+            eci[k] ~ normal(0,$formatted_eci_variance);
+        }
+        energies ~ normal(corr * eci, sigma);
+    }"""
+        )
+    else:
+        # If model and ECI variance are not fixed (follows a distribution)
+        formatted_sigma = str(likelihood_variance_args)
+        formatted_eci_variance = eci_variance_prior + str(eci_variance_args)
+        ce_model = Template(
+            """data {
+        int K; 
+        int n_configs;
+        matrix[n_configs, K] corr;
+        vector[n_configs] energies;
+    }
+parameters {
+        vector[K] eci;
+        vector<lower=0>[K] eci_variance;
+    }
+model 
+    {
+        real sigma = $formatted_sigma;
+        for (k in 1:K){
+            eci_variance[k] ~ $formatted_eci_variance ;
+            eci[k] ~ normal(0,eci_variance[k]);
+        }
+        energies ~ normal(corr * eci, sigma);
+    }"""
+        )
+    model_template = ce_model.substitute(
+        formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance,
+    )
+    # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
+    return model_template
