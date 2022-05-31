@@ -1,7 +1,7 @@
 #General System Params
 LREAL = AUTO
-LWAVE = FALSE
-LCHARG = FALSE
+LWAVE = .FALSE.
+LCHARG = .FALSE.
 ADDGRID = TRUE
 
 #Spin
@@ -9,7 +9,7 @@ ISPIN = {spin}
 
 #SCAN
 METAGGA = SCAN
-LASPH = TRUE
+LASPH = .TRUE.
 ALGO = ALL #better convergence
 
 #Electronic stuff
@@ -20,10 +20,10 @@ ICHARG = 2
 
 #Ionic stuff
 ISTART = 0
-IBRION = -1
+IBRION = 1
 NSW = 60
 ISIF = 3
-EDIFFG = -0.02
+EDIFFG = 0.01
 
 #DOS stuff
 ISMEAR = {ismear}
