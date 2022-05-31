@@ -654,3 +654,53 @@ cd ../
 
         if run_jobs:
             dj.submit_slurm_job(calc_dir)
+
+
+def kpoint_convergence(
+    kpoint_densities: list,
+    run_dir: str,
+    incar_path: str,
+    poscar_path: str,
+    potcar_path: str,
+) -> None:
+    """
+    Run a sweep of static vasp calculations for varying numbers of kpoints
+
+
+    Parameters:
+    -----------
+    kpoint_densities: list
+        List of kpoint densities to test.
+    run_dir: str
+        Directory to run kpoint convergence calculations in.
+    incar_path: str
+        Path to INCAR file
+    poscar_path: str
+        Path to POSCAR file
+    potcar_path: str
+        Path to POTCAR file
+
+    Returns:
+    --------
+    None
+    """
+
+    for kpoint_density in kpoint_densities:
+        kpoint_density = int(kpoint_density)
+        print("Running kpoint density: %s" % kpoint_density)
+        calc_dir = os.path.join(run_dir, "kpoint_density.%s" % kpoint_density)
+        os.makedirs(calc_dir, exist_ok=True)
+        os.system("cp %s %s" % (incar_path, os.path.join(calc_dir, "INCAR")))
+        os.system("cp %s %s" % (poscar_path, os.path.join(calc_dir, "POSCAR")))
+        os.system("cp %s %s" % (potcar_path, os.path.join(calc_dir, "POTCAR")))
+        with open(os.path.join(calc_dir, "KPOINTS"), "w") as f:
+            f.write(
+                """
+    KPOINTS created by vasputils
+    0
+    Auto
+    %d
+    """
+                % kpoint_density
+            )
+
