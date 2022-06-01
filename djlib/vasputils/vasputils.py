@@ -662,6 +662,7 @@ def kpoint_convergence(
     incar_path: str,
     poscar_path: str,
     potcar_path: str,
+    dry_run: bool = False,
 ) -> None:
     """
     Run a sweep of static vasp calculations for varying numbers of kpoints
