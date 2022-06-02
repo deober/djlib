@@ -346,7 +346,7 @@ def stan_model_formatter(
     model_variance_is_fixed: bool,
     eci_parameters: list,
     model_parameters: list,
-    sigma_indices: list,
+    start_stop_indices: list,
 ) -> str:
     """Formats the Stan model for use in the Stan Fit class.
     Parameters:
@@ -361,10 +361,10 @@ def stan_model_formatter(
         A list of ECI parameters; each element is a string. 
     model_parameters: list
         A list of model parameters; each element is a string.
-    sigma_indices: list
-        A 1-D list of indices, length equal to the number of configurations. Each element is an index of the sigma parameter to use for the corresponding configuration.
-        Only used if there is more than one element in model_parameters.
-    
+    start_stop_indices: list
+        list start and stop indices to divide configurations into groups with different model variances. 
+        Each element is a list of two integers.
+
     Returns:
     --------
     stan_model_template: str
@@ -444,10 +444,12 @@ def stan_model_formatter(
     else:
         # If there are multiple model variances
         if model_variance_is_fixed:
-            for config_index, sigma_index in enumerate(sigma_indices):
+            for sigma_index, start_stop in enumerate(start_stop_indices):
                 model_string += (
-                    "energies[{i}] ~ normal(corr[{i}]*eci, {sigma}) ".format(
-                        i=config_index + 1, sigma=model_parameters[sigma_index]
+                    "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}]*eci, {sigma}) ".format(
+                        start=start_stop[0] + 1,
+                        stop=start_stop[1] + 1,
+                        sigma=model_parameters[sigma_index],
                     )
                     + ";\n"
                 )
@@ -458,10 +460,12 @@ def stan_model_formatter(
                     + model_param
                     + ";\n"
                 )
-            for config_index, sigma_index in enumerate(sigma_indices):
+            for sigma_index, start_stop in enumerate(start_stop_indices):
                 model_string += (
-                    "energies[{i}] ~ normal(corr[{i}]*eci, sigma[{sigma_index}]) ".format(
-                        i=config_index + 1, sigma_index=sigma_index + 1
+                    "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}}]*eci, sigma[{sigma_index}]) ".format(
+                        start=start_stop[0] + 1,
+                        stop=start_stop[1] + 1,
+                        sigma_index=sigma_index + 1,
                     )
                     + ";\n"
                 )
