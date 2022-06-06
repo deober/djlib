@@ -695,12 +695,10 @@ def kpoint_convergence(
         os.system("cp %s %s" % (potcar_path, os.path.join(calc_dir, "POTCAR")))
         with open(os.path.join(calc_dir, "KPOINTS"), "w") as f:
             f.write(
-                """
-    KPOINTS created by vasputils
-    0
-    Auto
-    %d
-    """
+                """KPOINTS created by vasputils
+0
+Auto
+%d"""
                 % kpoint_density
             )
 
