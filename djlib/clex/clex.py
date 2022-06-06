@@ -13,11 +13,11 @@ import csv
 from glob import glob
 import pickle
 from string import Template
-from sklearn.model_selection import ShuffleSplit
 import arviz as ar
 import thermofitting.hull.lower_hull as thull
 import pathlib
 from warnings import warn
+from typing import List
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2):
@@ -82,11 +82,11 @@ def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
 
 
 def find_proposed_ground_states(
-    corr: numpy.ndarray,
-    comp: numpy.ndarray,
-    formation_energy: numpy.ndarray,
-    eci_set: numpy.ndarray,
-) -> numpy.ndarray:
+    corr: np.ndarray,
+    comp: np.ndarray,
+    formation_energy: np.ndarray,
+    eci_set: np.ndarray,
+) -> np.ndarray:
     """Collects indices of configurations that fall 'below the cluster expansion prediction of DFT-determined hull configurations'.
 
     Parameters
@@ -480,117 +480,6 @@ def stan_model_formatter(
     )
 
 
-# format_stan_model is deprecated. Use stan_model_formatter instead.
-def format_stan_model(
-    eci_variance_args,
-    likelihood_variance_args,
-    eci_prior="normal",
-    eci_variance_prior="gamma",
-    likelihood_variance_prior="gamma",
-    fixed_variance=False,
-) -> str:
-    """
-    Parameters
-    ----------
-    eci_variance_args: tuple
-        if fixed_variance is True, this should be a single float for eci variance. eg. eci_variance_args = 0.0016
-        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
-    likelihood_variance_args: tuple
-        if fixed_variance is True, this should be a single float for the model variance. eg. likelihood_variance_args = 0.005
-        if fixed_variance is False, give arguments for the distribution as a tuple. eg. eci_variance_args = (1,1)
-    eci_prior: string
-        Distribution type for ECI priors
-    eci_variance_prior: string
-        Distribution type for ECI variance prior
-    likelihood_variance_prior: string
-        Distribution type for model variance prior
-    fixed_variance: Bool
-        If True, model and ECI variance are fixed values. If false, they follow a distribution governed by hyperparameters.
-        This choice will affect the eci and likelihood variance arg inputs; please read documentation for both.
-
-    Returns
-    -------
-    model_template : str
-        Formatted stan model template
-    """
-    warn(
-        'This functinon "format_stan_model() is deprecated. Use "stan_model_formatter()" instead.',
-        DeprecationWarning,
-    )
-
-    # Old args:
-    # TODO: Add filter on string arguments
-
-    supported_eci_priors = ["normal"]
-    supported_eci_variance_priors = ["gamma"]
-    supported_model_variance_priors = ["gamma"]
-
-    assert eci_prior in supported_eci_priors, "Specified ECI prior is not suported."
-    assert (
-        eci_variance_prior in supported_eci_variance_priors
-    ), "Specified ECI variance prior is not supported."
-
-    assert (
-        likelihood_variance_prior in supported_model_variance_priors
-    ), "Specified model variance prior is not supported."
-    # TODO: make this a single string that can be modified to allow any combination of fixed / non-fixed ECI and model variance priors.
-
-    if fixed_variance:
-        # If model and ECI variance are fixed to scalar values
-        formatted_sigma = str(likelihood_variance_args)
-        formatted_eci_variance = str(eci_variance_args)
-
-        ce_model = Template(
-            """data {
-        int K; 
-        int n_configs;
-        matrix[n_configs, K] corr;
-        vector[n_configs] energies;
-    }
-parameters {
-        vector[K] eci;
-    }
-model 
-    {
-        real sigma = $formatted_sigma;
-        for (k in 1:K){
-            eci[k] ~ normal(0,$formatted_eci_variance);
-        }
-        energies ~ normal(corr * eci, sigma);
-    }"""
-        )
-    else:
-        # If model and ECI variance are not fixed (follows a distribution)
-        formatted_sigma = str(likelihood_variance_args)
-        formatted_eci_variance = eci_variance_prior + str(eci_variance_args)
-        ce_model = Template(
-            """data {
-        int K; 
-        int n_configs;
-        matrix[n_configs, K] corr;
-        vector[n_configs] energies;
-    }
-parameters {
-        vector[K] eci;
-        vector<lower=0>[K] eci_variance;
-    }
-model 
-    {
-        real sigma = $formatted_sigma;
-        for (k in 1:K){
-            eci_variance[k] ~ $formatted_eci_variance ;
-            eci[k] ~ normal(0,eci_variance[k]);
-        }
-        energies ~ normal(corr * eci, sigma);
-    }"""
-        )
-    model_template = ce_model.substitute(
-        formatted_sigma=formatted_sigma, formatted_eci_variance=formatted_eci_variance,
-    )
-    # model_template = ce_model.substitute(formatted_eci_variance=formatted_eci_variance)
-    return model_template
-
-
 def format_stan_executable_script(
     data_file: str,
     stan_model_file: str,
@@ -666,149 +555,6 @@ print("Run time is: ", end_time - start_time, " seconds")
         energy_tag=energy_tag,
     )
     return executable_file
-
-
-def cross_validate_stan_model(
-    data_file: str,
-    num_samples: int,
-    eci_variance_args,
-    likelihood_variance_args,
-    cross_val_directory: str,
-    random_seed=5,
-    eci_prior="normal",
-    eci_variance_prior="gamma",
-    likelihood_variance_prior="gamma",
-    stan_model_file="stan_model.txt",
-    eci_output_file="results.pkl",
-    energy_tag="formation_energy",
-    num_chains=4,
-    kfold=5,
-    submit_with_slurm=True,
-    fixed_variance=False,
-):
-    """Perform kfold cross validation on a specific stan model. Wraps around format_stan_model() and format_stan_executable_script().
-
-    Parameters:
-    -----------
-    data_file: string
-        Path to casm query output containing correlations, compositions and formation energies
-    num_samples: int
-        Number of samples in the stan monte carlo process
-    eci_variance_args: tuple
-        arguments for gamma distribution as a tuple. eg. eci_variance_args = (1,1)
-    cross_val_directory: str
-        Path to directory where the kfold cross validation runs will write data.
-    random_seed: int
-        Random number seed for randomized kfold data splitting. Providing the same seed will result in identical training / testing data partitions.
-    eci_prior: string
-        Distribution type for ECI priors
-    eci_variance_prior: string
-        Distribution type for ECI variance prior
-    stan_model_file: string
-        Path to text file containing stan model specifics
-    eci_output_file: string
-        Path to file where Stan will write the sampled ECI
-    energy_tag: string
-        Tag for the energy column in the casm query output (Can be formation_energy, energy, energy_per_atom, formation_energy_per_atom, etc.)
-    num_chains: int
-        Number of simultaneous markov chains
-    kfold: int
-        Number of "bins" to split training data into.
-    submit_with_slurm: bool
-        Decides if the function will submit with slurm. Defaults to true.
-
-    Returns:
-    --------
-    None
-    """
-    # create directory for kfold cross validation
-    os.makedirs(cross_val_directory, exist_ok=True)
-
-    # load data
-    with open(data_file) as f:
-        data = np.array(json.load(f))
-
-    # setup kfold batches, format for stan input
-    data_length = data.shape[0]
-    ss = ShuffleSplit(n_splits=kfold, random_state=random_seed)
-    indices = range(data_length)
-
-    count = 0
-    for train_index, test_index in ss.split(indices):
-
-        # make run directory for this iteration of the kfold cross validation
-        this_run_path = os.path.join(cross_val_directory, "crossval_" + str(count))
-        os.makedirs(this_run_path, exist_ok=True)
-
-        # slice data; write training and testing data in separate files.
-        training_data = data[train_index].tolist()
-        testing_data = data[test_index].tolist()
-        training_data_path = os.path.join(this_run_path, "training_data.json")
-        with open(training_data_path, "w") as f:
-            json.dump(training_data, f)
-        with open(os.path.join(this_run_path, "testing_data.json"), "w") as f:
-            json.dump(testing_data, f)
-
-        # Also write training/ testing indices for easier post processing.
-        run_info = {
-            "training_set": train_index.tolist(),
-            "test_set": test_index.tolist(),
-            "eci_variance_args": eci_variance_args,
-            "likelihood_variance_args": likelihood_variance_args,
-            "data_source": data_file,
-            "random_seed": random_seed,
-        }
-        with open(os.path.join(this_run_path, "run_info.json"), "w") as f:
-            json.dump(run_info, f)
-
-        # Write model info
-
-        # format and write stan model
-        formatted_stan_model = format_stan_model(
-            eci_variance_args=eci_variance_args,
-            eci_prior=eci_prior,
-            eci_variance_prior=eci_variance_prior,
-            likelihood_variance_args=likelihood_variance_args,
-            fixed_variance=fixed_variance,
-        )
-        with open(os.path.join(this_run_path, stan_model_file), "w") as f:
-            f.write(formatted_stan_model)
-
-        # format and write stan executable python script
-        formatted_stan_script = format_stan_executable_script(
-            data_file=training_data_path,
-            stan_model_file=stan_model_file,
-            eci_output_file=eci_output_file,
-            num_samples=num_samples,
-            energy_tag=energy_tag,
-            num_chains=4,
-        )
-
-        with open(os.path.join(this_run_path, "run_stan.py"), "w") as f:
-            f.write(formatted_stan_script)
-
-        # format and write slurm submission file
-        user_command = "python run_stan.py"
-
-        likelihood_variance_name = str(likelihood_variance_args)
-        if type(eci_variance_args) == type(tuple([1])):
-            eci_name = eci_variance_args[1]
-        else:
-            eci_name = str(eci_variance_args)
-        dj.format_slurm_job(
-            jobname="eci_var_"
-            + str(eci_name)
-            + "likelihood_"
-            + likelihood_variance_name
-            + "_crossval_"
-            + str(count),
-            hours=20,
-            user_command=user_command,
-            output_dir=this_run_path,
-        )
-        if submit_with_slurm:
-            dj.submit_slurm_job(this_run_path)
-        count += 1
 
 
 def bayes_train_test_analysis(run_dir: str) -> dict:
