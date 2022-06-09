@@ -49,7 +49,7 @@ def checkhull(
     test_comp: np.ndarray,
     test_energy: np.ndarray,
 ):
-    """Find if specified coordinates are above, on or below the specified lower convex hull.
+    """Calculates hull distance for each configuration
     Parameters
     ----------
         hull_comps : numpy.ndarray shape(number_configurations, number_composition_axes)
@@ -824,6 +824,7 @@ def general_binary_convex_hull_plotter(
 
     fig = plt.gcf()
     fig.set_size_inches(19, 14)
+    return fig
 
 
 def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
