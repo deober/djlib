@@ -9,8 +9,7 @@ PREC = Accurate
 ISPIN = {spin}
 LREAL = AUTO
 IBRION = -1
-EDIFFG = 0.02
-LORBIT = None #11 = writes decomposed DOSCAR
+EDIFFG = 0.01
 LWAVE = .TRUE.
 LCHARG = .TRUE.
 NCORE = 1
