@@ -390,8 +390,19 @@ def setup_dos_calculation(
     calc_dir = os.path.join(training_dir, config_name, calctype)
     print("Making static_charge_calc directory in %s" % calc_dir)
     os.makedirs(os.path.join(calc_dir, "static_charge_calc"), exist_ok=True)
-    templates_path = os.path.join(vasputils_lib_dir, "../../templates")
+    templates_path = os.path.join(vasputils_lib_dir, "../templates")
     # format INCAR
+    os.system(
+        "cp %s %s"
+        % (
+            os.path.join(calc_dir, "run.final/INCAR"),
+            os.path.join(calc_dir, "static_charge_calc", "INCAR"),
+        )
+    )
+    os.system("sed -i \"s/ICHARG.*/ICHARG = 2/g\" %s" %(os.path.join(calc_dir,"static_charge_calc","INCAR")))
+    os.system("sed -i \"s/LCHARG.*/LCHARG = .TRUE./g\" %s" %(os.path.join(calc_dir,"static_charge_calc","INCAR")))
+
+    '''
     with open(os.path.join(templates_path, "INCAR_static_charge.template")) as f:
         template = f.read()
 
@@ -408,7 +419,7 @@ def setup_dos_calculation(
 
     with open(os.path.join(calc_dir, "static_charge_calc", "INCAR"), "w") as f:
         f.write(s)
-
+    '''
     # format KPOINTS
     os.system(
         "cp %s %s"
