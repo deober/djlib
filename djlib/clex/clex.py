@@ -352,17 +352,17 @@ def stan_model_formatter(
     Parameters:
     -----------
     eci_variance_is_fixed: bool
-        If True, the function will not create any eci variance variables. 
-        If False, the function will create eci variance variables. 
+        If True, the function will not create any eci variance variables.
+        If False, the function will create eci variance variables.
     model_variance_is_fixed: bool
         If True, the function will not create any model variance variables.
         If False, the function will create model variance variables.
     eci_parameters: list
-        A list of ECI parameters; each element is a string. 
+        A list of ECI parameters; each element is a string.
     model_parameters: list
         A list of model parameters; each element is a string.
     start_stop_indices: list
-        list start and stop indices to divide configurations into groups with different model variances. 
+        list start and stop indices to divide configurations into groups with different model variances.
         Each element is a list of two integers.
 
     Returns:
@@ -377,11 +377,11 @@ def stan_model_formatter(
         If eci_variance_is_fixed == True, each element should describe the prior distribution for ECI. If only one element is provided, it will be used as the prior for all ECI.
         If eci_variance_is_fixed == False, each element should describe the hyperdistribution for the ECI variance.
         If only one element is provided, it will be used as the prior for all ECI.
-        Otherwise, there should be one element for each ECI. 
+        Otherwise, there should be one element for each ECI.
         example: eci_variance_is_fixed==True: ['~ normal(0, #)']
         example: eci_variance_is_fixed==False: ['~ gamma(1, #)']
     model_parameters:
-        If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance. 
+        If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance.
         If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
         If only one element is provided, it will be used as the prior for all model variances.
         If more than one element is provided, the user must specify a sigma_indices list to match each configuration to a model variance.
@@ -828,24 +828,24 @@ def general_binary_convex_hull_plotter(
 
 def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
     """Counts the number of stan parameters with rha values greater than the provided rhat_tolerance.
-    
+
     Parameters:
     -----------
     posterior_fit_object: stan.fit.Fit
-        Posterior fit object from stan. 
+        Posterior fit object from stan.
     rhat_tolerance: float
         Value to compare rhat metrics against. Default is 1.05
-    
 
-     
-    
-    Returns: 
+
+
+
+    Returns:
     --------
     rhat_summary: dict{
         total_count: int
-            total number of parameters above rhat_tolerance. 
+            total number of parameters above rhat_tolerance.
         *_count: int
-            Number of parameters in parameter vector * which are above the rhat tolerance. * is representative of a posterior parameter vector. 
+            Number of parameters in parameter vector * which are above the rhat tolerance. * is representative of a posterior parameter vector.
     }
 
     Notes:
@@ -867,7 +867,7 @@ def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
 def simplex_corner_weights(
     interior_point: np.ndarray, corner_points: np.ndarray
 ) -> np.ndarray:
-    """Calculates the linear combination of simplex corners required to produce a point within the simplex. 
+    """Calculates the linear combination of simplex corners required to produce a point within the simplex.
 
     Parameters:
     -----------
@@ -879,8 +879,8 @@ def simplex_corner_weights(
     Returns:
     --------
     weights: numpy.ndarray
-        Vector of weights for each corner point. Matrix multiplying wieghts @ corner_corr_matrix will give the linear combination of simplex correlation vectors which, 
-        when multiplied with ECI, gives the hull distance of the correlation represented by interior_point. 
+        Vector of weights for each corner point. Matrix multiplying wieghts @ corner_corr_matrix will give the linear combination of simplex correlation vectors which,
+        when multiplied with ECI, gives the hull distance of the correlation represented by interior_point.
     """
     # Add a 1 to the end of interior_point and a column of ones to simplex_corners to enforce that the sum of weights is 1.
     interior_point = np.array(interior_point).reshape(1, -1)
@@ -895,13 +895,13 @@ def simplex_corner_weights(
 def calculate_hulldist_corr(
     corr: np.ndarray, comp: np.ndarray, formation_energy: np.ndarray
 ) -> np.ndarray:
-    """Calculated the effective correlations to predict hull distance instead of absolute formation energy. 
+    """Calculated the effective correlations to predict hull distance instead of absolute formation energy.
     Parameters:
     -----------
     corr: np.array
-        nxk correlation matrix, where n is the number of configurations and k is the number of ECI. 
+        nxk correlation matrix, where n is the number of configurations and k is the number of ECI.
     comp: np.array
-        nxc matrix of compositions, where n is the number of configurations and c is the number of composition axes. 
+        nxc matrix of compositions, where n is the number of configurations and c is the number of composition axes.
     formation_energy: np.array
         nx1 matrix of formation energies.
 
@@ -951,4 +951,3 @@ def calculate_hulldist_corr(
         )
 
     return hulldist_corr
-

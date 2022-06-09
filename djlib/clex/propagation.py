@@ -4,15 +4,16 @@ import djlib.clex.clex as cl
 
 
 def collect_ground_state_indices(
-    comp: np.ndarray, predicted_energies: np.ndarray,
+    comp: np.ndarray,
+    predicted_energies: np.ndarray,
 ) -> list:
-    """Stores ground state indices for each set of ECI. 
+    """Stores ground state indices for each set of ECI.
     Parameters:
     -----------
     comp: np.ndarray
         nxm Composition matrix from casm query: n = number of configurations, m = number of composition axes
     predicted_energies: np.ndarray
-        sxn matrix of n predicted energies for each of s sets of ECI. 
+        sxn matrix of n predicted energies for each of s sets of ECI.
     Returns:
     --------
     ground_state_indices: list
@@ -25,4 +26,3 @@ def collect_ground_state_indices(
         hull_simplices, hull_vertices = cl.lower_hull(hull)
         ground_state_indices.append(hull_vertices)
     return ground_state_indices
-

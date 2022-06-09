@@ -356,7 +356,7 @@ def setup_dos_calculation(
     config_name,
     training_dir,
     hours,
-    calctype='calctype.default',
+    calctype="calctype.default",
     spin=1,
     nedos=501,
     slurm=True,
@@ -399,10 +399,16 @@ def setup_dos_calculation(
             os.path.join(calc_dir, "static_charge_calc", "INCAR"),
         )
     )
-    os.system("sed -i \"s/ICHARG.*/ICHARG = 2/g\" %s" %(os.path.join(calc_dir,"static_charge_calc","INCAR")))
-    os.system("sed -i \"s/LCHARG.*/LCHARG = .TRUE./g\" %s" %(os.path.join(calc_dir,"static_charge_calc","INCAR")))
+    os.system(
+        'sed -i "s/ICHARG.*/ICHARG = 2/g" %s'
+        % (os.path.join(calc_dir, "static_charge_calc", "INCAR"))
+    )
+    os.system(
+        'sed -i "s/LCHARG.*/LCHARG = .TRUE./g" %s'
+        % (os.path.join(calc_dir, "static_charge_calc", "INCAR"))
+    )
 
-    '''
+    """
     with open(os.path.join(templates_path, "INCAR_static_charge.template")) as f:
         template = f.read()
 
@@ -419,7 +425,7 @@ def setup_dos_calculation(
 
     with open(os.path.join(calc_dir, "static_charge_calc", "INCAR"), "w") as f:
         f.write(s)
-    '''
+    """
     # format KPOINTS
     os.system(
         "cp %s %s"
@@ -476,7 +482,8 @@ def setup_dos_calculation(
     mpirun vasp >& vasp.out
 
     """ % (
-        os.path.join(calc_dir, "static_charge_calc"),nedos
+        os.path.join(calc_dir, "static_charge_calc"),
+        nedos,
     )
 
     # format submit script
@@ -717,4 +724,3 @@ Auto
 %d"""
                 % kpoint_density
             )
-
