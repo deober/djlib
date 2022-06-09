@@ -356,7 +356,9 @@ def setup_dos_calculation(
     config_name,
     training_dir,
     hours,
+    calctype='calctype.default'
     spin=1,
+    nedos=501,
     slurm=True,
     run_jobs=False,
     delete_submit_script=False,
@@ -370,6 +372,8 @@ def setup_dos_calculation(
         Name of the configuration to run the DOS calculation on.
     training_dir: str
         Path to the training directory (contains the configuration[s])
+    calctype: str
+        calctype (ex. calctype.SCAN). Default: 'calctype.default'
     slurm: bool
         Whether to submit the job with slurm.
     run_jobs: bool
@@ -383,7 +387,7 @@ def setup_dos_calculation(
 
     print("Setting up DOS calculation for %s" % config_name)
 
-    calc_dir = os.path.join(training_dir, config_name, "calctype.default")
+    calc_dir = os.path.join(training_dir, config_name, calctype)
     print("Making static_charge_calc directory in %s" % calc_dir)
     os.makedirs(os.path.join(calc_dir, "static_charge_calc"), exist_ok=True)
     templates_path = os.path.join(vasputils_lib_dir, "../../templates")
@@ -456,11 +460,12 @@ def setup_dos_calculation(
 
     sed -i \"s/LORBIT.*/LORBIT = 11/g\" INCAR
     sed -i \"s/ICHARG.*/ICHARG = 11/g\" INCAR
+    echo "NEDOS = %s" >> INCAR
 
     mpirun vasp >& vasp.out
 
     """ % (
-        os.path.join(calc_dir, "static_charge_calc")
+        os.path.join(calc_dir, "static_charge_calc"),nedos
     )
 
     # format submit script
