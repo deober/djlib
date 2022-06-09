@@ -356,7 +356,7 @@ def setup_dos_calculation(
     config_name,
     training_dir,
     hours,
-    calctype='calctype.default'
+    calctype='calctype.default',
     spin=1,
     nedos=501,
     slurm=True,
