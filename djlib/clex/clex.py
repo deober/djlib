@@ -447,8 +447,8 @@ def stan_model_formatter(
             for sigma_index, start_stop in enumerate(start_stop_indices):
                 model_string += (
                     "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}]*eci, {sigma}) ".format(
-                        start=start_stop[0] + 1,
-                        stop=start_stop[1] + 1,
+                        start=start_stop[0],
+                        stop=start_stop[1],
                         sigma=model_parameters[sigma_index],
                     )
                     + ";\n"
@@ -463,8 +463,8 @@ def stan_model_formatter(
             for sigma_index, start_stop in enumerate(start_stop_indices):
                 model_string += (
                     "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}}]*eci, sigma[{sigma_index}]) ".format(
-                        start=start_stop[0] + 1,
-                        stop=start_stop[1] + 1,
+                        start=start_stop[0],
+                        stop=start_stop[1],
                         sigma_index=sigma_index + 1,
                     )
                     + ";\n"
