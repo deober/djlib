@@ -168,26 +168,29 @@ def main():
     #plot_dos_by_element('/home/jonnyli/Desktop/CASM/experiments/TiNO_full/near_hull/FCC/SCEL3_3_1_1_0_2_1/10/calctype.SCAN/dos_1/PDOS_N.dat',config_name='SCEL3_3_1_1_0_2_1/10-N')
 
     # Plot the PDOS from the VASPkit output
-    root_loc = '/home/jonnyli/Desktop/CASM/experiments/TiNO_full/ground_states/FCC/SCEL4_2_2_1_1_1_0/68/calctype.SCAN/dos_1/'
-    emin = -3
-    emax = 2.2
-    config_names = ['N','O1','O2','O3','Ti1','Ti2','Ti3']
+    #root_loc = '/home/jonnyli/Desktop/CASM/experiments/TiNO_full/ground_states/FCC/SCEL4_2_2_1_1_1_0/68/calctype.SCAN/dos_1/'
+    root_loc = '/home/jonnyli/Desktop/CASM/experiments/TiNO_full/near_hull/FCC/SCEL3_3_1_1_0_2_1/10/calctype.SCAN/dos_1/'
+    emin = -2
+    emax = 2.5
+    config_names = ['N','O1','O2','Ti1','Ti2']
     fig = plt.figure()
     subfigs = fig.subfigures(nrows=1,ncols=2,wspace=0.1,hspace=0.30)
-    TiAxs=subfigs[0].subplots(3,1,sharex=True)
-    NOAxs=subfigs[1].subplots(4,1,sharex=True)
+    TiAxs=subfigs[0].subplots(2,1,sharex=True)
+    NOAxs=subfigs[1].subplots(3,1,sharex=True)
     subfigs[0].suptitle('Ti')
     subfigs[1].suptitle('N & O')
     #plot Ti PDOS's
     for i,ax in enumerate(TiAxs):
-        fname = root_loc+'PDOS_A%s'%(i+5)+'.dat'
-        config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_names[i+4]
+        fname = root_loc+'PDOS_A%s'%(i+4)+'.dat' #+5 for Ti3NO3 + 4 for Ti2NO2
+        #config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_names[i+4]
+        config_name = 'SCEL3_3_1_1_0_2_1-10-'+config_names[i+3]
         print(fname,config_name)
         add_pdos_data_to_axes(ax,fname,config_name=config_name,emin=emin,emax=emax,hide_labels=False)
     #plot NO PDOS's
     for i,ax in enumerate(NOAxs):
         fname = root_loc+'PDOS_A%s'%(i+1)+'.dat'
-        config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_names[i]
+        #config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_names[i]
+        config_name = 'SCEL3_3_1_1_0_2_1-10-'+config_names[i]
         print(fname,config_name)
         add_pdos_data_to_axes(ax,fname,config_name=config_name,emin=emin,emax=emax,hide_labels=False)
     plt.show()
