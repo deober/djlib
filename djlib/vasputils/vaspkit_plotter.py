@@ -134,7 +134,8 @@ def add_pdos_data_to_axes(ax,dos_by_element_file:str,emin=None,emax=None,title='
     print(energy.shape)
     dos_stack = np.vstack([data[imin:imax,i] for i in range(1,len(header)-energy_col) if header[i] != 'tot'])
     print(dos_stack.shape)
-    pdos_plt = ax.stackplot(energy,dos_stack,labels=element_list)
+    #pdos_plt = ax.stackplot(energy,dos_stack,labels=element_list)
+    pdos_plt = ax.plot(energy,dos_stack,labels=element_list)
     ax.legend(loc='best',fontsize='small')
     if not hide_labels:
         ax.set_xlabel('Energy (eV)')
@@ -169,8 +170,8 @@ def main():
 
     # Plot the PDOS from the VASPkit output
     root_loc = '/home/jonnyli/Desktop/CASM/experiments/TiNO_full/ground_states/FCC/SCEL4_2_2_1_1_1_0/68/calctype.SCAN/dos_1/'
-    emin = -9
-    emax = 2.5
+    emin = -25
+    emax = -10
     ### Plot and save individual orbital PDOSes ###
     '''
     dat_file_list = ['Ti1_dx2.dat','Ti1_dxy.dat','Ti1_dxz.dat','Ti1_dz2.dat','Ti1_dyz.dat','Ti1_pz.dat','Ti1_py.dat','Ti1_px.dat','Ti2_dx2.dat','Ti2_dxy.dat','Ti2_dxz.dat','Ti2_dz2.dat','Ti2_dyz.dat','Ti2_pz.dat','Ti2_py.dat','Ti2_px.dat','Ti3_dx2.dat','Ti3_dxy.dat','Ti3_dxz.dat','Ti3_dz2.dat','Ti3_dyz.dat','Ti3_pz.dat','Ti3_py.dat','Ti3_px.dat','O3_pz.dat','O3_py.dat','O3_px.dat','O2_pz.dat','O2_py.dat','O2_px.dat','O1_pz.dat','O1_py.dat','O1_px.dat','N_pz.dat','N_py.dat','N_px.dat',]
@@ -180,7 +181,7 @@ def main():
         plot_dos_by_element(os.path.join(root_loc,'PDOS_'+dat_file),emin=emin,emax=emax,title='SCEL4_2_2_1_1_1_0-68-'+dat_file,save_plot=True)
     '''
     dat_file = 'O1_pz.dat'
-    plot_dos_by_element(os.path.join(root_loc,'PDOS_'+dat_file),emin=emin,emax=emax,title='SCEL4_2_2_1_1_1_0-68-'+dat_file,save_plot=True)
+    #plot_dos_by_element(os.path.join(root_loc,'PDOS_'+dat_file),emin=emin,emax=emax,title='SCEL4_2_2_1_1_1_0-68-'+dat_file,save_plot=True)
     
     #config_names = ['N','O1','O2','O3','Ti1','Ti2','Ti3']
 
@@ -207,22 +208,107 @@ def main():
         add_pdos_data_to_axes(ax,fname,config_name=config_name,emin=emin,emax=emax,hide_labels=False)
     '''
     
-    #Compare 2
-    config_A='Ti1_dxy'
-    config_B='Ti2_dxy'
-    plots = fig.subplots(2,1,sharex=True)
+    #Compare N different PDOS's
+    config_1='Ti1_dz2'
+    config_2='Ti1_dx2'
+    config_3='Ti1_dxy'
+    config_4='Ti1_dyz'
+    config_5='Ti1_dxz'
+    config_6='Ti2_dz2'
+    config_7='Ti2_dx2'
+    config_8='Ti2_dxy'
+    config_9='Ti2_dyz'
+    config_10='Ti2_dxz'
+    config_11='Ti3_dz2'
+    config_12='Ti3_dx2'
+    config_13='Ti3_dxy'
+    config_14='Ti3_dyz'
+    config_15='Ti3_dxz'
+    #NxM grid
+    N=5
+    #make overall figure
+    plots = fig.subplots(N,1,sharex=True)
+    #fill in individual subplots
     for i,ax in enumerate(plots):
+        print(i,ax)
         if i==0:
-            fname = root_loc+'PDOS_'+config_A+'.dat'
-            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_A
+            fname = root_loc+'PDOS_'+config_1+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_1
             print(fname,config_name)
             add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
         if i==1:
-            fname = root_loc+'PDOS_'+config_B+'.dat'
-            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_B
+            fname = root_loc+'PDOS_'+config_2+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_2
             print(fname,config_name)
             add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
-
+        if i==2:
+            fname = root_loc+'PDOS_'+config_3+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_3
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==3:
+            fname = root_loc+'PDOS_'+config_4+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_4
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==4:
+            fname = root_loc+'PDOS_'+config_5+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_5
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,
+            emax=emax,hide_labels=False)
+        '''
+        if i==5:
+            fname = root_loc+'PDOS_'+config_6+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_6
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==6:
+            fname = root_loc+'PDOS_'+config_7+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_7
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==7:
+            fname = root_loc+'PDOS_'+config_8+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_8
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==8:
+            fname = root_loc+'PDOS_'+config_9+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_9
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==9:
+            fname = root_loc+'PDOS_'+config_10+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_10
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==10:
+            fname = root_loc+'PDOS_'+config_11+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_11
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==11:
+            fname = root_loc+'PDOS_'+config_12+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_12
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==12:
+            fname = root_loc+'PDOS_'+config_13+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_13
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==13:
+            fname = root_loc+'PDOS_'+config_14+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_14
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        if i==14:
+            fname = root_loc+'PDOS_'+config_15+'.dat'
+            config_name = 'SCEL4_2_2_1_1_1_0-68-'+config_15
+            print(fname,config_name)
+            add_pdos_data_to_axes(ax,fname,title=config_name,emin=emin,emax=emax,hide_labels=False)
+        '''
     plt.show()
 
 if __name__ == "__main__":
