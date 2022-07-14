@@ -286,6 +286,8 @@ def run_submitter(
 
     if output_exists == False and slurm_script_exists == True:
         submit_slurm_job(run_dir=run_directory)
+    elif output_exists == True:
+        print("Output file exists. Skipping submission.")
 
 
 def mode(vec: np.ndarray) -> float:
