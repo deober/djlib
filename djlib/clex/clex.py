@@ -384,9 +384,8 @@ def stan_model_formatter(
         If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance.
         If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
         If only one element is provided, it will be used as the prior for all model variances.
-        If more than one element is provided, the user must specify a sigma_indices list to match each configuration to a model variance.
-    sigma_indices:
-        Only used if more than one sigma is provided in the model_parameters list. Identifies which sigma to use for each configuration.
+        If more than one element is provided, the user must specify start-stop indices, denoting the range of energies to use for each model variance parameter.
+
 
     """
 
@@ -821,6 +820,8 @@ def general_binary_convex_hull_plotter(
     plt.xlabel("Composition X", fontsize=21)
     plt.ylabel("Formation Energy (eV)", fontsize=21)
     plt.legend(fontsize=21)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
 
     fig = plt.gcf()
     fig.set_size_inches(19, 14)
