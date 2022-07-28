@@ -324,6 +324,7 @@ def run_cooling_from_const_temperature(
     temp_final=20,
     temperature_increment=-5,
     job_scheduler="slurm",
+    submit_job=False,
 ):
 
     # read mu values, temperature information from the existing settings file
@@ -374,8 +375,9 @@ def run_cooling_from_const_temperature(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                dj.submit_slurm_job(current_dir)
-            elif job_scheduler == "braid":
+                if submit_job:
+                    dj.submit_slurm_job(current_dir)
+            elif job_scheduler == "pbs":
                 user_command = "casm monte -s mc_settings.json > mc_results.out"
                 format_pbs_job(
                     jobname=run_name,
@@ -384,9 +386,8 @@ def run_cooling_from_const_temperature(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_pbs_job(current_dir)
-            elif job_scheduler == "pod":
-                print("In the works")
+                if submit_job:
+                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
