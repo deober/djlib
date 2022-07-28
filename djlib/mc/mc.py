@@ -342,7 +342,7 @@ def run_cooling_from_const_temperature(
         current_dir = os.path.join(mc_cooling_dir, run_name)
         if os.path.isfile(os.path.join(current_dir, "results.json")) == False:
 
-            os.makedirs(current_dir)
+            os.makedirs(current_dir, exist_ok=True)
             os.chdir(current_dir)
 
             # get const_t_mu index that matches mu
@@ -412,7 +412,7 @@ def run_heating(
         current_dir = os.path.join(mc_heating_dir, run_name)
 
         if os.path.isfile(os.path.join(current_dir, "results.json")) == False:
-            os.makedirs(current_dir)
+            os.makedirs(current_dir, exist_ok=True)
             os.chdir(current_dir)
 
             # Format settings file for this heating run
