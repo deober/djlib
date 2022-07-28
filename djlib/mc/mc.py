@@ -402,6 +402,7 @@ def run_heating(
     temp_final=2000,
     temp_increment=5,
     scheduler="slurm",
+    submit_job=False,
 ):
 
     for mu_value in mu_values:
@@ -437,7 +438,8 @@ def run_heating(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                dj.submit_slurm_job(current_dir)
+                if submit_job:
+                    dj.submit_slurm_job(current_dir)
             elif scheduler == "pbs":
                 format_pbs_job(
                     jobname=run_name,
@@ -446,7 +448,8 @@ def run_heating(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_pbs_job(current_dir)
+                if submit_job:
+                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
