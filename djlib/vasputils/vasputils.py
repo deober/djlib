@@ -324,7 +324,7 @@ def collect_final_contcars(config_list_json_path, casm_root_path, deposit_direct
             print("could not find %s " % contcar_path)
 
 
-def reset_calc_staus(unknowns_file, casm_root):
+def reset_calc_stauts(unknowns_file, casm_root):
     """For runs that failed and must be re-submitted; resets status to 'not_submitted'
 
     Parameters:
