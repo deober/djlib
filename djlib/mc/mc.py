@@ -53,7 +53,8 @@ def read_mc_results_file(results_file_path):
     b = np.array(results["Beta"])
     temperature = np.array(results["T"])
     potential_energy = np.array(results["<potential_energy>"])
-    return (mu, x, b, temperature, potential_energy)
+    formation_energy = np.array(results["<formation_energy>"])
+    return (mu, x, b, temperature, potential_energy, formation_energy)
 
 
 def read_lte_results(results_file_path):
@@ -162,9 +163,14 @@ class constant_t_run:
     def __init__(self, const_t_dir):
         self.path = const_t_dir
         results_file_path = os.path.join(self.path, "results.json")
-        self.mu, self.x, self.b, self.t, self.pot_eng = read_mc_results_file(
-            results_file_path
-        )
+        (
+            self.mu,
+            self.x,
+            self.b,
+            self.t,
+            self.pot_eng,
+            self.formation_energy,
+        ) = read_mc_results_file(results_file_path)
         self.integrate_constant_temp_grand_canonical()
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
@@ -203,9 +209,14 @@ class heating_run:
     def __init__(self, heating_dir, lte_run):
         self.path = heating_dir
         results_file_path = os.path.join(self.path, "results.json")
-        self.mu, self.x, self.b, self.t, self.pot_eng = read_mc_results_file(
-            results_file_path
-        )
+        (
+            self.mu,
+            self.x,
+            self.b,
+            self.t,
+            self.pot_eng,
+            self.formation_energy,
+        ) = read_mc_results_file(results_file_path)
         self.get_lte_reference_energy(lte_run)
         self.integrate_heating_grand_canonical_from_lte()
         self.superdupercell = read_superdupercell(
@@ -492,6 +503,65 @@ def plot_heating_and_cooling(heating_run, cooling_run):
 # TODO: Function to check that a free energy crossing
 
 
+def predict_mu_vs_free_energy_crossing(
+    const_t_run_1: constant_t_run, const_t_run_2: constant_t_run
+) -> Tuple:
+    """Function to predict the free energy crossing chemical potential and compositions between two mu vs grand canonical plots
+
+
+    """
+    # Assert that the chemical potentials are the same
+    assert np.allclose(
+        np.sort(const_t_run_1.mu), np.sort(const_t_run_2.mu)
+    ), "Chemical potentials do not match"
+
+    # Ensure that all data is sorted by chemical potential
+    mu_1 = const_t_run_1.mu[np.argsort(const_t_run_1.mu)]
+    gc_free_energy_1 = const_t_run_1.integ_grand_canonical[np.argsort(const_t_run_1.mu)]
+    x_1 = const_t_run_1.x[np.argsort(const_t_run_1.mu)]
+
+    mu_2 = const_t_run_2.mu[np.argsort(const_t_run_2.mu)]
+    gc_free_energy_2 = const_t_run_2.integ_grand_canonical[np.argsort(const_t_run_2.mu)]
+    x_2 = const_t_run_2.x[np.argsort(const_t_run_2.mu)]
+
+    # Fit a spline to the chemical potential vs grand canonical free energy data
+    # Spline requires that domain (chemical potential) is strictly increasing
+    interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
+        mu_1, gc_free_energy_1
+    )
+    interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
+        mu_2, gc_free_energy_2
+    )
+
+    # Define a difference function to be used in the root finding algorithm
+    def difference(m):
+        return np.abs(interp_run_1(m) - interp_run_2(m))
+
+    # Find an initial guess for the root finding algorithm
+    m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
+    m0_guess = mu_1[m0_index]
+
+    # find the root of the difference function (chemical potential at crossing)
+    mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
+    energy_intersect_predict = interp_run_1(mu_intersect_predict)
+
+    # Find the calculated chemical potential that is closest to the predicted chemical potential
+    mu_intersect_index_1 = np.argmin(abs(mu_intersect_predict - const_t_run_1.mu))
+    mu_intersect_index_2 = np.argmin(abs(mu_intersect_predict - const_t_run_2.mu))
+
+    # Find the crossing composition at a point mu, x that is actually calculated
+    difference = np.abs(-mu_intersect_predict)
+
+    run_1_comp_intersect = const_t_run_1.x[mu_intersect_index_1]
+    run_2_comp_intersect = const_t_run_2.x[mu_intersect_index_2]
+    return (
+        mu_intersect_predict,
+        energy_intersect_predict,
+        run_1_comp_intersect,
+        run_2_comp_intersect,
+    )
+
+
 def predict_free_energy_crossing(heating_run, cooling_run):
     """Function to find crossing point between two (energy vs T) curves.
     Args:
@@ -656,7 +726,7 @@ def simulation_is_complete(mc_run_dir):
     return simulation_status
 
 
-def plot_t_vs_x_rainplot(mc_runs_directory, save_image=False, show_labels=False):
+def plot_t_vs_x_rainplot(mc_runs_directory, show_labels=False):
     """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
 
     Generate a single (T vs composition) plot using all monte carlo runs in mc_runs_directory.
@@ -686,17 +756,8 @@ def plot_t_vs_x_rainplot(mc_runs_directory, save_image=False, show_labels=False)
         plt.legend(labels)
     plt.xlabel("Composition", fontsize=18)
     plt.ylabel("Temperature (K)", fontsize=18)
-    title = (
-        "Chemical Potential and Temperature Sweep Rain Plot: %s"
-        % mc_runs_directory.split("/")[-1]
-    )
-    plt.title("Chemical Potential and Temperature Sweep Rain Plot", fontsize=30)
     fig = plt.gcf()
     fig.set_size_inches(18.5, 10)
-    if save_image:
-        fig.savefig(os.path.join(mc_runs_directory, title + ".png"), dpi=100)
-        print("Saving image to file: ", end="")
-        print(os.path.join(mc_runs_directory, title + ".png"))
     return fig
 
 
