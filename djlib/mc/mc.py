@@ -10,6 +10,8 @@ from glob import glob
 import pathlib
 import math as m
 import djlib.djlib as dj
+from typing import List, Tuple
+
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
@@ -505,9 +507,27 @@ def plot_heating_and_cooling(heating_run, cooling_run):
 
 def predict_mu_vs_free_energy_crossing(
     const_t_run_1: constant_t_run, const_t_run_2: constant_t_run
-) -> Tuple:
+) -> Tuple[float, float, float, float]:
     """Function to predict the free energy crossing chemical potential and compositions between two mu vs grand canonical plots
 
+    Parameters:
+    -----------
+    const_t_run_1: constant_t_run
+        A djlib constant_t_run object, containing the data for a constant temperature run
+    const_t_run_2: constant_t_run
+        A djlib constant_t_run object, containing the data for a constant temperature run
+
+    Returns:
+    --------
+    mu_intersect_predict: float
+        Predicted chemical potential at the crossing point in (chemical_potential vs grand canonical free energy) space
+    energy_intersect_predict: float
+        predicted grand canonical free energy at the crossing point in (chemical_potential vs grand canonical free energy) space
+    run_1_comp_intersect: float
+        composition for the first constant temperature run that is closest to the corresponding chemical potential at the crossing point
+    run_2_comp_intersect: float
+        composition for the second constant temperature run that is closest to the corresponding chemical potential at the crossing point
+    
 
     """
     # Assert that the chemical potentials are the same
