@@ -16,7 +16,7 @@ from typing import List, Tuple
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
 
-def find(lst, a):
+def find(lst: List, a: float):
     """Finds the index of an element that matches a specified value.
     Args:
         a(float): The value to search for
@@ -37,15 +37,21 @@ def find(lst, a):
         )
 
 
-def read_mc_results_file(results_file_path):
+def read_mc_results_file(
+    results_file_path: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Function to parse mc results.json files.
     Args;
         results_file_path(str): Path to the results.json file for the given monte carlo simulation.
     Returns:
-        x(ndarray): Vector of compostitions
-        b(ndarray): Vector of beta values
-        temperature(ndarray): Vecor of temperature values (K)
-        potential_energy(ndarray): Vector of potential energy values (E-mu*x)
+        x: np.ndarray
+            Vector of compostitions
+        b: np.ndarray 
+            Vector of beta values
+        temperature: np.ndarray 
+            Vecor of temperature values (K)
+        potential_energy: np.ndarray: 
+            Vector of potential energy values (E-mu*x)
     """
     with open(results_file_path) as f:
         results = json.load(f)
@@ -59,20 +65,29 @@ def read_mc_results_file(results_file_path):
     return (mu, x, b, temperature, potential_energy, formation_energy)
 
 
-def read_lte_results(results_file_path):
+def read_lte_results(
+    results_file_path: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Takes a lte results.json file and returns outputs from the simulation.
 
-    Args:
-        results_file_path(str): Path to the results.json file.
+    Parameters:
+    -----------
+    results_file_path: str
+        Path to lte results.json file.
+
     Returns:
-        tuple(
-            mu(ndarray): Vector of chemical potentials (species "a")
-            b(ndarray): Vector of Beta values.
-            t(ndarray): Vector of temperatures.
-            x(ndarray): Vector of compositions.
-            pot_eng(ndarray): Vector of phi values (grand canonical potential energy)
-        )
+    --------
+    mu: np.ndarray
+        Vector of chemical potentials (species "a")
+    b: np.ndarray
+        Vector of Beta values (1/Temperature).
+    t: np.ndarray 
+        Vector of temperatures.
+    x: np.ndarray 
+        Vector of compositions.
+    pot_eng: np.ndarray 
+        Vector of phi values (grand canonical potential energy)
     """
     with open(results_file_path) as f:
         results = json.load(f)
@@ -86,17 +101,21 @@ def read_lte_results(results_file_path):
     return (mu, b, t, x, pot_eng)
 
 
-def read_mc_settings(settings_file):
+def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Function to read chemical potential and temperature values from a mc_settings.json file.
 
-    Args:
-        settings_file(str): Path to a mc_settings.json file.
+    Parameters:
+    -----------
+    settings_file: str
+        Path to mc_settings.json file.
+    
     Returns:
-        tuple(
-            mu_values,      (ndarray): Vector of chemical potential values.
-            t_values        (ndarray): Vector of temperature values.
-        )
+    --------
+    mu: np.ndarray
+        Vector of chemical potentials (species "a")
+    t: np.ndarray
+        Vector of temperatures.
     """
     with open(settings_file) as f:
         settings = json.load(f)
@@ -129,12 +148,17 @@ def read_mc_settings(settings_file):
     return (mu_values, t_values)
 
 
-def read_superdupercell(mc_settings_file):
+def read_superdupercell(mc_settings_file: str) -> List:
     """Function to read mu / temperature values as well as superdupercell from a monte carlo settings.json file.
-    Args:
-        mc_settings_file(str): Path to mc_settings.json file.
+
+    Parameters:
+    -----------
+    mc_settings_file: str
+        Path to mc_settings.json file.
     Returns:
-        superdupercell(list): Matrix (list of 3 lists) that describes a supercell for the monte carlo simulation
+    --------
+    superdupercell: List
+        Matrix (list of 3 lists) that describes a supercell for the monte carlo simulation. 
     """
     with open(mc_settings_file) as f:
         settings = json.load(f)
@@ -143,6 +167,22 @@ def read_superdupercell(mc_settings_file):
 
 
 class lte_run:
+    """Class to parse CASM results from Grand Canonical monte carlo low temperature expansion (lte) calculation results.
+    
+    Attributes:
+    -----------
+    path: str   
+        Path to the directory containing the lte results files.
+
+    Methods:
+    --------
+    read_lte_results:
+        Function to parse lte results.json files.
+    
+    
+    
+    """
+
     def __init__(self, lte_dir):
         self.path = lte_dir
         self.read_lte_results()
@@ -162,6 +202,20 @@ class lte_run:
 
 
 class constant_t_run:
+    """Class to parse CASM results from constant temperature Grand Canonical monte carlo calculations.
+    
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the constant temperature results files.
+    
+    Methods:
+    --------
+    integrate_constant_temp_grand_canonical:
+        Function to integrate the Grand Canonical Free Energy over varying chemical potential at constant temperature.
+    
+    """
+
     def __init__(self, const_t_dir):
         self.path = const_t_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -208,6 +262,22 @@ class constant_t_run:
 
 
 class heating_run:
+    """Class to parse CASM results from heating Grand Canonical monte carlo calculations at constant chemical potential.
+
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the heating results files.
+    
+    Methods:
+    --------
+    get_lte_reference_energy:
+        Function to look up the lte reference energy at a given chemical potential, from a lte run object.
+    integrate_heating_grand_canonical_from_lte:
+        Function to integrate the Grand Canonical Free Energy over varying temperature from the end state of a lte run; all at constant chemical potential.
+
+    """
+
     def __init__(self, heating_dir, lte_run):
         self.path = heating_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -260,6 +330,19 @@ class heating_run:
 
 
 class cooling_run:
+    """Class to parse CASM results from cooling Grand Canonical monte carlo calculations at constant chemical potential.
+
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the cooling results files.
+
+    Methods:    
+    --------
+    get_constant_t_reference_energy:
+        Function to look up the lte reference energy at a given chemical potential, from a constant temperature run object.
+    """
+
     def __init__(self, cooling_dir, constant_t_run):
         self.path = cooling_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -303,8 +386,35 @@ def format_mc_settings(
     temp_final: float,
     temp_increment: float,
     output_file: str,
-    start_config_path=False,
-):
+    start_config_path: bool = False,
+) -> None:
+    """Function to format the CASM monte carlo settings json file file for a monte carlo run.
+    
+    Parameters:
+    -----------
+    superdupercell: list
+        Tranformation matrix to apply to the CASM project primitive cell. Represented as a list of lists.
+    mu_init: float
+        Initial chemical potential value.
+    mu_final: float
+        Final chemical potential value.
+    mu_increment: float
+        Chemical potential increment value. Sign matters: if positive, it must follow that mu_final > mu_init. If negative, it must follow that mu_final < mu_init.
+    temp_init: float
+        Initial temperature value.
+    temp_final: float
+        Final temperature value.
+    temp_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    output_file: str
+        Path to the output file.
+    start_config_path: str, optional
+        Path to the starting configuration file, contained within one of the conditions.* files.
+
+    Returns:
+    --------
+    None.
+    """
 
     templates_path = os.path.join(mc_lib_dir, "../templates")
     # Read template
@@ -331,14 +441,33 @@ def format_mc_settings(
 
 
 def run_cooling_from_const_temperature(
-    mu_values,
-    mc_cooling_dir,
-    const_temp_run_dir,
-    temp_final=20,
-    temperature_increment=-5,
-    job_scheduler="slurm",
-    submit_job=False,
-):
+    mu_values: np.ndarray,
+    mc_cooling_dir: str,
+    const_temp_run_dir: str,
+    temp_final: float,
+    temperature_increment: float,
+    job_scheduler: str = "slurm",
+    submit_job: bool = False,
+) -> None:
+    """Runs many cooling Grand Canonical monte carlo calculations; each run is at different chemical potential. The calculations begin at the end state (atomic configuration) of a constant temperature calculation.
+    
+    Parameters:
+    -----------
+    mu_values: np.ndarray
+        Array of chemical potential values to run the cooling calculation at.
+    mc_cooling_dir: str
+        Path to write all cooling calculations to.
+    const_temp_run_dir: str
+        Path to the directory containing the constant temperature run.
+    temp_final: float
+        Final temperature value.
+    temperature_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    job_scheduler: str, optional
+        Scheduler to use for the job. if not specified, will use slurm.
+    submit_job: bool, optional
+        Whether to submit the job. If False, will just write the job file. Default is False.
+    """
 
     # read mu values, temperature information from the existing settings file
     (const_t_mu, x, b, temperature_values, potential_energy) = read_mc_results_file(
@@ -409,15 +538,40 @@ def run_cooling_from_const_temperature(
 
 
 def run_heating(
-    mc_heating_dir,
-    mu_values,
-    superdupercell,
-    temp_init=20,
-    temp_final=2000,
-    temp_increment=5,
-    scheduler="slurm",
-    submit_job=False,
-):
+    mc_heating_dir: str,
+    mu_values: np.ndarray,
+    superdupercell: list,
+    temp_init: float,
+    temp_final: float,
+    temp_increment: float,
+    scheduler: str = "slurm",
+    submit_job: bool = False,
+) -> None:
+    """Runs many heating Grand Canonical monte carlo calculations; each run is at different chemical potential.
+    
+    Parameters:
+    -----------
+    mc_heating_dir: str
+        Path to write all heating calculations to.
+    mu_values: np.ndarray
+        Array of chemical potential values to run the heating calculation at.
+    superdupercell: list
+        Transformation matrix to apply on the CASM project primitive cell. Represented as a list of lists.
+    temp_init: float
+        Initial temperature value.
+    temp_final: float
+        Final temperature value.
+    temp_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    scheduler: str, optional
+        Scheduler to use for the job. if not specified, will use slurm.
+    submit_job: bool, optional
+        Whether to submit the job. If False, will just write the job file. Default is False.
+
+    Returns:
+    --------    
+    None.
+    """
 
     for mu_value in mu_values:
 
@@ -500,9 +654,6 @@ def plot_heating_and_cooling(heating_run, cooling_run):
     fig = plt.gcf()
     fig.set_size_inches(15, 19)
     return fig
-
-
-# TODO: Function to check that a free energy crossing
 
 
 def predict_mu_vs_free_energy_crossing(
@@ -746,7 +897,7 @@ def simulation_is_complete(mc_run_dir):
     return simulation_status
 
 
-def plot_t_vs_x_rainplot(mc_runs_directory, show_labels=False):
+def plot_t_vs_x_rainplot(mc_runs_directory: str, show_labels: bool = False):
     """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
 
     Generate a single (T vs composition) plot using all monte carlo runs in mc_runs_directory.

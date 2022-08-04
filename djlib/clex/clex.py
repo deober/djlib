@@ -1,6 +1,7 @@
 from __future__ import annotations
+
+import matplotlib
 import djlib.djlib as dj
-import djlib.clex.clex as cl
 import json
 import os
 import numpy as np
@@ -14,13 +15,14 @@ from glob import glob
 import pickle
 from string import Template
 import arviz as ar
-import thermofitting.hull.lower_hull as thull
+import thermocore.geometry.hull as thull
 import pathlib
 from warnings import warn
-from typing import List
+from typing import List, Tuple, Sequence
+import stan
 
 
-def lower_hull(hull: ConvexHull, energy_index=-2):
+def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the lower convex hull (with respect to energy direction) given  complete convex hull.
     Parameters
     ----------
@@ -36,11 +38,14 @@ def lower_hull(hull: ConvexHull, energy_index=-2):
         lower_hull_vertices : numpy.ndarray of ints, shape (nvertices,)
             Indices of the vertices forming the vertices of the lower convex hull.
     """
+    warn(
+        "This function is deprecated. Use thermocore.geometry.hull.lower_hull instead."
+    )
     # Note: energy_index is used on the "hull.equations" output, which has a scalar offset.
     # (If your energy is the last column of "points", either use the direct index, or use "-2". Using "-1" as energy_index will not give the proper lower hull.)
     lower_hull_simplices = hull.simplices[hull.equations[:, energy_index] < 0]
     lower_hull_vertices = np.unique(np.ravel(lower_hull_simplices))
-    return (lower_hull_simplices, lower_hull_vertices)
+    return (lower_hull_vertices, lower_hull_simplices)
 
 
 def checkhull(
@@ -48,7 +53,7 @@ def checkhull(
     hull_energies: np.ndarray,
     test_comp: np.ndarray,
     test_energy: np.ndarray,
-):
+) -> np.ndarray:
     """Calculates hull distance for each configuration
     Parameters
     ----------
@@ -106,8 +111,8 @@ def find_proposed_ground_states(
 
     Returns
     -------
-        proposed_ground_state_indices: numpy.ndarray
-            Vector of indices denoting configurations which appeared below the DFT hull across all of the Monte Carlo steps.
+    proposed_ground_state_indices: numpy.ndarray
+        Vector of indices denoting configurations which appeared below the DFT hull across all of the Monte Carlo steps.
     """
 
     # Read data from casm query json output
@@ -136,7 +141,7 @@ def find_proposed_ground_states(
     points[:, 0:-1] = comp_calculated
     points[:, -1] = formation_energy_calculated
     hull = ConvexHull(points)
-    dft_hull_simplices, dft_hull_config_indices = lower_hull(hull, energy_index=-2)
+    dft_hull_config_indices, dft_hull_simplices = thull.lower_hull(hull)
     dft_hull_corr = corr_calculated[dft_hull_config_indices]
     dft_hull_vertices = hull.points[dft_hull_config_indices]
 
@@ -747,7 +752,7 @@ def write_eci_json(eci: np.ndarray, basis_json: dict):
 
 def general_binary_convex_hull_plotter(
     composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None]
-):
+) -> matplotlib.figure.Figure:
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
     Parameters:
@@ -778,9 +783,9 @@ def general_binary_convex_hull_plotter(
             )
         )
 
-    dft_lower_hull_vertices = cl.lower_hull(dft_hull)[1]
+    dft_lower_hull_vertices = thull.lower_hull(dft_hull)[0]
     if any(predicted_energies):
-        predicted_lower_hull_vertices = cl.lower_hull(predicted_hull)[1]
+        predicted_lower_hull_vertices = thull.lower_hull(predicted_hull)[0]
 
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
