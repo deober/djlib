@@ -2,6 +2,8 @@ import numpy as np
 from scipy.spatial import ConvexHull
 import djlib.clex.clex as cl
 import matplotlib.pyplot as plt
+import seaborn as sns
+import thermocore.geometry.hull as thull
 
 
 def collect_ground_state_indices(
@@ -21,9 +23,9 @@ def collect_ground_state_indices(
     """
     ground_state_indices = []
     for index, energy_set in enumerate(predicted_energies):
-        points = np.hstack((compositions, np.reshape(energy_set, (-1, 1))))
-        hull = ConvexHull(points)
-        hull_simplices, hull_vertices = cl.lower_hull(hull)
+        hull = thull.full_hull(compositions=compositions, energies=energy_set)
+
+        hull_vertices, hull_simplices = thull.lower_hull(hull)
         ground_state_indices.append(hull_vertices)
     return ground_state_indices
 
@@ -84,7 +86,9 @@ def plot_eci_covariance_matrix(eci_matrix: np.ndarray) -> np.ndarray:
     --------    
     covariance_matrix_plot: 
     """
+
     covariance_matrix = np.cov(eci_matrix)
+
     plt.imshow(covariance_matrix, cmap="bwr")
     plt.title("ECI Covariance Matrix", fontsize=30)
     plt.xticks(fontsize=21)

@@ -671,6 +671,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
     test_rms_values = []
     eci_mean_testing_rms = []
     eci_mean = None
+    invalid_rhat_tally = []
 
     kfold_subdirs = glob(os.path.join(kfold_dir, "*"))
     for run_dir in kfold_subdirs:
@@ -685,6 +686,15 @@ def kfold_analysis(kfold_dir: str) -> dict:
                     eci_mean = run_data["eci_means"]
                 else:
                     eci_mean = (eci_mean + run_data["eci_means"]) / 2
+                with open(os.path.join(run_dir, "results.pkl"), "rb") as f:
+                    results = pickle.load(f)
+                    rhat_check_results = rhat_check(results)
+                    invalid_rhat_tally.append(rhat_check_results["total_count"])
+                with open(os.path.join(run_dir, "run_info.json"), "r") as f:
+                    run_info = json.load(f)
+                    run_info["rhat_summary"] = rhat_check_results
+                with open(os.path.join(run_dir, "run_info.json"), "w") as f:
+                    json.dump(run_info, f)
     eci_mean_testing_rms = np.mean(np.array(eci_mean_testing_rms), axis=0)
     return {
         "train_rms": train_rms_values,
@@ -958,3 +968,4 @@ def calculate_hulldist_corr(
         )
 
     return hulldist_corr
+
