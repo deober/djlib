@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import ConvexHull
 import djlib.clex.clex as cl
+import matplotlib.pyplot as plt
 
 
 def collect_ground_state_indices(
@@ -69,3 +70,26 @@ def binning_posterior_ground_state_domains(
         ground_state_set_tally[str(element)] += 1
 
     return ground_state_set_tally
+
+
+def plot_eci_covariance_matrix(eci_matrix: np.ndarray) -> np.ndarray:
+    """Plots the covariance matrix of the ECI space, given an array of multiple ECI vectors.
+
+    Parameters:
+    -----------
+    eci_matrix: np.ndarray
+        kxm matrix of m ECI vectors, k = number of correlations (number of ECI in a single ECI vector)
+    
+    Returns:
+    --------    
+    covariance_matrix_plot: 
+    """
+    covariance_matrix = np.cov(eci_matrix)
+    plt.imshow(covariance_matrix, cmap="bwr")
+    plt.title("ECI Covariance Matrix", fontsize=30)
+    plt.xticks(fontsize=21)
+    plt.yticks(fontsize=21)
+    fig = plt.gcf()
+    fig.set_size_inches(15, 15)
+    return fig
+
