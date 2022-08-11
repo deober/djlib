@@ -701,6 +701,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
         "test_rms": test_rms_values,
         "eci_mean_testing_rms": eci_mean_testing_rms,
         "kfold_avg_eci_mean": eci_mean,
+        "invalid_rhat_tally": invalid_rhat_tally,
     }
 
 
