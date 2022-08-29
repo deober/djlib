@@ -217,6 +217,7 @@ def format_slurm_job(
     nodes=1,
     ntasks=1,
     tasks_per_core=1,
+    cpus_per_task=1,
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
@@ -232,7 +233,7 @@ def format_slurm_job(
     """
     submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
     templates_path = os.path.join(libpath, "templates")
-    if queue == "batch":
+    if queue == "batch" or queue == "debug":
         slurm_template_file = "single_task_slurm_template.sh"
     elif queue == "short":
         slurm_template_file = "short_queue_single_task_slurm_template.sh"
@@ -254,6 +255,7 @@ def format_slurm_job(
             nodes=nodes,
             ntasks=ntasks,
             tasks_per_core=tasks_per_core,
+            cpus_per_task=cpus_per_task,
         )
     with open(submit_file_path, "w") as f:
         f.write(s)
