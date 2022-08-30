@@ -76,7 +76,7 @@ def end_state_supercell_calc_setup(
     job_time_hours: int,
     job_name: str,
     output_dir: str,
-    cpus_per_task: int,
+    ntasks_per_node: int,
     user_command: str,
 ) -> None:
     """Set up static vasp calculation for composition end state structure in a larger supercell in order to reduce kpoint noise in formation energy values.
@@ -138,5 +138,5 @@ def end_state_supercell_calc_setup(
         hours=job_time_hours,
         user_command=user_command,
         output_dir=output_dir,
-        cpus_per_task=cpus_per_task,
+        ntasksk_per_node=ntasks_per_node,
     )
