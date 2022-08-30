@@ -5,6 +5,7 @@ import pathlib
 import math as m
 from glob import glob
 import json
+from typing import List, Tuple
 
 libpath = pathlib.Path(__file__).parent.resolve()
 
@@ -306,3 +307,49 @@ def mode(vec: np.ndarray) -> float:
     max_index = np.where(hist[0] == max(hist[0]))[0]
     hist_mode = np.mean((hist[1][max_index], hist[1][max_index + 1]))
     return hist_mode
+
+
+def analytic_posterior(
+    feature_matrix: np.ndarray,
+    weight_covariance_matrix: np.ndarray,
+    weight_mean_vec: np.ndarray,
+    label_covariance_matrix: np.ndarray,
+    label_vec: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector, weight covariance matrix, target values vector, and target values covariance matrix.
+
+    Parameters:
+    ----------
+    weight_covariance_matrix: np.ndarray
+        Weight covariance matrix.
+    weight_mean_vec: np.ndarray
+        Weight mean vector.
+    label_covariance_matrix: np.ndarray
+        Target values covariance matrix.
+    label_vec: np.ndarray
+        Target values vector.
+    Returns:
+    --------
+    posterior_mean_vec: np.ndarray
+        Posterior mean vector.
+    posterior_covariance_matrix: np.ndarray
+        Posterior covariance matrix.
+    """
+    # Calculate precision matrices (inverse of covariance matrices)
+    weight_precision_matrix = np.linalg.pinv(weight_covariance_matrix)
+    label_precision_matrix = np.linalg.pinv(label_covariance_matrix)
+
+    # Calculate the posterior distribution covariance matrix
+    posterior_covariance_matrix = np.linalg.pinv(
+        weight_precision_matrix
+        + feature_matrix.T @ label_precision_matrix @ feature_matrix
+    )
+
+    # Calculate the posterior distribution mean vector
+    posterior_mean_vec = posterior_covariance_matrix @ (
+        feature_matrix.T @ label_precision_matrix @ label_vec
+        + weight_precision_matrix @ weight_mean_vec
+    )
+
+    return (posterior_mean_vec, posterior_covariance_matrix)
+
