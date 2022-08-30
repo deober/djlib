@@ -138,5 +138,5 @@ def end_state_supercell_calc_setup(
         hours=job_time_hours,
         user_command=user_command,
         output_dir=output_dir,
-        ntasksk_per_node=ntasks_per_node,
+        ntask_per_node=ntasks_per_node,
     )
