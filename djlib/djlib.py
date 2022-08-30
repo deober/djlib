@@ -215,9 +215,7 @@ def format_slurm_job(
     delete_submit_script=False,
     queue="batch",
     nodes=1,
-    ntasks=1,
-    tasks_per_core=1,
-    cpus_per_task=1,
+    ntasks_per_node=1,
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
@@ -253,9 +251,7 @@ def format_slurm_job(
             user_command=user_command,
             delete_submit_script=delete_submit_script,
             nodes=nodes,
-            ntasks=ntasks,
-            tasks_per_core=tasks_per_core,
-            cpus_per_task=cpus_per_task,
+            ntasks_per_node=ntasks_per_node,
         )
     with open(submit_file_path, "w") as f:
         f.write(s)
