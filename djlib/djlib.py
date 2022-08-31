@@ -381,7 +381,7 @@ def collect_config_structure_files(
         print("copying config structure.json file for config: ", config)
         os.makedirs(os.path.join(output_directory, config), exist_ok=True)
         shutil.copy(
-            os.path.join(casm_root, config, "structure.json"),
+            os.path.join(casm_root, "training_data", config, "structure.json"),
             os.path.join(output_directory, config),
         )
     print("done")
