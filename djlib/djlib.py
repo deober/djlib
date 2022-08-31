@@ -6,6 +6,7 @@ import math as m
 from glob import glob
 import json
 from typing import List, Tuple
+import shutil
 
 libpath = pathlib.Path(__file__).parent.resolve()
 
@@ -353,3 +354,34 @@ def analytic_posterior(
 
     return (posterior_mean_vec, posterior_covariance_matrix)
 
+
+def collect_config_structure_files(
+    casm_root: str, config_list: List[str], output_directory
+) -> None:
+    """Collects the config structure.json files from a list of config names.
+    
+    Parameters:
+    -----------
+    casm_root: str
+        Path to the CASM root directory.
+    config_list: List[str]
+        List of config names.
+    
+    Returns:
+    --------
+    None.
+    """
+
+    # make output directory if it doesn't exist
+    print("creating output directory: ", output_directory)
+    os.makedirs(output_directory, exist_ok=True)
+
+    # For each config, copy the config structure.json file to the output directory
+    for config in config_list:
+        print("copying config structure.json file for config: ", config)
+        os.makedirs(os.path.join(output_directory, config), exist_ok=True)
+        shutil.copy(
+            os.path.join(casm_root, config, "structure.json"),
+            os.path.join(output_directory, config),
+        )
+    print("done")
