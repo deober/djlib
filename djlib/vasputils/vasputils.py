@@ -685,6 +685,8 @@ def kpoint_convergence(
     incar_path: str,
     poscar_path: str,
     potcar_path: str,
+    user_command: str,
+    hours: int,
 ) -> None:
     """
     Run a sweep of static vasp calculations for varying numbers of kpoints
@@ -724,3 +726,10 @@ Auto
 %d"""
                 % kpoint_density
             )
+        dj.format_slurm_job(
+            jobname="kpoint_density.%s" % kpoint_density,
+            hours=hours,
+            user_command=user_command,
+            output_dir=calc_dir,
+        )
+
