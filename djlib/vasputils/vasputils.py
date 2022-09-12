@@ -749,7 +749,7 @@ def check_vasp_run_is_complete(vasp_run_dir) -> bool:
         True if vasp run is complete, False if not.
     """
     # check that OUTCAR exists
-    if not os.path.exists(os.path.join(vasp_run_dir, "OUTCAR")):
+    if os.path.exists(os.path.join(vasp_run_dir, "OUTCAR")) == False:
         return False
     else:
         with open(os.path.join(vasp_run_dir, "OUTCAR"), "r") as f:
