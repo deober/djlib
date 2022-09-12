@@ -756,3 +756,4 @@ def check_vasp_run_is_complete(vasp_run_dir) -> bool:
             for line in f:
                 if "General timing and accounting informations for this job:" in line:
                     return True
+            return False
