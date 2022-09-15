@@ -20,6 +20,7 @@ import pathlib
 from warnings import warn
 from typing import List, Tuple, Sequence
 import stan
+from sklearn.decomposition import PCA
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
@@ -970,3 +971,95 @@ def calculate_hulldist_corr(
 
     return hulldist_corr
 
+
+def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
+    """Calculates the variance mean ratio for each ECI and ranks them from highest to lowest variance mean ratio.
+
+    Parameters:
+    -----------
+    posterior_eci: np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+
+    Returns:
+    --------
+    eci_ranking: np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    eci_variance = np.var(posterior_eci, axis=1)
+    eci_mean = np.mean(posterior_eci, axis=1)
+    eci_vmr = eci_variance / np.abs(eci_mean)
+    eci_ranking = np.argsort(eci_vmr)
+    return eci_ranking
+
+
+def principal_component_analysis_eci_ranking(
+    posterior_eci: np.ndarray, explained_variance_tolerance
+) -> np.ndarray:
+    """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
+       The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
+       This vector is then ranked from lowest to highest and returned. 
+
+    Parameters
+    ----------
+    posterior_eci : np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+    explained_variance_tolerance : float
+        The fraction of the normalized inverse of the explained variance, which will decide how many PCA components to sum.
+
+    Returns:
+    --------
+    eci_ranking: np.ndarray
+        Vector of ECI indices ranked from highest to lowest normalized inverse explained variance.
+    """
+    pca = PCA().fit(posterior_eci.T)
+    flipped_explained_variance = (1 / pca.explained_variance_) / np.sum(
+        1 / pca.explained_variance_
+    )
+    eci_ranking = np.argsort()
+    return eci_ranking
+
+
+def iteratively_prune_eci_by_importance_array(
+    mean_eci: np.ndarray, prune_order_indices: np.ndarray, comp, corr, true_energies,
+) -> np.ndarray:
+    """Iteratively prunes ECI by importance array.
+
+    Parameters
+    ----------
+    mean_eci : np.ndarray
+        Vector of mean ECI.
+    prune_order_indices : np.ndarray
+        Vector of ECI indices, in the order that they should be pruned.
+    comp : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    corr : np.ndarray
+        nxk correlation matrix, where n is the number of configurations and k is the number of ECI.
+    true_energies : np.ndarray
+        nx1 matrix of true formation energies.
+    
+
+    Returns
+    -------
+    pruning_record: dict
+        Dictionary containing rmse, ground states, and eci_record for each pruning iteration.
+    """
+
+    mask = np.ones(mean_eci.shape[0])
+    rmse = []
+    ground_state_indices = []
+    pruned_eci_record = []
+    for index, entry in enumerate(prune_order_indices):
+        mask[entry] = 0
+        pruned_eci = mean_eci * mask
+        pruned_eci_record.append(pruned_eci)
+        predicted_energy = corr @ pruned_eci
+        rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
+        hull = thull.full_hull(compositions=comp, energies=predicted_energy)
+        vertices, _ = thull.lower_hull(hull)
+        ground_state_indices.append(vertices)
+    pruning_record = {
+        "rmse": rmse,
+        "ground_states": ground_state_indices,
+        "eci_record": pruned_eci_record,
+    }
+    return pruning_record
