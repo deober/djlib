@@ -1048,7 +1048,7 @@ def iteratively_prune_eci_by_importance_array(
     rmse = []
     ground_state_indices = []
     pruned_eci_record = []
-    for index, entry in enumerate(prune_order_indices):
+    for index, entry in enumerate(prune_order_indices[0:-3]):
         mask[entry] = 0
         pruned_eci = mean_eci * mask
         pruned_eci_record.append(pruned_eci)
