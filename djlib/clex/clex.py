@@ -992,9 +992,7 @@ def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
     return eci_ranking
 
 
-def principal_component_analysis_eci_ranking(
-    posterior_eci: np.ndarray, explained_variance_tolerance
-) -> np.ndarray:
+def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
     """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
        The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
        This vector is then ranked from lowest to highest and returned. 
