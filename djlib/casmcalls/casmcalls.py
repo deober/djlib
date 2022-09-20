@@ -104,15 +104,12 @@ def end_state_supercell_calc_setup(
     """
 
     # create the vasp calculation directory if it does not exist
-    if not os.path.exists(vasp_calc_dir):
-        os.makedirs(vasp_calc_dir, exist_ok=True)
+    os.makedirs(vasp_calc_dir, exist_ok=True)
 
-        # copy potcar, incar and kpoint file to vasp calculation directory
-        os.system("cp %s %s" % (potcar_path, os.path.join(vasp_calc_dir, "POTCAR")))
-        os.system("cp %s %s" % (incar_template, os.path.join(vasp_calc_dir, "INCAR")))
-        os.system(
-            "cp %s %s" % (kpoints_template, os.path.join(vasp_calc_dir, "KPOINTS"))
-        )
+    # copy potcar, incar and kpoint file to vasp calculation directory
+    os.system("cp %s %s" % (potcar_path, os.path.join(vasp_calc_dir, "POTCAR")))
+    os.system("cp %s %s" % (incar_template, os.path.join(vasp_calc_dir, "INCAR")))
+    os.system("cp %s %s" % (kpoints_template, os.path.join(vasp_calc_dir, "KPOINTS")))
 
     # write a status.json file if it does not exist. If the file does not exist, initialize the status as "not_submitted"
     if not os.path.exists(os.path.join(vasp_calc_dir, "status.json")):
