@@ -1061,7 +1061,7 @@ def iteratively_prune_eci_by_importance_array(
             ridge_corr = corr[:, mask.astype(bool)]
             ridge_eci = (
                 RidgeCV(fit_intercept=False, alphas=[ridge_lambda])
-                .fit(corr, true_energies)
+                .fit(ridge_corr, true_energies)
                 .coef_
             )
             predicted_energy = ridge_corr @ ridge_eci
