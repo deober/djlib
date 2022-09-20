@@ -21,6 +21,7 @@ from warnings import warn
 from typing import List, Tuple, Sequence
 import stan
 from sklearn.decomposition import PCA
+from sklearn.linear_model import RidgeCV
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
@@ -1018,7 +1019,13 @@ def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.nd
 
 
 def iteratively_prune_eci_by_importance_array(
-    mean_eci: np.ndarray, prune_order_indices: np.ndarray, comp, corr, true_energies,
+    mean_eci: np.ndarray,
+    prune_order_indices: np.ndarray,
+    comp,
+    corr,
+    true_energies,
+    fit_each_iteration: bool = False,
+    ridge_lambda: float = 0.0,
 ) -> np.ndarray:
     """Iteratively prunes ECI by importance array.
 
@@ -1050,6 +1057,13 @@ def iteratively_prune_eci_by_importance_array(
         mask[entry] = 0
         pruned_eci = mean_eci * mask
         pruned_eci_record.append(pruned_eci)
+        if fit_each_iteration:
+            corr = corr[:, mask.astype(bool)]
+            pruned_eci = (
+                RidgeCV(fit_intercept=False, alphas=[ridge_lambda])
+                .fit(corr, true_energies)
+                .coef_
+            )
         predicted_energy = corr @ pruned_eci
         rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
         hull = thull.full_hull(compositions=comp, energies=predicted_energy)
