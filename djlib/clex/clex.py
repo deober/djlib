@@ -1058,13 +1058,15 @@ def iteratively_prune_eci_by_importance_array(
         pruned_eci = mean_eci * mask
         pruned_eci_record.append(pruned_eci)
         if fit_each_iteration:
-            corr = corr[:, mask.astype(bool)]
-            pruned_eci = (
+            ridge_corr = corr[:, mask.astype(bool)]
+            ridge_eci = (
                 RidgeCV(fit_intercept=False, alphas=[ridge_lambda])
                 .fit(corr, true_energies)
                 .coef_
             )
-        predicted_energy = corr @ pruned_eci
+            predicted_energy = ridge_corr @ ridge_eci
+        else:
+            predicted_energy = corr @ pruned_eci
         rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
         hull = thull.full_hull(compositions=comp, energies=predicted_energy)
         vertices, _ = thull.lower_hull(hull)
