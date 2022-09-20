@@ -992,9 +992,7 @@ def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
     return eci_ranking
 
 
-def principal_component_analysis_eci_ranking(
-    posterior_eci: np.ndarray, explained_variance_tolerance
-) -> np.ndarray:
+def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
     """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
        The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
        This vector is then ranked from lowest to highest and returned. 
@@ -1008,15 +1006,15 @@ def principal_component_analysis_eci_ranking(
 
     Returns:
     --------
-    eci_ranking: np.ndarray
-        Vector of ECI indices ranked from highest to lowest normalized inverse explained variance.
+    pca_explained_variance_ranking: np.ndarray
+        Vector of ECI indices ranked from lowest to highest magnitude in the PCA component with the lowest explained variance
+        from the posterior distribution. The PCA with the lowest explained variance shows the ECI direction which varies the least,
+        meaning that the ECI which contribute to this direction are "well pinned" by the data.
     """
     pca = PCA().fit(posterior_eci.T)
-    flipped_explained_variance = (1 / pca.explained_variance_) / np.sum(
-        1 / pca.explained_variance_
-    )
-    eci_ranking = np.argsort()
-    return eci_ranking
+    pca_explained_variance_ranking = np.argsort(np.abs(pca.components_[-1]))
+
+    return pca_explained_variance_ranking
 
 
 def iteratively_prune_eci_by_importance_array(
