@@ -1053,6 +1053,7 @@ def iteratively_prune_eci_by_importance_array(
     rmse = []
     ground_state_indices = []
     pruned_eci_record = []
+    predicted_energy_record = []
     for index, entry in enumerate(prune_order_indices[0:-3]):
         mask[entry] = 0
         pruned_eci = mean_eci * mask
@@ -1065,8 +1066,10 @@ def iteratively_prune_eci_by_importance_array(
                 .coef_
             )
             predicted_energy = ridge_corr @ ridge_eci
+            predicted_energy_record.append(predicted_energy)
         else:
             predicted_energy = corr @ pruned_eci
+            predicted_energy_record.append(predicted_energy)
         rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
         hull = thull.full_hull(compositions=comp, energies=predicted_energy)
         vertices, _ = thull.lower_hull(hull)
@@ -1075,5 +1078,6 @@ def iteratively_prune_eci_by_importance_array(
         "rmse": rmse,
         "ground_states": ground_state_indices,
         "eci_record": pruned_eci_record,
+        "predicted_energy_record": predicted_energy_record,
     }
     return pruning_record
