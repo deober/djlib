@@ -21,7 +21,7 @@ from warnings import warn
 from typing import List, Tuple, Sequence
 import stan
 from sklearn.decomposition import PCA
-from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import BayesianRidge
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
@@ -1025,7 +1025,8 @@ def iteratively_prune_eci_by_importance_array(
     corr,
     true_energies,
     fit_each_iteration: bool = False,
-    ridge_lambda: float = 0.0,
+    likelihood_stddev: float = 0.0,
+    eci_stddev: float = 0.0,
 ) -> np.ndarray:
     """Iteratively prunes ECI by importance array.
 
@@ -1054,19 +1055,27 @@ def iteratively_prune_eci_by_importance_array(
     ground_state_indices = []
     pruned_eci_record = []
     predicted_energy_record = []
+    br_prune_order_indices = np.ones(mean_eci.shape[0])
+    bayesian_ridge_corr = corr.copy()
     for index, entry in enumerate(prune_order_indices[0:-3]):
         mask[entry] = 0
         pruned_eci = mean_eci * mask
         pruned_eci_record.append(pruned_eci)
         if fit_each_iteration:
-            ridge_corr = corr[:, mask.astype(bool)]
-            ridge_eci = (
-                RidgeCV(fit_intercept=False, alphas=[ridge_lambda])
-                .fit(ridge_corr, true_energies)
-                .coef_
+            bayesian_ridge_corr = bayesian_ridge_corr[
+                :, br_prune_order_indices.astype(bool)
+            ]
+            bayesian_ridge_fit = BayesianRidge(fit_intercept=False,).fit(
+                bayesian_ridge_corr, true_energies
             )
-            predicted_energy = ridge_corr @ ridge_eci
+
+            predicted_energy = bayesian_ridge_corr @ bayesian_ridge_fit.coef_
             predicted_energy_record.append(predicted_energy)
+            br_stddev = np.sqrt(np.diagonal(bayesian_ridge_fit.sigma_))
+            br_prune_order_indices = np.argsort(
+                br_stddev / np.abs(bayesian_ridge_fit.coef_)
+            )
+
         else:
             predicted_energy = corr @ pruned_eci
             predicted_energy_record.append(predicted_energy)
