@@ -1025,8 +1025,6 @@ def iteratively_prune_eci_by_importance_array(
     corr,
     true_energies,
     fit_each_iteration: bool = False,
-    likelihood_stddev: float = 0.0,
-    eci_stddev: float = 0.0,
 ) -> np.ndarray:
     """Iteratively prunes ECI by importance array.
 
