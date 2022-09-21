@@ -1018,6 +1018,24 @@ def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.nd
     return pca_explained_variance_ranking
 
 
+def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit()) -> np.ndarray:
+    """Sorts the ECI by variance mean ratio, and returns the array of sorted indices. 
+
+    Parameters
+    ----------
+    bayesian_ridge_fit : sklearn.linear_model.BayesianRidge.fit()
+        Bayesian Ridge fit object.
+    
+    Returns
+    -------
+    eci_ranking : np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    br_stddev = np.sqrt(np.diagonal(bayesian_ridge_fit.sigma_))
+    br_prune_order_indices = np.argsort(br_stddev / np.abs(bayesian_ridge_fit.coef_))
+    return br_prune_order_indices
+
+
 def iteratively_prune_eci_by_importance_array(
     mean_eci: np.ndarray,
     prune_order_indices: np.ndarray,
@@ -1025,6 +1043,7 @@ def iteratively_prune_eci_by_importance_array(
     corr,
     true_energies,
     fit_each_iteration: bool = False,
+    sorter_function: Callable = None,
 ) -> np.ndarray:
     """Iteratively prunes ECI by importance array.
 
@@ -1040,6 +1059,10 @@ def iteratively_prune_eci_by_importance_array(
         nxk correlation matrix, where n is the number of configurations and k is the number of ECI.
     true_energies : np.ndarray
         nx1 matrix of true formation energies.
+    fit_each_iteration : bool, optional
+        Whether to fit the model after each iteration, by default False
+    sorter_function : Callable, optional
+        Function to sort the ECI by; must accept a BayesianRidge.fit() object, and return an array of indices. None by default. 
     
 
     Returns
@@ -1069,11 +1092,7 @@ def iteratively_prune_eci_by_importance_array(
 
             predicted_energy = bayesian_ridge_corr @ bayesian_ridge_fit.coef_
             predicted_energy_record.append(predicted_energy)
-            br_stddev = np.sqrt(np.diagonal(bayesian_ridge_fit.sigma_))
-            br_prune_order_indices = np.argsort(
-                br_stddev / np.abs(bayesian_ridge_fit.coef_)
-            )
-
+            br_prune_order_indices = sorter_function(bayesian_ridge_fit)
         else:
             predicted_energy = corr @ pruned_eci
             predicted_energy_record.append(predicted_energy)
