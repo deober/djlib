@@ -74,6 +74,52 @@ def binning_posterior_ground_state_domains(
     return ground_state_set_tally
 
 
+def partition_posterior_by_ground_states(
+    corr: np.ndarray, compositions: np.ndarray, posterior_distribution: np.ndarray
+) -> dict:
+    """Takes a posterior markov chain of points in ECI space and returns those points grouped by their ground state sets.
+
+    Parameters
+    ----------
+    corr: np.ndarray
+        nxk matrix of n configurations, k = number of correlations (number of ECI in a single ECI vector)
+    compositions : np.ndarray
+        nxm Composition matrix from casm query: n = number of configurations, m = number of composition axes
+    posterior_distribution : np.ndarray
+        sxm matrix of m ECI vectors, s = number of samples in the posterior markov chain
+
+
+    Returns
+    -------
+    ground_state_set_partition: dict
+        Dictionary of unique ground state sets and their counts. Key is the unique set as a string, value is .
+    """
+
+    # Initialize the dictionary
+    ground_state_set_partition = {}
+
+    # For each ECI vector in posterior distribution, find the ground state set.
+    # If the ground state set is not already a key in the dictionary, add it and initialize the list of ECI vectors to an empty list.
+    # Append the ECI vector to the list of ECI vectors for that ground state set.
+    # If the ground state set is already a key in the dictionary, append the ECI vector to the list of ECI vectors for that ground state set.
+    for eci_vector in posterior_distribution:
+
+        # Find the ground state set for the ECI vector
+        predicted_energies = corr @ eci_vector
+        predicted_hull = thull.full_hull(
+            compositions=compositions, energies=predicted_energies
+        )
+        hull_vertices, _ = thull.lower_hull(predicted_hull)
+        ground_state_set = str(set(hull_vertices))
+
+        # If the ground state set is not already a key in the dictionary, add it and initialize the list of ECI vectors to an empty list.
+        if ground_state_set not in ground_state_set_partition.keys():
+            ground_state_set_partition[ground_state_set] = []
+        ground_state_set_partition[ground_state_set].append(eci_vector)
+
+    return ground_state_set_partition
+
+
 def plot_eci_covariance_matrix(eci_matrix: np.ndarray) -> np.ndarray:
     """Plots the covariance matrix of the ECI space, given an array of multiple ECI vectors.
 
@@ -96,4 +142,3 @@ def plot_eci_covariance_matrix(eci_matrix: np.ndarray) -> np.ndarray:
     fig = plt.gcf()
     fig.set_size_inches(15, 15)
     return fig
-
