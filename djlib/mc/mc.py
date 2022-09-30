@@ -10,11 +10,13 @@ from glob import glob
 import pathlib
 import math as m
 import djlib.djlib as dj
+from typing import List, Tuple
+
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
 
-def find(lst, a):
+def find(lst: List, a: float):
     """Finds the index of an element that matches a specified value.
     Args:
         a(float): The value to search for
@@ -35,15 +37,21 @@ def find(lst, a):
         )
 
 
-def read_mc_results_file(results_file_path):
+def read_mc_results_file(
+    results_file_path: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Function to parse mc results.json files.
     Args;
         results_file_path(str): Path to the results.json file for the given monte carlo simulation.
     Returns:
-        x(ndarray): Vector of compostitions
-        b(ndarray): Vector of beta values
-        temperature(ndarray): Vecor of temperature values (K)
-        potential_energy(ndarray): Vector of potential energy values (E-mu*x)
+        x: np.ndarray
+            Vector of compostitions
+        b: np.ndarray 
+            Vector of beta values
+        temperature: np.ndarray 
+            Vecor of temperature values (K)
+        potential_energy: np.ndarray: 
+            Vector of potential energy values (E-mu*x)
     """
     with open(results_file_path) as f:
         results = json.load(f)
@@ -53,23 +61,33 @@ def read_mc_results_file(results_file_path):
     b = np.array(results["Beta"])
     temperature = np.array(results["T"])
     potential_energy = np.array(results["<potential_energy>"])
-    return (mu, x, b, temperature, potential_energy)
+    formation_energy = np.array(results["<formation_energy>"])
+    return (mu, x, b, temperature, potential_energy, formation_energy)
 
 
-def read_lte_results(results_file_path):
+def read_lte_results(
+    results_file_path: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Takes a lte results.json file and returns outputs from the simulation.
 
-    Args:
-        results_file_path(str): Path to the results.json file.
+    Parameters:
+    -----------
+    results_file_path: str
+        Path to lte results.json file.
+
     Returns:
-        tuple(
-            mu(ndarray): Vector of chemical potentials (species "a")
-            b(ndarray): Vector of Beta values.
-            t(ndarray): Vector of temperatures.
-            x(ndarray): Vector of compositions.
-            pot_eng(ndarray): Vector of phi values (grand canonical potential energy)
-        )
+    --------
+    mu: np.ndarray
+        Vector of chemical potentials (species "a")
+    b: np.ndarray
+        Vector of Beta values (1/Temperature).
+    t: np.ndarray 
+        Vector of temperatures.
+    x: np.ndarray 
+        Vector of compositions.
+    pot_eng: np.ndarray 
+        Vector of phi values (grand canonical potential energy)
     """
     with open(results_file_path) as f:
         results = json.load(f)
@@ -83,17 +101,21 @@ def read_lte_results(results_file_path):
     return (mu, b, t, x, pot_eng)
 
 
-def read_mc_settings(settings_file):
+def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Function to read chemical potential and temperature values from a mc_settings.json file.
 
-    Args:
-        settings_file(str): Path to a mc_settings.json file.
+    Parameters:
+    -----------
+    settings_file: str
+        Path to mc_settings.json file.
+    
     Returns:
-        tuple(
-            mu_values,      (ndarray): Vector of chemical potential values.
-            t_values        (ndarray): Vector of temperature values.
-        )
+    --------
+    mu: np.ndarray
+        Vector of chemical potentials (species "a")
+    t: np.ndarray
+        Vector of temperatures.
     """
     with open(settings_file) as f:
         settings = json.load(f)
@@ -126,12 +148,17 @@ def read_mc_settings(settings_file):
     return (mu_values, t_values)
 
 
-def read_superdupercell(mc_settings_file):
+def read_superdupercell(mc_settings_file: str) -> List:
     """Function to read mu / temperature values as well as superdupercell from a monte carlo settings.json file.
-    Args:
-        mc_settings_file(str): Path to mc_settings.json file.
+
+    Parameters:
+    -----------
+    mc_settings_file: str
+        Path to mc_settings.json file.
     Returns:
-        superdupercell(list): Matrix (list of 3 lists) that describes a supercell for the monte carlo simulation
+    --------
+    superdupercell: List
+        Matrix (list of 3 lists) that describes a supercell for the monte carlo simulation. 
     """
     with open(mc_settings_file) as f:
         settings = json.load(f)
@@ -140,6 +167,22 @@ def read_superdupercell(mc_settings_file):
 
 
 class lte_run:
+    """Class to parse CASM results from Grand Canonical monte carlo low temperature expansion (lte) calculation results.
+    
+    Attributes:
+    -----------
+    path: str   
+        Path to the directory containing the lte results files.
+
+    Methods:
+    --------
+    read_lte_results:
+        Function to parse lte results.json files.
+    
+    
+    
+    """
+
     def __init__(self, lte_dir):
         self.path = lte_dir
         self.read_lte_results()
@@ -159,12 +202,31 @@ class lte_run:
 
 
 class constant_t_run:
+    """Class to parse CASM results from constant temperature Grand Canonical monte carlo calculations.
+    
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the constant temperature results files.
+    
+    Methods:
+    --------
+    integrate_constant_temp_grand_canonical:
+        Function to integrate the Grand Canonical Free Energy over varying chemical potential at constant temperature.
+    
+    """
+
     def __init__(self, const_t_dir):
         self.path = const_t_dir
         results_file_path = os.path.join(self.path, "results.json")
-        self.mu, self.x, self.b, self.t, self.pot_eng = read_mc_results_file(
-            results_file_path
-        )
+        (
+            self.mu,
+            self.x,
+            self.b,
+            self.t,
+            self.pot_eng,
+            self.formation_energy,
+        ) = read_mc_results_file(results_file_path)
         self.integrate_constant_temp_grand_canonical()
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
@@ -200,12 +262,33 @@ class constant_t_run:
 
 
 class heating_run:
+    """Class to parse CASM results from heating Grand Canonical monte carlo calculations at constant chemical potential.
+
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the heating results files.
+    
+    Methods:
+    --------
+    get_lte_reference_energy:
+        Function to look up the lte reference energy at a given chemical potential, from a lte run object.
+    integrate_heating_grand_canonical_from_lte:
+        Function to integrate the Grand Canonical Free Energy over varying temperature from the end state of a lte run; all at constant chemical potential.
+
+    """
+
     def __init__(self, heating_dir, lte_run):
         self.path = heating_dir
         results_file_path = os.path.join(self.path, "results.json")
-        self.mu, self.x, self.b, self.t, self.pot_eng = read_mc_results_file(
-            results_file_path
-        )
+        (
+            self.mu,
+            self.x,
+            self.b,
+            self.t,
+            self.pot_eng,
+            self.formation_energy,
+        ) = read_mc_results_file(results_file_path)
         self.get_lte_reference_energy(lte_run)
         self.integrate_heating_grand_canonical_from_lte()
         self.superdupercell = read_superdupercell(
@@ -247,6 +330,19 @@ class heating_run:
 
 
 class cooling_run:
+    """Class to parse CASM results from cooling Grand Canonical monte carlo calculations at constant chemical potential.
+
+    Attributes:
+    -----------
+    path: str
+        Path to the directory containing the cooling results files.
+
+    Methods:    
+    --------
+    get_constant_t_reference_energy:
+        Function to look up the lte reference energy at a given chemical potential, from a constant temperature run object.
+    """
+
     def __init__(self, cooling_dir, constant_t_run):
         self.path = cooling_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -290,8 +386,35 @@ def format_mc_settings(
     temp_final: float,
     temp_increment: float,
     output_file: str,
-    start_config_path=False,
-):
+    start_config_path: bool = False,
+) -> None:
+    """Function to format the CASM monte carlo settings json file file for a monte carlo run.
+    
+    Parameters:
+    -----------
+    superdupercell: list
+        Tranformation matrix to apply to the CASM project primitive cell. Represented as a list of lists.
+    mu_init: float
+        Initial chemical potential value.
+    mu_final: float
+        Final chemical potential value.
+    mu_increment: float
+        Chemical potential increment value. Sign matters: if positive, it must follow that mu_final > mu_init. If negative, it must follow that mu_final < mu_init.
+    temp_init: float
+        Initial temperature value.
+    temp_final: float
+        Final temperature value.
+    temp_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    output_file: str
+        Path to the output file.
+    start_config_path: str, optional
+        Path to the starting configuration file, contained within one of the conditions.* files.
+
+    Returns:
+    --------
+    None.
+    """
 
     templates_path = os.path.join(mc_lib_dir, "../templates")
     # Read template
@@ -318,13 +441,33 @@ def format_mc_settings(
 
 
 def run_cooling_from_const_temperature(
-    mu_values,
-    mc_cooling_dir,
-    const_temp_run_dir,
-    temp_final=20,
-    temperature_increment=-5,
-    job_scheduler="slurm",
-):
+    mu_values: np.ndarray,
+    mc_cooling_dir: str,
+    const_temp_run_dir: str,
+    temp_final: float,
+    temperature_increment: float,
+    job_scheduler: str = "slurm",
+    submit_job: bool = False,
+) -> None:
+    """Runs many cooling Grand Canonical monte carlo calculations; each run is at different chemical potential. The calculations begin at the end state (atomic configuration) of a constant temperature calculation.
+    
+    Parameters:
+    -----------
+    mu_values: np.ndarray
+        Array of chemical potential values to run the cooling calculation at.
+    mc_cooling_dir: str
+        Path to write all cooling calculations to.
+    const_temp_run_dir: str
+        Path to the directory containing the constant temperature run.
+    temp_final: float
+        Final temperature value.
+    temperature_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    job_scheduler: str, optional
+        Scheduler to use for the job. if not specified, will use slurm.
+    submit_job: bool, optional
+        Whether to submit the job. If False, will just write the job file. Default is False.
+    """
 
     # read mu values, temperature information from the existing settings file
     (const_t_mu, x, b, temperature_values, potential_energy) = read_mc_results_file(
@@ -341,7 +484,7 @@ def run_cooling_from_const_temperature(
         current_dir = os.path.join(mc_cooling_dir, run_name)
         if os.path.isfile(os.path.join(current_dir, "results.json")) == False:
 
-            os.makedirs(current_dir)
+            os.makedirs(current_dir, exist_ok=True)
             os.chdir(current_dir)
 
             # get const_t_mu index that matches mu
@@ -374,8 +517,9 @@ def run_cooling_from_const_temperature(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                dj.submit_slurm_job(current_dir)
-            elif job_scheduler == "braid":
+                if submit_job:
+                    dj.submit_slurm_job(current_dir)
+            elif job_scheduler == "pbs":
                 user_command = "casm monte -s mc_settings.json > mc_results.out"
                 format_pbs_job(
                     jobname=run_name,
@@ -384,9 +528,8 @@ def run_cooling_from_const_temperature(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_pbs_job(current_dir)
-            elif job_scheduler == "pod":
-                print("In the works")
+                if submit_job:
+                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
@@ -395,14 +538,40 @@ def run_cooling_from_const_temperature(
 
 
 def run_heating(
-    mc_heating_dir,
-    mu_values,
-    superdupercell,
-    temp_init=20,
-    temp_final=2000,
-    temp_increment=5,
-    scheduler="slurm",
-):
+    mc_heating_dir: str,
+    mu_values: np.ndarray,
+    superdupercell: list,
+    temp_init: float,
+    temp_final: float,
+    temp_increment: float,
+    scheduler: str = "slurm",
+    submit_job: bool = False,
+) -> None:
+    """Runs many heating Grand Canonical monte carlo calculations; each run is at different chemical potential.
+    
+    Parameters:
+    -----------
+    mc_heating_dir: str
+        Path to write all heating calculations to.
+    mu_values: np.ndarray
+        Array of chemical potential values to run the heating calculation at.
+    superdupercell: list
+        Transformation matrix to apply on the CASM project primitive cell. Represented as a list of lists.
+    temp_init: float
+        Initial temperature value.
+    temp_final: float
+        Final temperature value.
+    temp_increment: float
+        Temperature increment value. Sign matters: if positive, it must follow that temp_final > temp_init. If negative, it must follow that temp_final < temp_init.
+    scheduler: str, optional
+        Scheduler to use for the job. if not specified, will use slurm.
+    submit_job: bool, optional
+        Whether to submit the job. If False, will just write the job file. Default is False.
+
+    Returns:
+    --------    
+    None.
+    """
 
     for mu_value in mu_values:
 
@@ -410,7 +579,7 @@ def run_heating(
         current_dir = os.path.join(mc_heating_dir, run_name)
 
         if os.path.isfile(os.path.join(current_dir, "results.json")) == False:
-            os.makedirs(current_dir)
+            os.makedirs(current_dir, exist_ok=True)
             os.chdir(current_dir)
 
             # Format settings file for this heating run
@@ -437,7 +606,8 @@ def run_heating(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                dj.submit_slurm_job(current_dir)
+                if submit_job:
+                    dj.submit_slurm_job(current_dir)
             elif scheduler == "pbs":
                 format_pbs_job(
                     jobname=run_name,
@@ -446,7 +616,8 @@ def run_heating(
                     output_dir=current_dir,
                     delete_submit_script=False,
                 )
-                submit_pbs_job(current_dir)
+                if submit_job:
+                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
@@ -485,7 +656,81 @@ def plot_heating_and_cooling(heating_run, cooling_run):
     return fig
 
 
-# TODO: Function to check that a free energy crossing
+def predict_mu_vs_free_energy_crossing(
+    const_t_run_1: constant_t_run, const_t_run_2: constant_t_run
+) -> Tuple[float, float, float, float]:
+    """Function to predict the free energy crossing chemical potential and compositions between two mu vs grand canonical plots
+
+    Parameters:
+    -----------
+    const_t_run_1: constant_t_run
+        A djlib constant_t_run object, containing the data for a constant temperature run
+    const_t_run_2: constant_t_run
+        A djlib constant_t_run object, containing the data for a constant temperature run
+
+    Returns:
+    --------
+    mu_intersect_predict: float
+        Predicted chemical potential at the crossing point in (chemical_potential vs grand canonical free energy) space
+    energy_intersect_predict: float
+        predicted grand canonical free energy at the crossing point in (chemical_potential vs grand canonical free energy) space
+    run_1_comp_intersect: float
+        composition for the first constant temperature run that is closest to the corresponding chemical potential at the crossing point
+    run_2_comp_intersect: float
+        composition for the second constant temperature run that is closest to the corresponding chemical potential at the crossing point
+    
+
+    """
+    # Assert that the chemical potentials are the same
+    assert np.allclose(
+        np.sort(const_t_run_1.mu), np.sort(const_t_run_2.mu)
+    ), "Chemical potentials do not match"
+
+    # Ensure that all data is sorted by chemical potential
+    mu_1 = const_t_run_1.mu[np.argsort(const_t_run_1.mu)]
+    gc_free_energy_1 = const_t_run_1.integ_grand_canonical[np.argsort(const_t_run_1.mu)]
+    x_1 = const_t_run_1.x[np.argsort(const_t_run_1.mu)]
+
+    mu_2 = const_t_run_2.mu[np.argsort(const_t_run_2.mu)]
+    gc_free_energy_2 = const_t_run_2.integ_grand_canonical[np.argsort(const_t_run_2.mu)]
+    x_2 = const_t_run_2.x[np.argsort(const_t_run_2.mu)]
+
+    # Fit a spline to the chemical potential vs grand canonical free energy data
+    # Spline requires that domain (chemical potential) is strictly increasing
+    interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
+        mu_1, gc_free_energy_1
+    )
+    interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
+        mu_2, gc_free_energy_2
+    )
+
+    # Define a difference function to be used in the root finding algorithm
+    def difference(m):
+        return np.abs(interp_run_1(m) - interp_run_2(m))
+
+    # Find an initial guess for the root finding algorithm
+    m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
+    m0_guess = mu_1[m0_index]
+
+    # find the root of the difference function (chemical potential at crossing)
+    mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
+    energy_intersect_predict = interp_run_1(mu_intersect_predict)
+
+    # Find the calculated chemical potential that is closest to the predicted chemical potential
+    mu_intersect_index_1 = np.argmin(abs(mu_intersect_predict - const_t_run_1.mu))
+    mu_intersect_index_2 = np.argmin(abs(mu_intersect_predict - const_t_run_2.mu))
+
+    # Find the crossing composition at a point mu, x that is actually calculated
+    difference = np.abs(-mu_intersect_predict)
+
+    run_1_comp_intersect = const_t_run_1.x[mu_intersect_index_1]
+    run_2_comp_intersect = const_t_run_2.x[mu_intersect_index_2]
+    return (
+        mu_intersect_predict,
+        energy_intersect_predict,
+        run_1_comp_intersect,
+        run_2_comp_intersect,
+    )
 
 
 def predict_free_energy_crossing(heating_run, cooling_run):
@@ -652,7 +897,7 @@ def simulation_is_complete(mc_run_dir):
     return simulation_status
 
 
-def plot_t_vs_x_rainplot(mc_runs_directory, save_image=False, show_labels=False):
+def plot_t_vs_x_rainplot(mc_runs_directory: str, show_labels: bool = False):
     """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
 
     Generate a single (T vs composition) plot using all monte carlo runs in mc_runs_directory.
@@ -682,17 +927,8 @@ def plot_t_vs_x_rainplot(mc_runs_directory, save_image=False, show_labels=False)
         plt.legend(labels)
     plt.xlabel("Composition", fontsize=18)
     plt.ylabel("Temperature (K)", fontsize=18)
-    title = (
-        "Chemical Potential and Temperature Sweep Rain Plot: %s"
-        % mc_runs_directory.split("/")[-1]
-    )
-    plt.title("Chemical Potential and Temperature Sweep Rain Plot", fontsize=30)
     fig = plt.gcf()
     fig.set_size_inches(18.5, 10)
-    if save_image:
-        fig.savefig(os.path.join(mc_runs_directory, title + ".png"), dpi=100)
-        print("Saving image to file: ", end="")
-        print(os.path.join(mc_runs_directory, title + ".png"))
     return fig
 
 

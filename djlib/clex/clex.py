@@ -1,6 +1,7 @@
 from __future__ import annotations
+
+import matplotlib
 import djlib.djlib as dj
-import djlib.clex.clex as cl
 import json
 import os
 import numpy as np
@@ -14,13 +15,16 @@ from glob import glob
 import pickle
 from string import Template
 import arviz as ar
-import thermofitting.hull.lower_hull as thull
+import thermocore.geometry.hull as thull
 import pathlib
 from warnings import warn
-from typing import List
+from typing import List, Tuple, Sequence
+import stan
+from sklearn.decomposition import PCA
+from sklearn.linear_model import BayesianRidge
 
 
-def lower_hull(hull: ConvexHull, energy_index=-2):
+def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the lower convex hull (with respect to energy direction) given  complete convex hull.
     Parameters
     ----------
@@ -36,11 +40,14 @@ def lower_hull(hull: ConvexHull, energy_index=-2):
         lower_hull_vertices : numpy.ndarray of ints, shape (nvertices,)
             Indices of the vertices forming the vertices of the lower convex hull.
     """
+    warn(
+        "This function is deprecated. Use thermocore.geometry.hull.lower_hull instead."
+    )
     # Note: energy_index is used on the "hull.equations" output, which has a scalar offset.
     # (If your energy is the last column of "points", either use the direct index, or use "-2". Using "-1" as energy_index will not give the proper lower hull.)
     lower_hull_simplices = hull.simplices[hull.equations[:, energy_index] < 0]
     lower_hull_vertices = np.unique(np.ravel(lower_hull_simplices))
-    return (lower_hull_simplices, lower_hull_vertices)
+    return (lower_hull_vertices, lower_hull_simplices)
 
 
 def checkhull(
@@ -48,7 +55,7 @@ def checkhull(
     hull_energies: np.ndarray,
     test_comp: np.ndarray,
     test_energy: np.ndarray,
-):
+) -> np.ndarray:
     """Calculates hull distance for each configuration
     Parameters
     ----------
@@ -106,8 +113,8 @@ def find_proposed_ground_states(
 
     Returns
     -------
-        proposed_ground_state_indices: numpy.ndarray
-            Vector of indices denoting configurations which appeared below the DFT hull across all of the Monte Carlo steps.
+    proposed_ground_state_indices: numpy.ndarray
+        Vector of indices denoting configurations which appeared below the DFT hull across all of the Monte Carlo steps.
     """
 
     # Read data from casm query json output
@@ -136,7 +143,7 @@ def find_proposed_ground_states(
     points[:, 0:-1] = comp_calculated
     points[:, -1] = formation_energy_calculated
     hull = ConvexHull(points)
-    dft_hull_simplices, dft_hull_config_indices = lower_hull(hull, energy_index=-2)
+    dft_hull_config_indices, dft_hull_simplices = thull.lower_hull(hull)
     dft_hull_corr = corr_calculated[dft_hull_config_indices]
     dft_hull_vertices = hull.points[dft_hull_config_indices]
 
@@ -384,9 +391,8 @@ def stan_model_formatter(
         If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance.
         If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
         If only one element is provided, it will be used as the prior for all model variances.
-        If more than one element is provided, the user must specify a sigma_indices list to match each configuration to a model variance.
-    sigma_indices:
-        Only used if more than one sigma is provided in the model_parameters list. Identifies which sigma to use for each configuration.
+        If more than one element is provided, the user must specify start-stop indices, denoting the range of energies to use for each model variance parameter.
+
 
     """
 
@@ -667,6 +673,7 @@ def kfold_analysis(kfold_dir: str) -> dict:
     test_rms_values = []
     eci_mean_testing_rms = []
     eci_mean = None
+    invalid_rhat_tally = []
 
     kfold_subdirs = glob(os.path.join(kfold_dir, "*"))
     for run_dir in kfold_subdirs:
@@ -681,12 +688,22 @@ def kfold_analysis(kfold_dir: str) -> dict:
                     eci_mean = run_data["eci_means"]
                 else:
                     eci_mean = (eci_mean + run_data["eci_means"]) / 2
+                with open(os.path.join(run_dir, "results.pkl"), "rb") as f:
+                    results = pickle.load(f)
+                    rhat_check_results = rhat_check(results)
+                    invalid_rhat_tally.append(rhat_check_results["total_count"])
+                with open(os.path.join(run_dir, "run_info.json"), "r") as f:
+                    run_info = json.load(f)
+                    run_info["rhat_summary"] = rhat_check_results
+                with open(os.path.join(run_dir, "run_info.json"), "w") as f:
+                    json.dump(run_info, f)
     eci_mean_testing_rms = np.mean(np.array(eci_mean_testing_rms), axis=0)
     return {
         "train_rms": train_rms_values,
         "test_rms": test_rms_values,
         "eci_mean_testing_rms": eci_mean_testing_rms,
         "kfold_avg_eci_mean": eci_mean,
+        "invalid_rhat_tally": invalid_rhat_tally,
     }
 
 
@@ -748,7 +765,7 @@ def write_eci_json(eci: np.ndarray, basis_json: dict):
 
 def general_binary_convex_hull_plotter(
     composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None]
-):
+) -> matplotlib.figure.Figure:
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
     Parameters:
@@ -779,9 +796,9 @@ def general_binary_convex_hull_plotter(
             )
         )
 
-    dft_lower_hull_vertices = cl.lower_hull(dft_hull)[1]
+    dft_lower_hull_vertices = thull.lower_hull(dft_hull)[0]
     if any(predicted_energies):
-        predicted_lower_hull_vertices = cl.lower_hull(predicted_hull)[1]
+        predicted_lower_hull_vertices = thull.lower_hull(predicted_hull)[0]
 
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
@@ -821,6 +838,8 @@ def general_binary_convex_hull_plotter(
     plt.xlabel("Composition X", fontsize=21)
     plt.ylabel("Formation Energy (eV)", fontsize=21)
     plt.legend(fontsize=21)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
 
     fig = plt.gcf()
     fig.set_size_inches(19, 14)
@@ -952,3 +971,139 @@ def calculate_hulldist_corr(
         )
 
     return hulldist_corr
+
+
+def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
+    """Calculates the variance mean ratio for each ECI and ranks them from highest to lowest variance mean ratio.
+
+    Parameters:
+    -----------
+    posterior_eci: np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+
+    Returns:
+    --------
+    eci_ranking: np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    eci_variance = np.var(posterior_eci, axis=1)
+    eci_mean = np.mean(posterior_eci, axis=1)
+    eci_vmr = eci_variance / np.abs(eci_mean)
+    eci_ranking = np.argsort(eci_vmr)
+    return eci_ranking
+
+
+def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
+    """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
+       The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
+       This vector is then ranked from lowest to highest and returned. 
+
+    Parameters
+    ----------
+    posterior_eci : np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+    explained_variance_tolerance : float
+        The fraction of the normalized inverse of the explained variance, which will decide how many PCA components to sum.
+
+    Returns:
+    --------
+    pca_explained_variance_ranking: np.ndarray
+        Vector of ECI indices ranked from lowest to highest magnitude in the PCA component with the lowest explained variance
+        from the posterior distribution. The PCA with the lowest explained variance shows the ECI direction which varies the least,
+        meaning that the ECI which contribute to this direction are "well pinned" by the data.
+    """
+    pca = PCA().fit(posterior_eci.T)
+    pca_explained_variance_ranking = np.argsort(np.abs(pca.components_[-1]))
+
+    return pca_explained_variance_ranking
+
+
+def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit()) -> np.ndarray:
+    """Sorts the ECI by variance mean ratio, and returns the array of sorted indices. 
+
+    Parameters
+    ----------
+    bayesian_ridge_fit : sklearn.linear_model.BayesianRidge.fit()
+        Bayesian Ridge fit object.
+    
+    Returns
+    -------
+    eci_ranking : np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    br_stddev = np.sqrt(np.diagonal(bayesian_ridge_fit.sigma_))
+    br_prune_order_indices = np.argsort(br_stddev / np.abs(bayesian_ridge_fit.coef_))
+    return br_prune_order_indices
+
+
+def iteratively_prune_eci_by_importance_array(
+    mean_eci: np.ndarray,
+    prune_order_indices: np.ndarray,
+    comp,
+    corr,
+    true_energies,
+    fit_each_iteration: bool = False,
+    sorter_function: Callable = None,
+) -> np.ndarray:
+    """Iteratively prunes ECI by importance array.
+
+    Parameters
+    ----------
+    mean_eci : np.ndarray
+        Vector of mean ECI.
+    prune_order_indices : np.ndarray
+        Vector of ECI indices, in the order that they should be pruned.
+    comp : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    corr : np.ndarray
+        nxk correlation matrix, where n is the number of configurations and k is the number of ECI.
+    true_energies : np.ndarray
+        nx1 matrix of true formation energies.
+    fit_each_iteration : bool, optional
+        Whether to fit the model after each iteration, by default False
+    sorter_function : Callable, optional
+        Function to sort the ECI by; must accept a BayesianRidge.fit() object, and return an array of indices. None by default. 
+    
+
+    Returns
+    -------
+    pruning_record: dict
+        Dictionary containing rmse, ground states, and eci_record for each pruning iteration.
+    """
+
+    mask = np.ones(mean_eci.shape[0])
+    rmse = []
+    ground_state_indices = []
+    pruned_eci_record = []
+    predicted_energy_record = []
+    br_prune_order_indices = np.ones(mean_eci.shape[0])
+    bayesian_ridge_corr = corr.copy()
+    for index, entry in enumerate(prune_order_indices[0:-3]):
+        mask[entry] = 0
+        pruned_eci = mean_eci * mask
+        pruned_eci_record.append(pruned_eci)
+        if fit_each_iteration:
+            bayesian_ridge_corr = bayesian_ridge_corr[
+                :, br_prune_order_indices.astype(bool)
+            ]
+            bayesian_ridge_fit = BayesianRidge(fit_intercept=False,).fit(
+                bayesian_ridge_corr, true_energies
+            )
+
+            predicted_energy = bayesian_ridge_corr @ bayesian_ridge_fit.coef_
+            predicted_energy_record.append(predicted_energy)
+            br_prune_order_indices = sorter_function(bayesian_ridge_fit)
+        else:
+            predicted_energy = corr @ pruned_eci
+            predicted_energy_record.append(predicted_energy)
+        rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
+        hull = thull.full_hull(compositions=comp, energies=predicted_energy)
+        vertices, _ = thull.lower_hull(hull)
+        ground_state_indices.append(vertices)
+    pruning_record = {
+        "rmse": rmse,
+        "ground_states": ground_state_indices,
+        "eci_record": pruned_eci_record,
+        "predicted_energy_record": predicted_energy_record,
+    }
+    return pruning_record
