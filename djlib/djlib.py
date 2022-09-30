@@ -385,3 +385,10 @@ def collect_config_structure_files(
             os.path.join(output_directory, config),
         )
     print("done")
+
+
+def safe_list_get (l, idx, default):
+    try:
+        return l[idx]
+    except IndexError:
+        return default
