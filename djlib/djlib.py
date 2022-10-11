@@ -7,8 +7,42 @@ from glob import glob
 import json
 from typing import List, Tuple
 import shutil
+import warnings
 
 libpath = pathlib.Path(__file__).parent.resolve()
+
+
+def regroup_dicts_by_keys(list_of_dictionaries: list) -> dict:
+    """Groups CASM query data by property instead of by configuration.
+
+    Parameters
+    ----------
+    list_of_dictionaries: list
+        List of dictionaries.
+
+    Returns
+    -------
+    results: dict
+        Dictionary of all data grouped by keys (not grouped by configuraton)
+
+    Notes
+    ------
+    This function assumes that all dictionaries have the same keys.
+    It sorts all properties by those keys instead of by list index.
+    Properties that are a single value or string are passed as a list of those properties.
+    Properties that are arrays are passed as a list of lists (2D matrices) even if the
+    property only has one value (a matrix of one column).
+    """
+    data = list_of_dictionaries
+    keys = data[0].keys()
+    data_collect = []
+    for i in range(len(keys)):
+        data_collect.append([])
+
+    for element_dict in data:
+        for index, key in enumerate(keys):
+            data_collect[index].append(element_dict[key])
+    return dict(zip(keys, data_collect))
 
 
 def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
@@ -385,3 +419,63 @@ def collect_config_structure_files(
             os.path.join(output_directory, config),
         )
     print("done")
+
+
+class gridspace_manager:
+    def __init__(
+        self,
+        origin_dir: str = "./",
+        namer: callable = None,
+        run_parser: callable = None,
+        run_creator: callable = None,
+        status_updater: callable = None,
+        run_submitter: callable = None,
+        grid_params: dict = None,
+    ) -> None:
+
+        self.data = None
+        self.origin_dir = origin_dir
+        self.namer = namer
+        self.run_parser = run_parser
+        self.run_creator = run_creator
+        self.grid_params = grid_params
+        self.status_updater = status_updater
+        self.run_submitter = run_submitter
+
+        def collect_data(self):
+            # Iterate through directories, collecting data from each run.
+            self.data = []
+            self.dirs = glob(os.path.join(self.origin_dir, "*"))
+
+            for dir in self.dirs:
+                try:
+                    self.data.append(self.run_parser(dir))
+                except:
+                    print("failed to parse: ", dir)
+            self.data = regroup_dicts_by_keys(self.data)
+
+        def format_run_dirs(self) -> None:
+            for entry in self.grid_params:
+                # Make a directory for each entry grid_params, according to the namer function. Overwrite existing directories if they exist.
+                run_dir = os.path.join(self.origin_dir, self.namer(entry))
+                os.makedirs(run_dir, exist_ok=True)
+                self.run_creator(entry, run_dir)
+
+        def update_status(self) -> None:
+            # Iterate through directories, updating status of each run.
+            self.dirs = glob(os.path.join(self.origin_dir, "*"))
+            for dir in self.dirs:
+                try:
+                    self.status_updater(dir)
+                except:
+                    print("failed to update: ", dir)
+
+        def run_valid_calculations(self) -> None:
+            # Iterate through directories, updating status of each run.
+            self.dirs = glob(os.path.join(self.origin_dir, "*"))
+            for dir in self.dirs:
+                try:
+                    self.run_submitter(dir)
+                except:
+                    print("failed to update: ", dir)
+
