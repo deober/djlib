@@ -739,7 +739,7 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
 
     return fig
 
-
+#TODO: Take this one out
 def write_eci_json(eci: np.ndarray, basis_json: dict):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
