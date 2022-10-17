@@ -739,7 +739,8 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
 
     return fig
 
-#TODO: Take this one out
+
+# TODO: Take this one out
 def write_eci_json(eci: np.ndarray, basis_json: dict):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
@@ -1107,3 +1108,76 @@ def iteratively_prune_eci_by_importance_array(
         "predicted_energy_record": predicted_energy_record,
     }
     return pruning_record
+
+
+def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
+    """Calculates the slope for each line segment in a series of connected points.
+    
+    Parameters:
+    -----------
+    x_coords: np.ndarray
+        Array of x coordinates.
+    y_coords: np.ndarray
+        Array of y coordinates.
+    
+    Returns:
+    --------
+    slopes: np.ndarray
+        Array of slopes.
+    """
+
+    # sort x_coords and y_coords by x_coords
+    x_coords, y_coords = zip(*sorted(zip(x_coords, y_coords)))
+
+    slopes = np.zeros(len(x_coords) - 1)
+    for i in range(len(x_coords) - 1):
+        slopes[i] = (y_coords[i + 1] - y_coords[i]) / (x_coords[i + 1] - x_coords[i])
+    return slopes
+
+
+def ground_state_accuracy_metric(
+    composition_predicted, energy_predicted, true_ground_state_indices
+) -> float:
+    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction. 
+        The denominator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull.
+        The numerator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull, which are ALSO ground states in DFT data.
+
+    Parameters
+    ----------
+    composition_predicted : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    energy_predicted : np.ndarray
+        nx1 matrix of predicted formation energies.
+    true_ground_state_indices : np.ndarray
+        nx1 matrix of true ground state indices.
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric.
+    """
+    hull = thull.full_hull(
+        compositions=composition_predicted, energies=energy_predicted
+    )
+    vertices, _ = thull.lower_hull(hull)
+
+    slopes = calculate_slopes(
+        composition_predicted[vertices], energy_predicted[vertices]
+    )
+    stable_chem_pot_windows = [
+        slopes[i + 1] - slopes[i] for i in range(len(slopes) - 1)
+    ]
+
+    # End states will always be on the convex hull and have an infinite stable chemical potential window. Exclude these from the
+    vertices = np.sort(vertices)[2:]
+
+    vertex_indices_ordered_by_comp = np.argsort(
+        np.ravel(composition_predicted[vertices])
+    )
+
+    numerator = 0
+    for vertex_index in vertex_indices_ordered_by_comp:
+        if vertices[vertex_index] in true_ground_state_indices:
+            numerator += stable_chem_pot_windows[vertex_index]
+
+    return numerator / np.sum(stable_chem_pot_windows)

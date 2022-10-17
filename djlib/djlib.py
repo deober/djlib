@@ -442,40 +442,40 @@ class gridspace_manager:
         self.status_updater = status_updater
         self.run_submitter = run_submitter
 
-        def collect_data(self):
-            # Iterate through directories, collecting data from each run.
-            self.data = []
-            self.dirs = glob(os.path.join(self.origin_dir, "*"))
+    def collect_data(self):
+        # Iterate through directories, collecting data from each run.
+        self.data = []
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
 
-            for dir in self.dirs:
-                try:
-                    self.data.append(self.run_parser(dir))
-                except:
-                    print("failed to parse: ", dir)
-            self.data = regroup_dicts_by_keys(self.data)
+        for dir in self.dirs:
+            try:
+                self.data.append(self.run_parser(dir))
+            except:
+                print("failed to parse: ", dir)
+        self.data = regroup_dicts_by_keys(self.data)
 
-        def format_run_dirs(self) -> None:
-            for entry in self.grid_params:
-                # Make a directory for each entry grid_params, according to the namer function. Overwrite existing directories if they exist.
-                run_dir = os.path.join(self.origin_dir, self.namer(entry))
-                os.makedirs(run_dir, exist_ok=True)
-                self.run_creator(entry, run_dir)
+    def format_run_dirs(self) -> None:
+        for entry in self.grid_params:
+            # Make a directory for each entry grid_params, according to the namer function. Overwrite existing directories if they exist.
+            run_dir = os.path.join(self.origin_dir, self.namer(entry))
+            os.makedirs(run_dir, exist_ok=True)
+            self.run_creator(entry, run_dir)
 
-        def update_status(self) -> None:
-            # Iterate through directories, updating status of each run.
-            self.dirs = glob(os.path.join(self.origin_dir, "*"))
-            for dir in self.dirs:
-                try:
-                    self.status_updater(dir)
-                except:
-                    print("failed to update: ", dir)
+    def update_status(self) -> None:
+        # Iterate through directories, updating status of each run according to the status_updater function.
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
+        for dir in self.dirs:
+            try:
+                self.status_updater(dir)
+            except:
+                print("failed to update: ", dir)
 
-        def run_valid_calculations(self) -> None:
-            # Iterate through directories, updating status of each run.
-            self.dirs = glob(os.path.join(self.origin_dir, "*"))
-            for dir in self.dirs:
-                try:
-                    self.run_submitter(dir)
-                except:
-                    print("failed to update: ", dir)
+    def run_valid_calculations(self) -> None:
+        # Iterate through directories, submitting each according to the run_submitter function.
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
+        for dir in self.dirs:
+            try:
+                self.run_submitter(dir)
+            except:
+                print("failed to update: ", dir)
 
