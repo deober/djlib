@@ -101,7 +101,7 @@ def mc_status_updater(run_dir):
     else:
         status = "not_submitted"
     with open(status_file, "w") as f:
-        f.write({'status':status})
+        json.dump({'status':status},f,indent=4)
 
 def read_lte_results(
     results_file_path: str,
@@ -166,7 +166,7 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     t_increment = settings["driver"]["incremental_conditions"]["temperature"]
 
     if mu_increment != 0:
-        mu_length = int(np.abs((mu_start - mu_stop) / mu_increment))
+        mu_length = int(np.abs((mu_start - mu_stop) / mu_increment))+1
     else:
         mu_length = 1
     if t_increment != 0:
