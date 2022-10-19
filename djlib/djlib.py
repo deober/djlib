@@ -145,7 +145,12 @@ def update_properties_files(casm_root_dir: str):
                 if "coord_mode" in properties:
                     properties["coordinate_mode"] = properties["coord_mode"]
                 if properties["atom_properties"]["force"]["value"] == []:
-                    properties["atom_properties"]["force"]["value"] = [[0.0, 0.0, 0.0]]
+                    atoms = len(properties["atom_type"])
+                    fixer = []
+                    for i in range(atoms):
+                        fixer.append([0.0,0.0,0.0])
+                    print(len(fixer))
+                    properties["atom_properties"]["force"]["value"] = fixer
                     print("Fixed empty forces in %s" % config)
                 with open(
                     os.path.join(config, "calctype.default/properties.calc.json"), "w"
