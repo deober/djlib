@@ -435,7 +435,7 @@ class gridspace_manager:
         run_creator: callable = None,
         status_updater: callable = None,
         run_submitter: callable = None,
-        grid_params: dict = None,
+        grid_params: dict = None, # list of dictionary, each dictionary corresponds to a run
     ) -> None:
 
         self.data = None
