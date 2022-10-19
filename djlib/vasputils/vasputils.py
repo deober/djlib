@@ -685,6 +685,8 @@ def kpoint_convergence(
     incar_path: str,
     poscar_path: str,
     potcar_path: str,
+    user_command: str,
+    hours: int,
 ) -> None:
     """
     Run a sweep of static vasp calculations for varying numbers of kpoints
@@ -724,3 +726,34 @@ Auto
 %d"""
                 % kpoint_density
             )
+        dj.format_slurm_job(
+            jobname="kpoint_density.%s" % kpoint_density,
+            hours=hours,
+            user_command=user_command,
+            output_dir=calc_dir,
+        )
+
+
+def check_vasp_run_is_complete(vasp_run_dir) -> bool:
+    """
+    Check if a vasp run is complete by checking the OUTCAR file for the string "General timing and accounting informations for this job:"
+
+    Parameters:
+    -----------
+    vasp_run_dir: str
+        Path to directory containing vasp run
+
+    Returns:
+    --------
+    bool
+        True if vasp run is complete, False if not.
+    """
+    # check that OUTCAR exists
+    if os.path.exists(os.path.join(vasp_run_dir, "OUTCAR")) == False:
+        return False
+    else:
+        with open(os.path.join(vasp_run_dir, "OUTCAR"), "r") as f:
+            for line in f:
+                if "General timing and accounting informations for this job:" in line:
+                    return True
+            return False

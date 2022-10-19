@@ -76,7 +76,7 @@ def end_state_supercell_calc_setup(
     job_time_hours: int,
     job_name: str,
     output_dir: str,
-    cpus_per_task: int,
+    ntasks_per_node: int,
     user_command: str,
 ) -> None:
     """Set up static vasp calculation for composition end state structure in a larger supercell in order to reduce kpoint noise in formation energy values.
@@ -104,13 +104,12 @@ def end_state_supercell_calc_setup(
     """
 
     # create the vasp calculation directory if it does not exist
-    if not os.path.exists(vasp_calc_dir):
-        os.makedirs(vasp_calc_dir, exist_ok=True)
+    os.makedirs(vasp_calc_dir, exist_ok=True)
 
-        # copy potcar, incar and kpoint file to vasp calculation directory
-        os.system("cp %s %s" % (potcar_path, vasp_calc_dir))
-        os.system("cp %s %s" % (incar_template, vasp_calc_dir))
-        os.system("cp %s %s" % (kpoints_template, vasp_calc_dir))
+    # copy potcar, incar and kpoint file to vasp calculation directory
+    os.system("cp %s %s" % (potcar_path, os.path.join(vasp_calc_dir, "POTCAR")))
+    os.system("cp %s %s" % (incar_template, os.path.join(vasp_calc_dir, "INCAR")))
+    os.system("cp %s %s" % (kpoints_template, os.path.join(vasp_calc_dir, "KPOINTS")))
 
     # write a status.json file if it does not exist. If the file does not exist, initialize the status as "not_submitted"
     if not os.path.exists(os.path.join(vasp_calc_dir, "status.json")):
@@ -138,5 +137,5 @@ def end_state_supercell_calc_setup(
         hours=job_time_hours,
         user_command=user_command,
         output_dir=output_dir,
-        cpus_per_task=cpus_per_task,
+        ntasks_per_node=ntasks_per_node,
     )

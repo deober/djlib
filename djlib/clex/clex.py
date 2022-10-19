@@ -20,6 +20,8 @@ import pathlib
 from warnings import warn
 from typing import List, Tuple, Sequence
 import stan
+from sklearn.decomposition import PCA
+from sklearn.linear_model import BayesianRidge
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
@@ -738,6 +740,7 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     return fig
 
 
+# TODO: Take this one out
 def write_eci_json(eci: np.ndarray, basis_json: dict):
     """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
 
@@ -970,3 +973,211 @@ def calculate_hulldist_corr(
 
     return hulldist_corr
 
+
+def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
+    """Calculates the variance mean ratio for each ECI and ranks them from highest to lowest variance mean ratio.
+
+    Parameters:
+    -----------
+    posterior_eci: np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+
+    Returns:
+    --------
+    eci_ranking: np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    eci_variance = np.var(posterior_eci, axis=1)
+    eci_mean = np.mean(posterior_eci, axis=1)
+    eci_vmr = eci_variance / np.abs(eci_mean)
+    eci_ranking = np.argsort(eci_vmr)
+    return eci_ranking
+
+
+def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
+    """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
+       The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
+       This vector is then ranked from lowest to highest and returned. 
+
+    Parameters
+    ----------
+    posterior_eci : np.ndarray
+        nxk matrix of ECI, where n is the number of posterior samples and k is the number of ECI.
+    explained_variance_tolerance : float
+        The fraction of the normalized inverse of the explained variance, which will decide how many PCA components to sum.
+
+    Returns:
+    --------
+    pca_explained_variance_ranking: np.ndarray
+        Vector of ECI indices ranked from lowest to highest magnitude in the PCA component with the lowest explained variance
+        from the posterior distribution. The PCA with the lowest explained variance shows the ECI direction which varies the least,
+        meaning that the ECI which contribute to this direction are "well pinned" by the data.
+    """
+    pca = PCA().fit(posterior_eci.T)
+    pca_explained_variance_ranking = np.argsort(np.abs(pca.components_[-1]))
+
+    return pca_explained_variance_ranking
+
+
+def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit()) -> np.ndarray:
+    """Sorts the ECI by variance mean ratio, and returns the array of sorted indices. 
+
+    Parameters
+    ----------
+    bayesian_ridge_fit : sklearn.linear_model.BayesianRidge.fit()
+        Bayesian Ridge fit object.
+    
+    Returns
+    -------
+    eci_ranking : np.ndarray
+        Vector of ECI indices ranked from highest to lowest variance mean ratio.
+    """
+    br_stddev = np.sqrt(np.diagonal(bayesian_ridge_fit.sigma_))
+    br_prune_order_indices = np.argsort(br_stddev / np.abs(bayesian_ridge_fit.coef_))
+    return br_prune_order_indices
+
+
+def iteratively_prune_eci_by_importance_array(
+    mean_eci: np.ndarray,
+    prune_order_indices: np.ndarray,
+    comp,
+    corr,
+    true_energies,
+    fit_each_iteration: bool = False,
+    sorter_function: Callable = None,
+) -> np.ndarray:
+    """Iteratively prunes ECI by importance array.
+
+    Parameters
+    ----------
+    mean_eci : np.ndarray
+        Vector of mean ECI.
+    prune_order_indices : np.ndarray
+        Vector of ECI indices, in the order that they should be pruned.
+    comp : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    corr : np.ndarray
+        nxk correlation matrix, where n is the number of configurations and k is the number of ECI.
+    true_energies : np.ndarray
+        nx1 matrix of true formation energies.
+    fit_each_iteration : bool, optional
+        Whether to fit the model after each iteration, by default False
+    sorter_function : Callable, optional
+        Function to sort the ECI by; must accept a BayesianRidge.fit() object, and return an array of indices. None by default. 
+    
+
+    Returns
+    -------
+    pruning_record: dict
+        Dictionary containing rmse, ground states, and eci_record for each pruning iteration.
+    """
+
+    mask = np.ones(mean_eci.shape[0])
+    rmse = []
+    ground_state_indices = []
+    pruned_eci_record = []
+    predicted_energy_record = []
+    br_prune_order_indices = np.ones(mean_eci.shape[0])
+    bayesian_ridge_corr = corr.copy()
+    for index, entry in enumerate(prune_order_indices[0:-3]):
+        mask[entry] = 0
+        pruned_eci = mean_eci * mask
+        pruned_eci_record.append(pruned_eci)
+        if fit_each_iteration:
+            bayesian_ridge_corr = bayesian_ridge_corr[
+                :, br_prune_order_indices.astype(bool)
+            ]
+            bayesian_ridge_fit = BayesianRidge(fit_intercept=False,).fit(
+                bayesian_ridge_corr, true_energies
+            )
+
+            predicted_energy = bayesian_ridge_corr @ bayesian_ridge_fit.coef_
+            predicted_energy_record.append(predicted_energy)
+            br_prune_order_indices = sorter_function(bayesian_ridge_fit)
+        else:
+            predicted_energy = corr @ pruned_eci
+            predicted_energy_record.append(predicted_energy)
+        rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
+        hull = thull.full_hull(compositions=comp, energies=predicted_energy)
+        vertices, _ = thull.lower_hull(hull)
+        ground_state_indices.append(vertices)
+    pruning_record = {
+        "rmse": rmse,
+        "ground_states": ground_state_indices,
+        "eci_record": pruned_eci_record,
+        "predicted_energy_record": predicted_energy_record,
+    }
+    return pruning_record
+
+
+def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
+    """Calculates the slope for each line segment in a series of connected points.
+    
+    Parameters:
+    -----------
+    x_coords: np.ndarray
+        Array of x coordinates.
+    y_coords: np.ndarray
+        Array of y coordinates.
+    
+    Returns:
+    --------
+    slopes: np.ndarray
+        Array of slopes.
+    """
+
+    # sort x_coords and y_coords by x_coords
+    x_coords, y_coords = zip(*sorted(zip(x_coords, y_coords)))
+
+    slopes = np.zeros(len(x_coords) - 1)
+    for i in range(len(x_coords) - 1):
+        slopes[i] = (y_coords[i + 1] - y_coords[i]) / (x_coords[i + 1] - x_coords[i])
+    return slopes
+
+
+def ground_state_accuracy_metric(
+    composition_predicted, energy_predicted, true_ground_state_indices
+) -> float:
+    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction. 
+        The denominator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull.
+        The numerator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull, which are ALSO ground states in DFT data.
+
+    Parameters
+    ----------
+    composition_predicted : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    energy_predicted : np.ndarray
+        nx1 matrix of predicted formation energies.
+    true_ground_state_indices : np.ndarray
+        nx1 matrix of true ground state indices.
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric.
+    """
+    hull = thull.full_hull(
+        compositions=composition_predicted, energies=energy_predicted
+    )
+    vertices, _ = thull.lower_hull(hull)
+
+    slopes = calculate_slopes(
+        composition_predicted[vertices], energy_predicted[vertices]
+    )
+    stable_chem_pot_windows = [
+        slopes[i + 1] - slopes[i] for i in range(len(slopes) - 1)
+    ]
+
+    # End states will always be on the convex hull and have an infinite stable chemical potential window. Exclude these from the
+    vertices = np.sort(vertices)[2:]
+
+    vertex_indices_ordered_by_comp = np.argsort(
+        np.ravel(composition_predicted[vertices])
+    )
+
+    numerator = 0
+    for vertex_index in vertex_indices_ordered_by_comp:
+        if vertices[vertex_index] in true_ground_state_indices:
+            numerator += stable_chem_pot_windows[vertex_index]
+
+    return numerator / np.sum(stable_chem_pot_windows)

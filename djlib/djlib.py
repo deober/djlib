@@ -5,8 +5,44 @@ import pathlib
 import math as m
 from glob import glob
 import json
+from typing import List, Tuple
+import shutil
+import warnings
 
 libpath = pathlib.Path(__file__).parent.resolve()
+
+
+def regroup_dicts_by_keys(list_of_dictionaries: list) -> dict:
+    """Groups CASM query data by property instead of by configuration.
+
+    Parameters
+    ----------
+    list_of_dictionaries: list
+        List of dictionaries.
+
+    Returns
+    -------
+    results: dict
+        Dictionary of all data grouped by keys (not grouped by configuraton)
+
+    Notes
+    ------
+    This function assumes that all dictionaries have the same keys.
+    It sorts all properties by those keys instead of by list index.
+    Properties that are a single value or string are passed as a list of those properties.
+    Properties that are arrays are passed as a list of lists (2D matrices) even if the
+    property only has one value (a matrix of one column).
+    """
+    data = list_of_dictionaries
+    keys = data[0].keys()
+    data_collect = []
+    for i in range(len(keys)):
+        data_collect.append([])
+
+    for element_dict in data:
+        for index, key in enumerate(keys):
+            data_collect[index].append(element_dict[key])
+    return dict(zip(keys, data_collect))
 
 
 def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
@@ -220,9 +256,7 @@ def format_slurm_job(
     delete_submit_script=False,
     queue="batch",
     nodes=1,
-    ntasks=1,
-    tasks_per_core=1,
-    cpus_per_task=1,
+    ntasks_per_node=1,
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
@@ -258,9 +292,7 @@ def format_slurm_job(
             user_command=user_command,
             delete_submit_script=delete_submit_script,
             nodes=nodes,
-            ntasks=ntasks,
-            tasks_per_core=tasks_per_core,
-            cpus_per_task=cpus_per_task,
+            ntasks_per_node=ntasks_per_node,
         )
     with open(submit_file_path, "w") as f:
         f.write(s)
@@ -315,3 +347,140 @@ def mode(vec: np.ndarray) -> float:
     max_index = np.where(hist[0] == max(hist[0]))[0]
     hist_mode = np.mean((hist[1][max_index], hist[1][max_index + 1]))
     return hist_mode
+
+
+def analytic_posterior(
+    feature_matrix: np.ndarray,
+    weight_covariance_matrix: np.ndarray,
+    weight_mean_vec: np.ndarray,
+    label_covariance_matrix: np.ndarray,
+    label_vec: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector, weight covariance matrix, target values vector, and target values covariance matrix.
+
+    Parameters:
+    ----------
+    weight_covariance_matrix: np.ndarray
+        Weight covariance matrix.
+    weight_mean_vec: np.ndarray
+        Weight mean vector.
+    label_covariance_matrix: np.ndarray
+        Target values covariance matrix.
+    label_vec: np.ndarray
+        Target values vector.
+    Returns:
+    --------
+    posterior_mean_vec: np.ndarray
+        Posterior mean vector.
+    posterior_covariance_matrix: np.ndarray
+        Posterior covariance matrix.
+    """
+    # Calculate precision matrices (inverse of covariance matrices)
+    weight_precision_matrix = np.linalg.pinv(weight_covariance_matrix)
+    label_precision_matrix = np.linalg.pinv(label_covariance_matrix)
+
+    # Calculate the posterior distribution covariance matrix
+    posterior_covariance_matrix = np.linalg.pinv(
+        weight_precision_matrix
+        + feature_matrix.T @ label_precision_matrix @ feature_matrix
+    )
+
+    # Calculate the posterior distribution mean vector
+    posterior_mean_vec = posterior_covariance_matrix @ (
+        feature_matrix.T @ label_precision_matrix @ label_vec
+        + weight_precision_matrix @ weight_mean_vec
+    )
+
+    return (posterior_mean_vec, posterior_covariance_matrix)
+
+
+def collect_config_structure_files(
+    casm_root: str, config_list: List[str], output_directory
+) -> None:
+    """Collects the config structure.json files from a list of config names.
+    
+    Parameters:
+    -----------
+    casm_root: str
+        Path to the CASM root directory.
+    config_list: List[str]
+        List of config names.
+    
+    Returns:
+    --------
+    None.
+    """
+
+    # make output directory if it doesn't exist
+    print("creating output directory: ", output_directory)
+    os.makedirs(output_directory, exist_ok=True)
+
+    # For each config, copy the config structure.json file to the output directory
+    for config in config_list:
+        print("copying config structure.json file for config: ", config)
+        os.makedirs(os.path.join(output_directory, config), exist_ok=True)
+        shutil.copy(
+            os.path.join(casm_root, "training_data", config, "structure.json"),
+            os.path.join(output_directory, config),
+        )
+    print("done")
+
+
+class gridspace_manager:
+    def __init__(
+        self,
+        origin_dir: str = "./",
+        namer: callable = None,
+        run_parser: callable = None,
+        run_creator: callable = None,
+        status_updater: callable = None,
+        run_submitter: callable = None,
+        grid_params: dict = None,
+    ) -> None:
+
+        self.data = None
+        self.origin_dir = origin_dir
+        self.namer = namer
+        self.run_parser = run_parser
+        self.run_creator = run_creator
+        self.grid_params = grid_params
+        self.status_updater = status_updater
+        self.run_submitter = run_submitter
+
+    def collect_data(self):
+        # Iterate through directories, collecting data from each run.
+        self.data = []
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
+
+        for dir in self.dirs:
+            try:
+                self.data.append(self.run_parser(dir))
+            except:
+                print("failed to parse: ", dir)
+        self.data = regroup_dicts_by_keys(self.data)
+
+    def format_run_dirs(self) -> None:
+        for entry in self.grid_params:
+            # Make a directory for each entry grid_params, according to the namer function. Overwrite existing directories if they exist.
+            run_dir = os.path.join(self.origin_dir, self.namer(entry))
+            os.makedirs(run_dir, exist_ok=True)
+            self.run_creator(entry, run_dir)
+
+    def update_status(self) -> None:
+        # Iterate through directories, updating status of each run according to the status_updater function.
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
+        for dir in self.dirs:
+            try:
+                self.status_updater(dir)
+            except:
+                print("failed to update: ", dir)
+
+    def run_valid_calculations(self) -> None:
+        # Iterate through directories, submitting each according to the run_submitter function.
+        self.dirs = glob(os.path.join(self.origin_dir, "*"))
+        for dir in self.dirs:
+            try:
+                self.run_submitter(dir)
+            except:
+                print("failed to update: ", dir)
+
