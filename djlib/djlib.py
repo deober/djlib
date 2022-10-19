@@ -299,36 +299,6 @@ def format_slurm_job(
     os.system("chmod 755 %s " % submit_file_path)
 
 
-def run_submitter(
-    run_directory: str,
-    output_file_name="results.pkl",
-    slurm_submit_script_name="submit_slurm.sh",
-):
-    """Checks if calculation output file exists. If slurm submission script exists, but calculation output does not, run the submission script.
-
-    Parameters:
-    -----------
-    run_directory: str
-        Path to the run directory.
-    output_file_name: str
-        Name of the output file (e.g. results.pkl). This is not a path, only the filename.
-    slurm_subnmit_script_name: str
-        Name of the slurm submit scriptfile (e.g. submit_slurm.sh)
-    Returns:
-    --------
-    None.
-    """
-    output_exists = os.path.isfile(os.path.join(run_directory, output_file_name))
-    slurm_script_exists = os.path.isfile(
-        os.path.join(run_directory, slurm_submit_script_name)
-    )
-
-    if output_exists == False and slurm_script_exists == True:
-        submit_slurm_job(run_dir=run_directory)
-    elif output_exists == True:
-        print("Output file exists. Skipping submission.")
-
-
 def mode(vec: np.ndarray) -> float:
     """Calculates and returns the mode of a vector of continuous data.
 

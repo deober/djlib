@@ -138,6 +138,13 @@ def read_lte_results(
 
     return (mu, b, t, x, pot_eng)
 
+def mc_run_submitter(run_dir,submit_script_name="submit_slurm.sh"):
+    """
+    Function to submit a monte carlo simulation to the queue.
+    """
+    dj.submit_slurm_job(run_dir,submit_script_name=submit_script_name)
+    with open(os.path.join(run_dir,"status.json"),"w") as f:
+        json.dump({"status":"submitted"},f,indent=4)
 
 def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
