@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+from re import T
 import matplotlib.pyplot as plt
 import os
 from scipy import integrate
@@ -64,6 +65,43 @@ def read_mc_results_file(
     formation_energy = np.array(results["<formation_energy>"])
     return (mu, x, b, temperature, potential_energy, formation_energy)
 
+def mc_run_namer(run_params:dict):
+    """
+    Function to generate a name for a MC simulation based on the run parameters.
+
+    Parameters:
+    -----------
+    run_params: dict
+        Dictionary of run parameters.
+        Should include: mu start, stop, & increment; T start, stop, & increment, and supercell transformation matrix.
+
+    Returns:
+    --------
+    name: str
+        Name of the non-lte simulation.
+    """
+    name = f"mu_{run_params['mu_start']}_{run_params['mu_stop']}T_{run_params['T_start']}+{run_params['T_stop']}"
+    return name
+
+def mc_status_updater(run_dir):
+    """
+        Update status.json in a run directory. Updates to "complete" if results.json exists and is of the right size. Updates to "incomplete" if results.json exists and is of the wrong size.
+    """
+    status_file = os.path.join(run_dir, "status.json")
+    settings_file = os.path.join(run_dir, "mc_settings.json")
+    length = read_mc_settings(settings_file)[0].shape[0]
+    results_file = os.path.join(run_dir, "results.json")
+    if os.path.exists(results_file):
+        results_length = read_mc_results_file(results_file)[0].shape[0]
+        print(f"length: {length}, results_length: {results_length}")
+        if results_length == length:
+            status = "complete"
+        else:
+            status = "incomplete"
+    else:
+        status = "not_submitted"
+    with open(status_file, "w") as f:
+        f.write({'status':status})
 
 def read_lte_results(
     results_file_path: str,
