@@ -170,7 +170,7 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     else:
         mu_length = 1
     if t_increment != 0:
-        t_length = int(np.abs((t_start - t_stop) / t_increment))
+        t_length = int(np.abs((t_start - t_stop) / t_increment))+1
     else:
         t_length = 1
 
