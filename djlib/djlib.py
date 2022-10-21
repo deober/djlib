@@ -427,7 +427,8 @@ class gridspace_manager:
                 self.data.append(self.run_parser(dir))
             except:
                 print("failed to parse: ", dir)
-        self.data = regroup_dicts_by_keys(self.data)
+        self.data = [entry for entry in self.data if entry is not None]
+        #self.data = regroup_dicts_by_keys(self.data)
 
     def format_run_dirs(self) -> None:
         for entry in self.grid_params:
