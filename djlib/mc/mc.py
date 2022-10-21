@@ -146,6 +146,17 @@ def mc_run_submitter(run_dir,submit_script_name="submit_slurm.sh"):
     with open(os.path.join(run_dir,"status.json"),"w") as f:
         json.dump({"status":"submitted"},f,indent=4)
 
+def mc_run_creator(run_params:dict,run_dir):
+    """
+    #TODO: Write this properly
+    Function to create a monte carlo simulation.
+    """
+    os.makedirs(run_dir,exist_ok=True)
+    mc_settings_file = os.path.join(run_dir,"mc_settings.json")
+    with open(mc_settings_file,"w") as f:
+        json.dump(run_params,f,indent=4)
+    mc_status_updater(run_dir)
+
 def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Function to read chemical potential and temperature values from a mc_settings.json file.
