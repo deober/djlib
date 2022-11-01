@@ -37,7 +37,8 @@ def find(lst: List, a: float):
             "\nWARNING: Search value does not match any value in the provided list.\n"
         )
 
-def mc_run_namer(run_params:dict):
+
+def mc_run_namer(run_params: dict):
     """
     Function to generate a name for a MC simulation based on the run parameters.
 
@@ -54,6 +55,7 @@ def mc_run_namer(run_params:dict):
     """
     name = f"mu_{run_params['mu_start']}_{run_params['mu_stop']}T_{run_params['T_start']}+{run_params['T_stop']}"
     return name
+
 
 def mc_status_updater(run_dir):
     """
@@ -73,12 +75,12 @@ def mc_status_updater(run_dir):
     else:
         status = "not_submitted"
     with open(status_file, "w") as f:
-        json.dump({'status':status},f,indent=4)
+        json.dump({"status": status}, f, indent=4)
 
-def mc_run_creator(run_params:dict,run_dir):
+
+def mc_run_creator(run_params: dict, run_dir):
     """
-    #TODO: Write this properly
-    Function to create a monte carlo simulation and updates status to 'not_submitted'.
+    Creates a grand canonical monte carlo simulation directory, formats necessary settings files, writes a status file and writes a run_info.json file, which contains run_params.
 
     Parameters:
     run_params: dict
@@ -92,29 +94,60 @@ def mc_run_creator(run_params:dict,run_dir):
     None
         Simply creates a directory and writes a mc_settings.json file.
     """
-    os.makedirs(run_dir,exist_ok=True)
-    mc_settings_file = os.path.join(run_dir,"mc_settings.json")
-    mc_template_file = os.path.join(mc_lib_dir,"../templates/mc_grand_canonical_template.json")
+    # Make the run directory
+    os.makedirs(run_dir, exist_ok=True)
+
+    # Write the run_params dictionary to a json file called run_info.json
+    with open(os.path.join(run_dir, "run_info.json"), "w") as f:
+        json.dump(run_params, f)
+
+    # Check that there is a status file called status.json in the run directory. If not, create one, and initialize the status as "not_submitted"
+    status_file = os.path.join(run_dir, "status.json")
+    if not os.path.exists(status_file):
+        with open(status_file, "w") as f:
+            json.dump({"status": "not_submitted"}, f)
+
+    # Load and write to the settings file, formatting based on the run_params dictionary.
+    mc_settings_file = os.path.join(run_dir, "mc_settings.json")
+    mc_template_file = os.path.join(
+        mc_lib_dir, "../templates/mc_grand_canonical_template.json"
+    )
     with open(mc_template_file) as f:
         mc_template = json.load(f)
-    with open(mc_settings_file,"w") as f:
-        mc_template['driver']['initial_conditions']['param_chem_pot']['a'] = run_params['mu_start']
-        mc_template['driver']['final_conditions']['param_chem_pot']['a'] = run_params['mu_stop']
-        mc_template['driver']['incremental_conditions']['param_chem_pot']['a'] = run_params['mu_increment']
-        mc_template['driver']['initial_conditions']['temperature'] = run_params['T_start']
-        mc_template['driver']['final_conditions']['temperature'] = run_params['T_stop']
-        mc_template['driver']['incremental_conditions']['temperature'] = run_params['T_increment']
-        mc_template['supercell'] = run_params['supercell'] #TODO: Make sure these keys are how we want them inputted in run_params
-        json.dump(mc_template,f,indent=4)
-    mc_status_updater(run_dir)
+    with open(mc_settings_file, "w") as f:
+        mc_template["driver"]["initial_conditions"]["param_chem_pot"]["a"] = run_params[
+            "mu_start"
+        ]
+        mc_template["driver"]["final_conditions"]["param_chem_pot"]["a"] = run_params[
+            "mu_stop"
+        ]
+        mc_template["driver"]["incremental_conditions"]["param_chem_pot"][
+            "a"
+        ] = run_params["mu_increment"]
+        mc_template["driver"]["initial_conditions"]["temperature"] = run_params[
+            "T_start"
+        ]
+        mc_template["driver"]["final_conditions"]["temperature"] = run_params["T_stop"]
+        mc_template["driver"]["incremental_conditions"]["temperature"] = run_params[
+            "T_increment"
+        ]
+        mc_template["supercell"] = run_params[
+            "supercell"
+        ]  # TODO: Make sure these keys are how we want them inputted in run_params
+        json.dump(mc_template, f, indent=4)
 
-def mc_run_submitter(run_dir,submit_script_name="submit_slurm.sh"):
+    # different callables for the gridspace manager probably shouldn't call each other. It makes the callables interdependent which could get very confusing and not modular.
+    # mc_status_updater(run_dir)
+
+
+def mc_run_submitter(run_dir, submit_script_name="submit_slurm.sh"):
     """
     Function to submit a monte carlo simulation to the queue.
     """
-    dj.submit_slurm_job(run_dir,submit_script_name=submit_script_name)
-    with open(os.path.join(run_dir,"status.json"),"w") as f:
-        json.dump({"status":"submitted"},f,indent=4)
+    dj.submit_slurm_job(run_dir, submit_script_name=submit_script_name)
+    with open(os.path.join(run_dir, "status.json"), "w") as f:
+        json.dump({"status": "submitted"}, f, indent=4)
+
 
 def read_mc_results_file(
     results_file_path: str,
@@ -142,6 +175,7 @@ def read_mc_results_file(
     potential_energy = np.array(results["<potential_energy>"])
     formation_energy = np.array(results["<formation_energy>"])
     return (mu, x, b, temperature, potential_energy, formation_energy)
+
 
 def read_lte_results(
     results_file_path: str,
@@ -178,6 +212,7 @@ def read_lte_results(
 
     return (mu, b, t, x, pot_eng)
 
+
 def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Function to read chemical potential and temperature values from a mc_settings.json file.
@@ -205,11 +240,11 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     t_increment = settings["driver"]["incremental_conditions"]["temperature"]
 
     if mu_increment != 0:
-        mu_length = int(np.abs((mu_start - mu_stop) / mu_increment))+1
+        mu_length = int(np.abs((mu_start - mu_stop) / mu_increment)) + 1
     else:
         mu_length = 1
     if t_increment != 0:
-        t_length = int(np.abs((t_start - t_stop) / t_increment))+1
+        t_length = int(np.abs((t_start - t_stop) / t_increment)) + 1
     else:
         t_length = 1
 
@@ -223,6 +258,7 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
         t_values = np.linspace(t_start, t_stop, t_length)
 
     return (mu_values, t_values)
+
 
 def read_superdupercell(mc_settings_file: str) -> List:
     """Function to read mu / temperature values as well as superdupercell from a monte carlo settings.json file.
@@ -240,6 +276,7 @@ def read_superdupercell(mc_settings_file: str) -> List:
         settings = json.load(f)
     superdupercell = settings["supercell"]
     return superdupercell
+
 
 class lte_run:
     """Class to parse CASM results from Grand Canonical monte carlo low temperature expansion (lte) calculation results.
