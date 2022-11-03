@@ -1,6 +1,4 @@
 import os
-import sys
-import numpy as np
 import json
 import thermocore.io.casm as cio
 import djlib.djlib as dj
@@ -113,7 +111,7 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
     # Needs to initialize from a LTE run; make sure that the selected LTE configuration and free energy reference are at the same temperature as the heating run initial temperature.
 
 
-def propagation_casm_project_setup(
+def propagation_casm_project_creator(
     propagation_info_dict, propagation_project_root_path
 ):
     """Copies a pre-templated casm project, writes a specific eci vector to 
@@ -245,7 +243,7 @@ def collect_all_statuses_gcmc(MC_gridspace):
     return status_list
 
 
-def propagation_casm_project_status_update(propagated_casm_project_root_path: str):
+def propagation_casm_project_status_updater(propagated_casm_project_root_path: str):
     """Checks and updates status for the grand canonical monte carlo runs of an entire casm project. 
 
     Parameters
