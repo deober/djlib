@@ -366,6 +366,68 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f, indent=4)
 
 
+def propagation_casm_project_submitter(propagated_casm_project_root_path):
+    """Runs all grand canonical monte carlo simulations for an entire casm project.
+    Cooling runs must initialize from completed constant Temperature runs, and heating runs must initialize from completed LTE runs. 
+    Dependent runs will not submit if necessary dependencies are not complete. 
+
+    Parameters
+    ----------
+    propagated_casm_project_root_path: str 
+        Path to the casm project, where grand canonical monte carlo simulations will be run. 
+    
+    Returns: 
+        None. 
+    """
+
+    # Create a gridspace manager object for each type of monte carlo run.
+    # Run the submit method for each gridspace manager object.
+
+    # LTE run submit
+    lte_gridspace_manager = dj.gridspace_manager(
+        origin_dir=os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
+        ),
+        namer=mc.mc_run_namer,
+        status_updater=mc.mc_status_updater,
+        run_submitter=mc.mc_run_submitter,
+    )
+    lte_gridspace_manager.run_submitter()
+
+    # T_const run submit
+    t_const_gridspace_manager = dj.gridspace_manager(
+        origin_dir=os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_t_const"
+        ),
+        namer=mc.mc_run_namer,
+        status_updater=mc.mc_status_updater,
+        run_submitter=mc.mc_run_submitter,
+    )
+    t_const_gridspace_manager.run_submitter()
+
+    # Heating run submit
+    heating_gridspace_manager = dj.gridspace_manager(
+        origin_dir=os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_heating"
+        ),
+        namer=mc.mc_run_namer,
+        status_updater=mc.mc_status_updater,
+        run_submitter=mc.mc_run_submitter,
+    )
+    heating_gridspace_manager.run_submitter()
+
+    # Cooling run submit
+    cooling_gridspace_manager = dj.gridspace_manager(
+        origin_dir=os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_cooling"
+        ),
+        namer=mc.mc_run_namer,
+        status_updater=mc.mc_status_updater,
+        run_submitter=mc.mc_run_submitter,
+    )
+    cooling_gridspace_manager.run_submitter()
+
+
 def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     """A very specific function: Writes all necessary files for heating and cooling runs for the ground state at 50% composition. This includes:
             -High temperature constant t runs from very low to very high chemical potential and very high to very low chemical potential
@@ -395,6 +457,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_stop": 100.0,
             "T_increment": 5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "hours": 24,
         }
     ]
     lte_gs = dj.gridspace_manager(
@@ -418,6 +481,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_stop": 2000.0,
             "T_increment": 0.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "hours": 24,
         }
     ]
     t_const_param_list_of_dicts += [
@@ -429,6 +493,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_stop": 2000.0,
             "T_increment": 0.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "hours": 24,
         }
     ]
     t_const_gs = dj.gridspace_manager(
@@ -452,6 +517,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_stop": 0.0,
             "T_increment": -5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "hours": 24,
         }
     ]
     cooling_gs = dj.gridspace_manager(
@@ -500,6 +566,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_stop": 2000.0,
             "T_increment": 5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "hours": 24,
         }
     ]
     heating_gs = dj.gridspace_manager(
