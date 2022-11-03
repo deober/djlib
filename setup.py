@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name="djlib",
-    version="0.2.0",
+    version="0.3.0",
     description="General utility package for AVDV people.",
     author="Derick Ober, Jonathan Li",
     license="MIT License",
-    packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils"],
+    packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils","djlib.propagation"],
     install_requires=[
         "httpstan",
         "json5>=0.9.6",
