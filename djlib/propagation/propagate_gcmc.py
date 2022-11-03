@@ -109,6 +109,7 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
     # Choose the path that starts at a chemical potential that is closest to the chemical potential of the cooling run.
     # TODO: integrate the free energy across heating runs:
     # Needs to initialize from a LTE run; make sure that the selected LTE configuration and free energy reference are at the same temperature as the heating run initial temperature.
+    # Also, heating runs are sensitive to the initial supercell choice. Heating runs should start from the clex-predicted supercell
 
 
 def propagation_casm_project_creator(
@@ -141,7 +142,7 @@ def propagation_casm_project_creator(
     os.system(
         "cp -r "
         + template_project_root_path
-        + "/*"
+        + "/."
         + " "
         + propagation_project_root_path
     )
@@ -174,22 +175,30 @@ def propagation_casm_project_creator(
     )
 
     # Write the propagation_info_dict to a json file to run_info.json within the grand_canonical_monte_carlo directory.
+    tmp_propagation_info_dict = propagation_info_dict.copy()
+    tmp_propagation_info_dict["eci"] = tmp_propagation_info_dict["eci"].tolist()
     with open(
         os.path.join(
             propagation_project_root_path, "grand_canonical_monte_carlo/run_info.json",
         ),
         "w",
     ) as f:
-        json.dump(propagation_info_dict, f)
+        json.dump(tmp_propagation_info_dict, f)
+    del tmp_propagation_info_dict
 
-    # Create a status.json file in the grand canonical monte carlo directory to keep track of all monte carlo run statuses.
-    with open(
+    # If it doesn't exist, create a status.json file in the grand canonical monte carlo directory to keep track of all monte carlo run statuses.
+    if not os.path.exists(
         os.path.join(
             propagation_project_root_path, "grand_canonical_monte_carlo/status.json"
-        ),
-        "w",
-    ) as f:
-        json.dump({}, f)
+        )
+    ):
+        with open(
+            os.path.join(
+                propagation_project_root_path, "grand_canonical_monte_carlo/status.json"
+            ),
+            "w",
+        ) as f:
+            json.dump({}, f)
 
     # Create an MC_cooling, MC_heating, MC_LTE, and MC_t_const directories within the new grand canonical monte carlo directory.
     os.system(
@@ -366,7 +375,7 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f, indent=4)
 
 
-def propagation_casm_project_submitter(propagated_casm_project_root_path):
+def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
     """Runs all grand canonical monte carlo simulations for an entire casm project.
     Cooling runs must initialize from completed constant Temperature runs, and heating runs must initialize from completed LTE runs. 
     Dependent runs will not submit if necessary dependencies are not complete. 
@@ -392,7 +401,7 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path):
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
     )
-    lte_gridspace_manager.run_submitter()
+    lte_gridspace_manager.run_valid_calculations()
 
     # T_const run submit
     t_const_gridspace_manager = dj.gridspace_manager(
@@ -403,9 +412,10 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path):
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
     )
-    t_const_gridspace_manager.run_submitter()
+    t_const_gridspace_manager.run_valid_calculations()
 
     # Heating run submit
+    # TODO: Enforce that heating runs must initialize from completed LTE runs. If LTE is not complete not, do not submit.
     heating_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_heating"
@@ -414,7 +424,25 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path):
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
     )
-    heating_gridspace_manager.run_submitter()
+    # Collect all LTE run statuses in a list. If all are "complete", then submit heating runs.
+    # Otherwise, warn the user that heating runs cannot be submitted until LTE runs are complete.
+    with open(
+        os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/status.json"
+        ),
+        "r",
+    ) as f:
+        status_dict = json.load(f)
+    lte_statuses = [
+        list(status_dict["MC_LTE"][i].values())[0]
+        for i in range(len(status_dict["MC_LTE"]))
+    ]
+    if all(status == "complete" for status in lte_statuses):
+        heating_gridspace_manager.run_valid_calculations()
+    else:
+        print(
+            "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete."
+        )
 
     # Cooling run submit
     cooling_gridspace_manager = dj.gridspace_manager(
@@ -425,7 +453,26 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path):
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
     )
-    cooling_gridspace_manager.run_submitter()
+    # Collect all constant temperature run statuses in a list. If all are "complete", then submit cooling runs.
+    # Otherwise, warn the user that cooling runs cannot be submitted until constant temperature runs are complete.
+    # TODO: Change this so that cooling runs only require the constant T run that matches their highest temperature.
+    with open(
+        os.path.join(
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/status.json"
+        ),
+        "r",
+    ) as f:
+        status_dict = json.load(f)
+    t_const_statuses = [
+        list(status_dict["MC_t_const"][i].values())[0]
+        for i in range(len(status_dict["MC_t_const"]))
+    ]
+    if all(status == "complete" for status in t_const_statuses):
+        cooling_gridspace_manager.run_valid_calculations()
+    else:
+        print(
+            "Not all constant temperature runs are complete. Cooling runs cannot be submitted until constant temperature runs are complete."
+        )
 
 
 def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
@@ -600,4 +647,8 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     heating_settings["driver"]["motif"]["configdof"] = os.path.join(
         lte_runs[0], "conditions.%d" % number_of_conditions
     )
+
+
+# TODO: write function to find the clex-predicted ground state for a given chemical potential
+# TODO: write function to find the transformation matrix that forms the supercell of a given configuration (Will involve a casm call, should probably be placed in casmcalls)
 

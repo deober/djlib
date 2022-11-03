@@ -145,9 +145,10 @@ def mc_run_creator(run_params: dict, run_dir):
 
     # Write the slurm submission script to the run directory
     dj.format_slurm_job(
-        jobname=run_params["name"],
+        jobname=mc_run_namer(run_params),
         hours=run_params["hours"],
         user_command="casm monte -s mc_settings.json > mc_results.out",
+        output_dir=run_dir,
     )
 
     # different callables for the gridspace manager probably shouldn't call each other. It makes the callables interdependent which could get very confusing and not modular.

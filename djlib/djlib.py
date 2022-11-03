@@ -184,7 +184,7 @@ def update_properties_files(casm_root_dir: str):
                     atoms = len(properties["atom_type"])
                     fixer = []
                     for i in range(atoms):
-                        fixer.append([0.0,0.0,0.0])
+                        fixer.append([0.0, 0.0, 0.0])
                     print(len(fixer))
                     properties["atom_properties"]["force"]["value"] = fixer
                     print("Fixed empty forces in %s" % config)
@@ -242,8 +242,8 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
                 )
 
 
-def submit_slurm_job(run_dir: str):
-    submit_file = os.path.join(run_dir, "submit_slurm.sh")
+def submit_slurm_job(run_dir: str, submit_script_name: str = "submit_slurm.sh"):
+    submit_file = os.path.join(run_dir, submit_script_name)
     os.system("cd %s" % run_dir)
     os.system("sbatch %s" % submit_file)
 
@@ -405,7 +405,7 @@ class gridspace_manager:
         run_creator: callable = None,
         status_updater: callable = None,
         run_submitter: callable = None,
-        grid_params: dict = None, # list of dictionary, each dictionary corresponds to a run
+        grid_params: dict = None,  # list of dictionary, each dictionary corresponds to a run
     ) -> None:
 
         self.data = None
@@ -428,7 +428,7 @@ class gridspace_manager:
             except:
                 print("failed to parse: ", dir)
         self.data = [entry for entry in self.data if entry is not None]
-        #self.data = regroup_dicts_by_keys(self.data)
+        # self.data = regroup_dicts_by_keys(self.data)
 
     def format_run_dirs(self) -> None:
         for entry in self.grid_params:
@@ -444,7 +444,7 @@ class gridspace_manager:
             try:
                 self.status_updater(dir)
             except:
-                print("failed to update: ", dir)
+                print("Failed to update: ", dir)
 
     def run_valid_calculations(self) -> None:
         # Iterate through directories, submitting each according to the run_submitter function.
@@ -453,5 +453,5 @@ class gridspace_manager:
             try:
                 self.run_submitter(dir)
             except:
-                print("failed to update: ", dir)
+                print("Failed to run: ", dir)
 
