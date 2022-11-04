@@ -1108,6 +1108,7 @@ def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
     slopes = np.zeros(len(x_coords) - 1)
     for i in range(len(x_coords) - 1):
         slopes[i] = (y_coords[i + 1] - y_coords[i]) / (x_coords[i + 1] - x_coords[i])
+
     return slopes
 
 
@@ -1157,3 +1158,102 @@ def ground_state_accuracy_metric(
             numerator += stable_chem_pot_windows[vertex_index]
 
     return numerator / np.sum(stable_chem_pot_windows)
+
+
+def ground_state_accuracy_fraction_correct(
+    composition_predicted, energy_predicted, true_ground_state_indices
+) -> float:
+    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. 
+        The denominator is the number of ground state configurations predicted by DFT.
+        The numerator is the number of predicted ground state configurations which are ALSO ground states predicted by DFT.
+
+    Parameters
+    ----------
+    composition_predicted : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    energy_predicted : np.ndarray
+        nx1 matrix of predicted formation energies.
+    true_ground_state_indices : np.ndarray
+        1D array of true ground state indices.
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric, between 0 and 1. 1 is perfect accuracy.
+    """
+    hull = thull.full_hull(
+        compositions=composition_predicted, energies=energy_predicted
+    )
+    vertices, _ = thull.lower_hull(hull)
+
+    numerator = 0
+    for vertex_index in vertices:
+        if vertex_index in true_ground_state_indices:
+            numerator += 1
+
+    return numerator / len(vertices)
+
+
+def ground_state_accuracy_fraction_of_top_n_stable_configurations(
+    predicted_ground_state_indices: np.ndarray,
+    composition_true: np.ndarray,
+    energy_true: np.ndarray,
+    n: int,
+) -> float:
+    """Computes a scalar metric between [0,1] which measures the fraction of the top n stable configurations which are also ground states in DFT data. 1 is perfect accuracy.
+        First, DFT-predicted ground state configurations are ranked by their stable chemical potential window. Only the top n of these configurations are considered in the accuracy metric. 
+        The numerator is the number of elements in the set intersection between the predicted ground states and the top n DFT predicted ground states.
+        The denominator is n (the number of configurations considered in the accuracy metric).
+        
+
+    Parameters
+    ----------
+    predicted_ground_state_indices : np.ndarray
+        1D array of predicted ground state indices.
+    composition_true : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    energy_true : np.ndarray
+        nx1 matrix of true formation energies.  
+    n:int
+        Number of DFT-predicted ground state configurations to compare agains in the ground state accuracy metric. 
+        Configurations with the largest stable chemical potential window are chose first. 
+        By the construction of the convex hull, end states will always be predicted. Therefore, end states are never included in the metric. 
+    
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric, between 0 and 1. 1 is perfect accuracy.
+    """
+
+    # Calculate the true convex hull, find the vertices, and calculate the stable chemical potential windows for each vertex.
+    true_hull = thull.full_hull(compositions=composition_true, energies=energy_true)
+    true_vertices, _ = thull.lower_hull(true_hull)
+    true_slopes = calculate_slopes(
+        composition_true[true_vertices], energy_true[true_vertices]
+    )
+    true_stable_chem_pot_windows = [
+        true_slopes[i + 1] - true_slopes[i] for i in range(len(true_slopes) - 1)
+    ]
+
+    # Sort true_vertices, drop the end states.
+    # Chemical potential windows are sorted by composition, true vertices are not. Sort by composition (ascending) so that they match order.
+    # Then sort by stable chemical potential window (descending)
+    true_vertices = np.sort(true_vertices)[2:]
+    true_vertices = true_vertices[np.argsort(np.ravel(composition_true[true_vertices]))]
+    true_vertices = true_vertices[np.argsort(true_stable_chem_pot_windows)[::-1]]
+
+    # Check that n is not larger than the number of true_vertices.
+    # If it is, set n to the number of true_vertices.
+    # Then set the true_vertices to the first n elements in true_vertices.
+    if n > len(true_vertices):
+        n = len(true_vertices)
+    true_vertices = true_vertices[:n]
+
+    # Calculated the predicted lower hull vertices, and count the number of vertices which are also in true_vertices. This is the numerator.
+    numerator = 0
+    for vertex_index in predicted_ground_state_indices:
+        if vertex_index in true_vertices:
+            numerator += 1
+
+    return numerator / n
