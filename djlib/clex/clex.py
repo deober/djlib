@@ -740,30 +740,6 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     return fig
 
 
-# TODO: Take this one out
-def write_eci_json(eci: np.ndarray, basis_json: dict):
-    """Writes supplied ECI to the eci.json file for use in grand canonical monte carlo. Written for CASM 1.2.0
-
-    Parameters:
-    -----------
-    eci: numpy.ndarray
-        Vector of ECI values.
-
-    basis_json_path: str
-        Path to the casm-generated basis.json file.
-
-    Returns:
-    --------
-    data: dict
-        basis.json dictionary formatted with provided eci's
-    """
-
-    for index, orbit in enumerate(basis_json["orbits"]):
-        basis_json["orbits"][index]["cluster_functions"][0]["eci"] = eci[index]
-
-    return basis_json
-
-
 def general_binary_convex_hull_plotter(
     composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None]
 ) -> matplotlib.figure.Figure:
