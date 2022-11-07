@@ -951,7 +951,7 @@ def predict_free_energy_crossing(heating_run, cooling_run):
 
 
 def find_crossing_composition(
-    temperature, integrated_energies, t_intersect_predict, energy_intersect_predict
+    integrated_energies, temperature, x, t_intersect_predict, energy_intersect_predict
 ):
     """Given an interpolated point in (energy vs temperature) space, find the closest existing (energy, temperature) and return the corresponding composition x and corresponding temperature.
     Args:
