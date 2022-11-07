@@ -651,17 +651,6 @@ def run_cooling_from_const_temperature(
                 )
                 if submit_job:
                     dj.submit_slurm_job(current_dir)
-            elif job_scheduler == "pbs":
-                user_command = "casm monte -s mc_settings.json > mc_results.out"
-                format_pbs_job(
-                    jobname=run_name,
-                    hours=20,
-                    user_command=user_command,
-                    output_dir=current_dir,
-                    delete_submit_script=False,
-                )
-                if submit_job:
-                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
@@ -740,16 +729,6 @@ def run_heating(
                 )
                 if submit_job:
                     dj.submit_slurm_job(current_dir)
-            elif scheduler == "pbs":
-                format_pbs_job(
-                    jobname=run_name,
-                    hours=20,
-                    user_command=user_command,
-                    output_dir=current_dir,
-                    delete_submit_script=False,
-                )
-                if submit_job:
-                    submit_pbs_job(current_dir)
             """
             print("Submitting: ", end="")
             print(current_dir)
