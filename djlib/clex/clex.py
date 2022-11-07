@@ -1112,6 +1112,28 @@ def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
     return slopes
 
 
+def stable_chemical_potential_windows_binary(hull: ConvexHull) -> np.ndarray:
+    """Takes a convex hull and returns the stable chemical potential windows of the lower convex hull, excluding the end states.
+    
+    Parameters
+    ----------
+    hull: ConvexHull
+        A convex hull object.
+    
+    Returns
+    -------
+    windows: np.ndarray
+        An array of scalars containing the lower and upper bounds of the stable chemical potential windows. 
+        Returned in order of increasing composition.
+        End state chemical potential windows are not included. 
+    
+    """
+    lower_hull_vertices, _ = thull.lower_hull(hull)
+    p = hull.points[lower_hull_vertices]
+    slopes = calculate_slopes(np.ravel(p[:, 0]), np.ravel(p[:, 1]))
+    return np.array([slopes[i + 1] - slopes[i] for i in range(len(slopes) - 1)])
+
+
 def ground_state_accuracy_metric(
     composition_predicted, energy_predicted, true_ground_state_indices
 ) -> float:
