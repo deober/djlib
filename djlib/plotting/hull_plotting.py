@@ -92,7 +92,7 @@ def general_binary_convex_hull_plotter(
 def plot_stable_chemical_potential_windows_for_binary(
     compositions: np.ndarray, energies: np.ndarray, names: np.ndarray
 ) -> matplotlib.figure.Figure:
-    """Takes compositions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
+    """Takes composit   ions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
 
     Parameters
     ----------
