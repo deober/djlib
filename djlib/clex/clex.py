@@ -1142,6 +1142,37 @@ def stable_chemical_potential_windows_binary(hull: ConvexHull) -> np.ndarray:
     return np.array([slopes[i + 1] - slopes[i] for i in range(len(slopes) - 1)])
 
 
+def ranking_by_stable_chemical_potential_window_binary(
+    compositions: np.ndarray, energies: np.ndarray
+) -> np.ndarray:
+    """Calculates the stable chemical potential window for each ECI, and returns the array of sorted indices.
+
+    Parameters
+    ----------
+    compositions : np.ndarray
+        nx1 vector of compositions, where n is the number of configurations and m is the number of composition axes.
+
+    Returns
+    -------
+    eci_ranking : np.ndarray
+        Vector of ECI indices ranked from highest to lowest stable chemical potential window.
+    """
+    # Calculate the convex hull
+    hull = thull.full_hull(compositions, energies)
+    lower_hull_vertices, _ = thull.lower_hull(hull)
+
+    # Sort the stable chemical potential windows by composition, and drop the first and last elements
+    # (The first and last elements are the end states and have unbounded chemical potential windows)
+    sorting_indices = np.argsort(np.ravel(compositions[lower_hull_vertices]))[1:-1]
+    lower_hull_vertices = lower_hull_vertices[sorting_indices]
+
+    # Calculate the stable chemical potential windows
+    stable_chemical_potential_windows = stable_chemical_potential_windows_binary(hull)
+
+    # Now, sort the lower_hull_vertices by high to low stable chemical potential window
+    return lower_hull_vertices[np.argsort(stable_chemical_potential_windows)[::-1]]
+
+
 def ground_state_accuracy_metric(
     composition_predicted, energy_predicted, true_ground_state_indices
 ) -> float:
