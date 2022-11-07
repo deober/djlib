@@ -18,7 +18,7 @@ import arviz as ar
 import thermocore.geometry.hull as thull
 import pathlib
 from warnings import warn
-from typing import List, Tuple, Sequence
+from typing import Callable, List, Tuple, Sequence
 import stan
 from sklearn.decomposition import PCA
 from sklearn.linear_model import BayesianRidge
@@ -177,6 +177,9 @@ def find_proposed_ground_states(
 
 
 def plot_eci_hist(eci_data, xmin=None, xmax=None):
+    print(
+        "clex.clex.plot_eci_hist is deprecated. Use plotting.clex_plotting.plot_eci_hist instead."
+    )
     plt.hist(x=eci_data, bins="auto", color="xkcd:crimson", alpha=0.7, rwidth=0.85)
     if xmin and xmax:
         plt.xlim(xmin, xmax)
@@ -718,6 +721,9 @@ def plot_eci_uncertainty(eci: np.ndarray, title=False) -> plt.figure:
     -------
     fig: matplotlib.pyplot figure
     """
+    print(
+        "clex.clex.plot_eci_uncertainty() is deprecated. Use plotting.clex_plotting.plot_eci_uncertainty() instead."
+    )
     stats = np.array([[np.mean(row), np.std(row)] for row in eci])
     print(stats.shape)
     means = stats[:, 0]
@@ -754,7 +760,9 @@ def general_binary_convex_hull_plotter(
     predicted_energies: numpy.ndarray
         None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported.
     """
-
+    print(
+        "clex.clex.general_binary_convex_hull_plotter() is deprecated. Use plotting.clex_plotting.general_binary_convex_hull_plotter() instead."
+    )
     predicted_color = "red"
     predicted_label = "Predicted Energies"
 
