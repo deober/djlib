@@ -761,7 +761,7 @@ def general_binary_convex_hull_plotter(
         None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported.
     """
     print(
-        "clex.clex.general_binary_convex_hull_plotter() is deprecated. Use plotting.clex_plotting.general_binary_convex_hull_plotter() instead."
+        "clex.clex.general_binary_convex_hull_plotter() is deprecated. Use plotting.hull_plotting.general_binary_convex_hull_plotter() instead."
     )
     predicted_color = "red"
     predicted_label = "Predicted Energies"

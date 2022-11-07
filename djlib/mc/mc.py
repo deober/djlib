@@ -758,7 +758,9 @@ def run_heating(
 
 
 def plot_const_t_x_vs_mu(const_t_left, const_t_right):
-
+    print(
+        "mc.mc.plot_const_t_x_vs_mu() is deprecated. Use plotting.mc_plotting.plot_const_t_x_vs_mu() instead."
+    )
     full_mu = np.concatenate((const_t_left.mu, const_t_right.mu))
     full_x = np.concatenate((const_t_left.x, const_t_right.x))
 
@@ -772,6 +774,9 @@ def plot_const_t_x_vs_mu(const_t_left, const_t_right):
 
 
 def plot_heating_and_cooling(heating_run, cooling_run):
+    print(
+        "mc.mc.plot_heating_and_cooling() is deprecated. Use plotting.mc_plotting.plot_heating_and_cooling() instead."
+    )
     bullet_size = 3
     if heating_run.mu[0] != cooling_run.mu[0]:
         print(
@@ -1041,6 +1046,9 @@ def plot_t_vs_x_rainplot(mc_runs_directory: str, show_labels: bool = False):
     Returns:
         fig(matplotlib.pyplot figure object): 2D plot object. Can do fig.show() to display the plot.
     """
+    print(
+        "mc.mc.plot_t_vs_x_rainplot() is deprecated. Use plotting.mc_plotting.plot_t_vs_x() instead."
+    )
     labels = []
     run_list = glob(os.path.join(mc_runs_directory, "mu*"))
     for run in run_list:
