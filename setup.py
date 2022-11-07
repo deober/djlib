@@ -6,7 +6,7 @@ setup(
     description="General utility package for AVDV people.",
     author="Derick Ober, Jonathan Li",
     license="MIT License",
-    packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils","djlib.propagation"],
+    packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils","djlib.propagation", "djlib.plotting"],
     install_requires=[
         "httpstan",
         "json5>=0.9.6",
