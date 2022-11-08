@@ -1173,6 +1173,35 @@ def ranking_by_stable_chemical_potential_window_binary(
     return lower_hull_vertices[np.argsort(stable_chemical_potential_windows)[::-1]]
 
 
+def upscale_eci_vector(ecis: np.ndarray, mask: np.ndarray):
+    """Intended for cases when the ECI vector is pruned, and a user would like to then upscale the ECI vector back to its original size.
+
+    Parameters
+    ----------
+    ecis : np.ndarray
+        Vector of ECI values.
+    mask : np.ndarray
+        Vector of Booleans, where True indicates the ECI is included in the vector. Number of True should equal the length of the ECI vector. Otherwise, the function will return an error.
+    
+    Returns 
+    -------
+    ecis_upscaled : np.ndarray
+        Vector of ECI values, upscaled to the original size.up
+    """
+    if np.sum(mask) != len(ecis):
+        raise ValueError(
+            "The number of True elements in the mask must equal the length of the ECI vector."
+        )
+    else:
+        # Create a new vector of zeros. The length of the new vector will be the same as the mask.
+        # Find the indices of the mask where the value is 1
+        # Replace the zeros in the new vector with the ECI values, in the order of the indices of the mask where the value is 1
+        indices = np.nonzero(mask)[0]
+        ecis_upscaled = np.zeros(len(mask))
+        ecis_upscaled[indices] = ecis
+        return ecis_upscaled
+
+
 def ground_state_accuracy_metric(
     composition_predicted, energy_predicted, true_ground_state_indices
 ) -> float:
