@@ -1186,7 +1186,7 @@ def upscale_eci_vector(ecis: np.ndarray, mask: np.ndarray):
     Returns 
     -------
     ecis_upscaled : np.ndarray
-        Vector of ECI values, upscaled to the original size.up
+        Vector of ECI values, upscaled to the original size.
     """
     if np.sum(mask) != len(ecis):
         raise ValueError(
