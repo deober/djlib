@@ -134,6 +134,7 @@ def plot_stable_chemical_potential_windows_for_binary(
         )
     plt.legend(fontsize=21)
 
+    plt.xlim([0, 1])
     plt.xlabel("Composition X", fontsize=21)
     plt.ylabel("Chemical Potential (eV)", fontsize=21)
 
