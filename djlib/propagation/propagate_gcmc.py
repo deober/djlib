@@ -583,7 +583,9 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     t_const_settings = mc.read_mc_settings(
         os.path.join(t_const_runs[0], "mc_settings.json")
     )
-    number_of_conditions = len(t_const_settings[0])
+    number_of_conditions = (
+        len(t_const_settings[0]) - 1
+    )  # -1 is required because conditions indexing starts at 0
 
     # Check that this conditions file exists
     if not os.path.exists(
@@ -629,7 +631,9 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     # Read the LTE run settings file to check how many conditions will be generated.
     lte_runs = glob(lte_dir + "/*")
     lte_settings = mc.read_mc_settings(os.path.join(lte_runs[0], "mc_settings.json"))
-    number_of_conditions = len(lte_settings[0])
+    number_of_conditions = (
+        len(lte_settings[0]) - 1
+    )  # -1 is required because conditions indexing starts at 0
 
     # Check that this conditions file exists
     if not os.path.exists(
