@@ -67,7 +67,6 @@ def mc_status_updater(run_dir):
     results_file = os.path.join(run_dir, "results.json")
     if os.path.exists(results_file):
         results_length = read_mc_results_file(results_file)[0].shape[0]
-        print(f"length: {length}, results_length: {results_length}")
         if results_length == length:
             status = "complete"
         else:
