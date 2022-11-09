@@ -603,6 +603,8 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     cooling_settings["driver"]["motif"]["configdof"] = os.path.join(
         t_const_runs[0], "conditions.%d" % number_of_conditions
     )
+    with open(os.path.join(cooling_runs[0], "mc_settings.json"), "w") as f:
+        json.dump(cooling_settings, f, indent=4)
 
     # Create a dj.gridspace_manager object to control heating runs
     heating_dir = os.path.join(casm_root_path, "grand_canonical_monte_carlo/MC_heating")
@@ -651,6 +653,8 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     heating_settings["driver"]["motif"]["configdof"] = os.path.join(
         lte_runs[0], "conditions.%d" % number_of_conditions
     )
+    with open(os.path.join(heating_runs[0], "mc_settings.json"), "w") as f:
+        json.dump(heating_settings, f, indent=4)
 
 
 # TODO: write function to find the clex-predicted ground state for a given chemical potential
