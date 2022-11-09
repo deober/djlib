@@ -441,7 +441,10 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
         heating_gridspace_manager.run_valid_calculations()
     else:
         print(
-            "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete."
+            "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete. Check LTE runs in %s "
+            % os.path.join(
+                propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
+            )
         )
 
     # Cooling run submit
@@ -471,7 +474,11 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
         cooling_gridspace_manager.run_valid_calculations()
     else:
         print(
-            "Not all constant temperature runs are complete. Cooling runs cannot be submitted until constant temperature runs are complete."
+            "Not all constant temperature runs are complete. Cooling runs cannot be submitted until constant temperature runs are complete. Please check constant temperature runs in %s "
+            % os.path.join(
+                propagated_casm_project_root_path,
+                "grand_canonical_monte_carlo/MC_t_const",
+            )
         )
 
 
