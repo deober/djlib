@@ -72,28 +72,28 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
         ),
         namer=mc.mc_run_namer,
-        run_parser=mc.read_lte_results,
+        run_parser=mc.mc_LTE_run_parser,
     )
     t_const_gridspace = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_T_const"
         ),
         namer=mc.mc_run_namer,
-        run_parser=mc.read_mc_results_file,
+        run_parser=mc.mc_run_parser,
     )
     cooling_gridspace = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_cooling"
         ),
         namer=mc.mc_run_namer,
-        run_parser=mc.read_mc_results_file,
+        run_parser=mc.mc_run_parser,
     )
     heating_gridspace = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_heating"
         ),
         namer=mc.mc_run_namer,
-        run_parser=mc.read_mc_results_file,
+        run_parser=mc.mc_run_parser,
     )
 
     # Pull data for all runs
