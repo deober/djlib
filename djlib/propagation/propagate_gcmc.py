@@ -72,7 +72,7 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
         ),
         namer=mc.mc_run_namer,
-        run_parser=mc.mc_LTE_run_parser,
+        run_parser=mc.mc_run_parser,
     )
     t_const_gridspace = dj.gridspace_manager(
         origin_dir=os.path.join(
@@ -101,6 +101,14 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
     t_const_gridspace.collect_data()
     cooling_gridspace.collect_data()
     heating_gridspace.collect_data()
+
+    # Combine all data into a single dictionary
+    all_data = {}
+    all_data["LTE"] = lte_gridspace.data
+    all_data["T_const"] = t_const_gridspace.data
+    all_data["cooling"] = cooling_gridspace.data
+    all_data["heating"] = heating_gridspace.data
+    return all_data
 
     # TODO: integrate the free energy across t_const runs
     # TODO: integrate the free energy across LTE runs
