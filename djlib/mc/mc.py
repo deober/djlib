@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-from re import T
 import matplotlib.pyplot as plt
 import os
 from scipy import integrate
@@ -318,18 +317,15 @@ def read_superdupercell(mc_settings_file: str) -> List:
 class lte_run:
     """Class to parse CASM results from Grand Canonical monte carlo low temperature expansion (lte) calculation results.
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     path: str   
         Path to the directory containing the lte results files.
 
-    Methods:
-    --------
+    Methods
+    -------
     read_lte_results:
         Function to parse lte results.json files.
-    
-    
-    
     """
 
     def __init__(self, lte_dir):
@@ -353,13 +349,13 @@ class lte_run:
 class constant_t_run:
     """Class to parse CASM results from constant temperature Grand Canonical monte carlo calculations.
     
-    Attributes:
-    -----------
+    Attributes
+    ----------
     path: str
         Path to the directory containing the constant temperature results files.
     
-    Methods:
-    --------
+    Methods
+    -------
     integrate_constant_temp_grand_canonical:
         Function to integrate the Grand Canonical Free Energy over varying chemical potential at constant temperature.
     
@@ -413,13 +409,13 @@ class constant_t_run:
 class heating_run:
     """Class to parse CASM results from heating Grand Canonical monte carlo calculations at constant chemical potential.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     path: str
         Path to the directory containing the heating results files.
     
-    Methods:
-    --------
+    Methods
+    -------
     get_lte_reference_energy:
         Function to look up the lte reference energy at a given chemical potential, from a lte run object.
     integrate_heating_grand_canonical_from_lte:
@@ -481,13 +477,13 @@ class heating_run:
 class cooling_run:
     """Class to parse CASM results from cooling Grand Canonical monte carlo calculations at constant chemical potential.
 
-    Attributes:
-    -----------
+    Attributes
+    ----------
     path: str
         Path to the directory containing the cooling results files.
 
-    Methods:    
-    --------
+    Methods    
+    -------
     get_constant_t_reference_energy:
         Function to look up the lte reference energy at a given chemical potential, from a constant temperature run object.
     """
@@ -812,7 +808,6 @@ def predict_mu_vs_free_energy_crossing(
     run_2_comp_intersect: float
         composition for the second constant temperature run that is closest to the corresponding chemical potential at the crossing point
     
-
     """
     # Assert that the chemical potentials are the same
     assert np.allclose(
@@ -904,9 +899,9 @@ def predict_free_energy_crossing(heating_run, cooling_run):
                 find_intersection = True
             else:
                 print(
-                    "Heating and cooling run temperature vectors are the same length but do not match. See printout below:\ntemp_heating  temp_cooling"
+                    "Heating and cooling run temperature vectors are the same length but do not match. See printout below:\nheating_run  cooling_run"
                 )
-                for idx, value in enumerate(heating_run.t):
+                for idx in range(len(heating_run.t)):
                     print("%.3f  %.3f" % heating_run.t[idx], cooling_run.t[idx])
 
         if find_intersection:
@@ -955,15 +950,15 @@ def predict_free_energy_crossing(heating_run, cooling_run):
         print(
             "The free energies and composition vectors do not have the same lengths.\nCurrent lengths are:"
         )
-        print("length of temp_heating: %d" % len(temp_heating))
+        print("length of temp_heating: %d" % len(heating_run.t))
         print(
-            "length of heating_integrated_free_energy: %d"
-            % len(heating_integrated_free_energy)
+            "length of heating run integrated free energy: %d"
+            % len(heating_run.integ_grand_canonical)
         )
-        print("length of temp_cooling: %d" % len(temp_cooling))
+        print("length of temp_cooling: %d" % len(cooling_run.t))
         print(
-            "length of cooling_integrated_free_energy: %d"
-            % len(cooling_integrated_free_energy)
+            "length of cooling run integrated free energy: %d"
+            % len(cooling_run.integ_grand_canonical)
         )
 
 

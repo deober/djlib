@@ -43,4 +43,3 @@ def plot_eci_hist(eci_data, xmin=None, xmax=None):
     plt.ylabel("Count", fontsize=18)
     fig = plt.gcf()
     return fig
-

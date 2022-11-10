@@ -758,3 +758,31 @@ def plot_clex_hull_data_1_x(
 
     fig = plt.gcf()
     return fig
+
+
+def simplex_corner_weights(
+    interior_point: np.ndarray, corner_points: np.ndarray
+) -> np.ndarray:
+    """Calculates the linear combination of simplex corners required to produce a point within the simplex.
+
+    Parameters:
+    -----------
+    interior_point: numpy.ndarray
+        Composition row vector of a point within a hull simplex.
+    corner_points: numpy.ndarray
+        Matrix of composition row vectors of all corner points of a hull simplex.
+
+    Returns:
+    --------
+    weights: numpy.ndarray
+        Vector of weights for each corner point. Matrix multiplying wieghts @ corner_corr_matrix will give the linear combination of simplex correlation vectors which,
+        when multiplied with ECI, gives the hull distance of the correlation represented by interior_point.
+    """
+    # Add a 1 to the end of interior_point and a column of ones to simplex_corners to enforce that the sum of weights is 1.
+    interior_point = np.array(interior_point).reshape(1, -1)
+    simplex_corners = np.hstack((corner_points, np.ones((simplex_corners.shape[0], 1))))
+
+    # Calculate the weights for each simplex corner point.
+    weights = interior_point @ np.linalg.pinv(simplex_corners)
+
+    return weights
