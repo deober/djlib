@@ -1251,7 +1251,7 @@ def ground_state_accuracy_metric(
 
 
 def ground_state_accuracy_fraction_correct(
-    composition_predicted, energy_predicted, true_ground_state_indices
+    predicted_ground_state_indices, true_ground_state_indices
 ) -> float:
     """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. 
         The denominator is the number of ground state configurations predicted by DFT.
@@ -1259,10 +1259,8 @@ def ground_state_accuracy_fraction_correct(
 
     Parameters
     ----------
-    composition_predicted : np.ndarray
-        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
-    energy_predicted : np.ndarray
-        nx1 matrix of predicted formation energies.
+    predicted_ground_state_indices : np.ndarray
+        1D array of predicted ground state indices.
     true_ground_state_indices : np.ndarray
         1D array of true ground state indices.
 
@@ -1271,17 +1269,12 @@ def ground_state_accuracy_fraction_correct(
     float
         Ground state accuracy metric, between 0 and 1. 1 is perfect accuracy.
     """
-    hull = thull.full_hull(
-        compositions=composition_predicted, energies=energy_predicted
-    )
-    vertices, _ = thull.lower_hull(hull)
-
     numerator = 0
-    for vertex_index in vertices:
+    for vertex_index in predicted_ground_state_indices:
         if vertex_index in true_ground_state_indices:
             numerator += 1
 
-    return numerator / len(vertices)
+    return numerator / len(true_ground_state_indices)
 
 
 def ground_state_accuracy_fraction_of_top_n_stable_configurations(
