@@ -79,7 +79,7 @@ def general_binary_convex_hull_plotter(
         )
 
     plt.xlabel("Composition X", fontsize=21)
-    plt.ylabel("Formation Energy (eV)", fontsize=21)
+    plt.ylabel("Formation Energy per Primitive Cell (eV)", fontsize=21)
     plt.legend(fontsize=21)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
