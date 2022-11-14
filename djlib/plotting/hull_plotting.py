@@ -25,11 +25,9 @@ def general_binary_convex_hull_plotter(
 
     predicted_color = "red"
     predicted_label = "Predicted Energies"
-
     plt.scatter(
         composition, true_energies, color="k", marker="x", label='"True" Energies'
     )
-
     dft_hull = thull.full_hull(compositions=composition, energies=true_energies)
 
     if any(predicted_energies):
@@ -42,7 +40,18 @@ def general_binary_convex_hull_plotter(
     dft_lower_hull_vertices = thull.lower_hull(dft_hull)[0]
     if any(predicted_energies):
         predicted_lower_hull_vertices = thull.lower_hull(predicted_hull)[0]
+        # Also, check the set difference between the two lower hulls
+        spurious = np.setdiff1d(predicted_lower_hull_vertices, dft_lower_hull_vertices)
 
+        if len(spurious) > 0:
+            plt.scatter(
+                composition[spurious],
+                predicted_energies[spurious],
+                color="royalblue",
+                marker="s",
+                label="Spurious Predictions",
+                s=400,
+            )
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
     if any(predicted_energies):
@@ -75,12 +84,12 @@ def general_binary_convex_hull_plotter(
             min(composition),
             0.9 * min(np.concatenate((true_energies, predicted_energies))),
             "RMSE: " + str(rmse) + " eV",
-            fontsize=21,
+            fontsize=19,
         )
 
     plt.xlabel("Composition X", fontsize=21)
     plt.ylabel("Formation Energy per Primitive Cell (eV)", fontsize=21)
-    plt.legend(fontsize=21)
+    plt.legend(fontsize=19)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
 
