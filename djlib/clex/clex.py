@@ -928,7 +928,7 @@ def stable_chemical_potential_windows_binary(hull: ConvexHull) -> np.ndarray:
     Returns
     -------
     windows: np.ndarray
-        An array of scalars containing the lower and upper bounds of the stable chemical potential windows. 
+        An array of scalars representing the magnitude of the stable chemical potential windows. 
         Returned in order of increasing composition.
         End state chemical potential windows are not included. 
     
@@ -1072,6 +1072,116 @@ def ground_state_accuracy_fraction_correct(
             numerator += 1
 
     return numerator / len(true_ground_state_indices)
+
+
+def gsa_fraction_correct_DFT_mu_window_binary(
+    predicted_comp, predicted_energies, true_comp, true_energies
+):
+    """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states. 
+        The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
+        The numerator is the sum across the stable chemical potential windows (slopes) for each configuration that is predicted (by both cluster expansion AND DFT) to be on the convex hull, excluding ground states.
+        The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction.
+
+    Parameters
+    ----------
+    predicted_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    predicted_energies : np.ndarray
+        nx1 matrix of predicted formation energies.
+    true_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    true_energies : np.ndarray
+        nx1 matrix of predicted formation energies.
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric, between [0,1]. 1 is perfect accuracy.
+    """
+    # Calculate the lower convex hull vertices for the predicted and true convex hulls
+    predicted_hull = thull.full_hull(
+        compositions=predicted_comp, energies=predicted_energies
+    )
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies)
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    # Calculate the slope windows for the true convex hull
+    true_chemical_potential_windows = stable_chemical_potential_windows_binary(
+        true_hull
+    )
+
+    # Sort the true convex hull vertices by their compositions
+    true_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # If the elements 1 or 0 are in the true convex hull vertices, delete them from the array. Do the same for predicted vertices.
+    if 0 in true_vertices:
+        true_vertices = np.delete(true_vertices, np.where(true_vertices == 0))
+    if 1 in true_vertices:
+        true_vertices = np.delete(true_vertices, np.where(true_vertices == 1))
+    if 0 in predicted_vertices:
+        predicted_vertices = np.delete(
+            predicted_vertices, np.where(predicted_vertices == 0)
+        )
+    if 1 in predicted_vertices:
+        predicted_vertices = np.delete(
+            predicted_vertices, np.where(predicted_vertices == 1)
+        )
+
+    # Calculate the ground state accuracy metric
+    numerator = 0
+    for vertex_index in true_vertices_ordered_by_comp:
+        if vertex_index in predicted_vertices:
+            numerator += true_chemical_potential_windows[vertex_index]
+    return numerator / np.sum(true_chemical_potential_windows)
+
+
+def gsa_fraction_correct_predicted_mu_window_binary():
+    print("Not implemented yet")    
+    return None
+
+
+def gsa_number_incorrect(predicted_ground_state_indices, true_ground_state_indices):
+    """Returns the number of incorrectly predicted ground state indices
+
+    Parameters
+    ----------
+    predicted_ground_state_indices : np.ndarray
+        1D array of predicted ground state indices.
+    true_ground_state_indices : np.ndarray
+        1D array of true ground state indices.
+
+    Returns
+    -------
+    int
+        Number of incorrectly predicted ground state indices
+    """
+    return np.setdiff1d(predicted_ground_state_indices, true_ground_state_indices).shape
+
+
+def gsa_fraction_intersection_over_union(
+    predicted_ground_state_indices, true_ground_state_indices
+):
+    """Normalized fraction of the set intersection over the set union of the predicted and true ground state indices.
+
+    Parameters
+    ----------
+    predicted_ground_state_indices : np.ndarray
+        1D array of predicted ground state indices.
+    true_ground_state_indices : np.ndarray
+        1D array of true ground state indices.
+
+    Returns
+    -------
+    float
+        Normalized fraction of the set intersection over the set union of the predicted and true ground state indices.
+    """
+    return (
+        np.intersect1d(predicted_ground_state_indices, true_ground_state_indices).shape[
+            0
+        ]
+        / np.union1d(predicted_ground_state_indices, true_ground_state_indices).shape[0]
+    )
 
 
 def ground_state_accuracy_fraction_of_top_n_stable_configurations(
