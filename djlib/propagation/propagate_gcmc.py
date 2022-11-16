@@ -76,7 +76,7 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
     )
     t_const_gridspace = dj.gridspace_manager(
         origin_dir=os.path.join(
-            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_T_const"
+            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_t_const"
         ),
         namer=mc.mc_run_namer,
         run_parser=mc.mc_run_parser,
@@ -515,7 +515,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "mu_start": 0.0,
             "mu_stop": 0.0,
             "mu_increment": 0.0,
-            "T_start": 0.0,
+            "T_start": 5.0,
             "T_stop": 100.0,
             "T_increment": 5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
@@ -576,7 +576,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "mu_stop": 0.0,
             "mu_increment": 0.0,
             "T_start": 2000.0,
-            "T_stop": 0.0,
+            "T_stop": 50.0,
             "T_increment": -5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
             "hours": 24,
@@ -628,7 +628,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "mu_start": 0.0,
             "mu_stop": 0.0,
             "mu_increment": 0.0,
-            "T_start": 0.0,
+            "T_start": 50.0,
             "T_stop": 2000.0,
             "T_increment": 5.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
