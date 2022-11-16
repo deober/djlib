@@ -1062,3 +1062,399 @@ def plot_t_vs_x_rainplot(mc_runs_directory: str, show_labels: bool = False):
     fig.set_size_inches(18.5, 10)
     return fig
 
+
+def constant_T_integration(t_const_run_data_dictionary):
+    """
+    Integrates the grand canonical free energy for a constant temperature run in temperature-chemical potential space.
+    Currently Assumes there is one parameterized chemical potential 
+
+    Parameters
+    ----------
+    t_const_run_data_dictionary : dictionary
+        Dictionary containing the data from a constant temperature run.
+    
+    Returns
+    -------
+    integrated_free_energy : np.ndarray
+        Integrated grand canonical free energy in temperature-chemical potential space.
+    """
+    # Re-define necessary arrays as np.ndarrays
+    free_energy_reference = np.array(
+        t_const_run_data_dictionary["<potential_energy>"][0]
+    )
+    mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
+    b = np.array(t_const_run_data_dictionary["Beta"])
+    x = np.array(t_const_run_data_dictionary["<comp(a)>"])
+
+    # Calculate the grand canonical free energy
+    integrated_potential = []
+    for index in range(len(mu)):
+        index = index + 1
+        if index > 0:
+            current_mu = mu[0:index]
+            current_b = b[0:index]
+            current_x = x[0:index]
+            integrated_potential.append(
+                (1 / current_b[-1])
+                * (
+                    b[0] * free_energy_reference
+                    + integrate.simpson((-1 * current_b * current_x), current_mu)
+                )
+            )
+    return np.asarray(integrated_potential)
+
+
+def LTE_integration(lte_run_data_dictionary):
+    """Integrates the grand canonical free energy for a LTE run in temperature-chemical potential space.
+    Currently Assumes there is one parameterized chemical potential
+
+    Parameters
+    ----------
+    lte_run_data_dictionary : dictionary
+        Dictionary containing the data from a LTE run. (Taken directly from a results.json file output by casm monte)
+
+    Returns
+    -------
+    integrated_free_energy : np.ndarray
+        Integrated grand canonical free energy in temperature-chemical potential space.
+    """
+
+    # Re-define necessary arrays as np.ndarrays
+    b = np.array(lte_run_data_dictionary["Beta"])
+    potential_energy = np.array(lte_run_data_dictionary["<potential_energy>"])
+
+    # Calculate the grand canonical free energy
+    integrated_potential = []
+    for index in range(len(b)):
+        index = index + 1
+        if index > 0:
+            current_b = b[0:index]
+            current_potential_energy = potential_energy[0:index]
+            integrated_potential.append(
+                (1 / current_b[-1])
+                * (
+                    b[0] * potential_energy[0]
+                    + integrate.simpson(current_potential_energy, current_b)
+                )
+            )
+    return np.asarray(integrated_potential)
+
+
+def heating_integration(heating_run_data_dictionary, LTE_reference_potential_energy):
+    """
+    Integrates the grand canonical free energy for a heating run in temperature-chemical potential space.
+    Currently Assumes there is one parameterized chemical potential
+
+    Parameters
+    ----------
+    heating_run_data_dictionary : dictionary
+        Dictionary containing the data from a heating run. (Taken directly from a results.json file output by casm monte)
+    LTE_reference_potential_energy : float
+        The integrated grand canonical free energy of a heating run at the starting (chemical_potential, Temperature) point of the heating run.
+
+    Returns
+    -------
+    integrated_free_energy : np.ndarray
+        Integrated grand canonical free energy in temperature-chemical potential space.
+    """
+    # Re-define necessary arrays as np.ndarrays
+    b = np.array(heating_run_data_dictionary["Beta"])
+    potential_energy = np.array(heating_run_data_dictionary["<potential_energy>"])
+
+    # Set the initial potential energy to the LTE reference potential energy
+    potential_energy[0] = LTE_reference_potential_energy
+
+    # Calculate the grand canonical free energy
+    integrated_potential = []
+    for index in range(len(b)):
+        index = index + 1
+        if index > 0:
+            current_b = b[0:index]
+            current_potential_energy = potential_energy[0:index]
+            integrated_potential.append(
+                (1 / current_b[-1])
+                * (
+                    b[0] * potential_energy[0]
+                    + integrate.simpson(current_potential_energy, current_b)
+                )
+            )
+    return np.asarray(integrated_potential)
+
+
+def cooling_integration(
+    cooling_run_data_dictionary, constant_T_reference_potential_energy
+):
+    """
+    Integrates the grand canonical free energy for a cooling run in temperature-chemical potential space.
+    Requires a reference potential energy from a constant temperature run at the same chemical potential and initial temperature as the cooling run.
+    Currently Assumes there is one parameterized chemical potential
+    
+    Parameters
+    ----------
+    cooling_run_data_dictionary : dictionary
+        Dictionary containing the data from a cooling run. (Taken directly from a results.json file output by casm monte)
+    constant_T_reference_potential_energy : float
+        The integrated grand canonical free energy of a constant temperature run at the same chemical potential and initial temperature as the cooling run.
+
+    Returns
+    -------
+    integrated_free_energy : np.ndarray
+        Integrated grand canonical free energy in temperature-chemical potential space.
+    """
+    # Re-define necessary arrays as np.ndarrays
+    b = np.array(cooling_run_data_dictionary["Beta"])
+    potential_energy = np.array(cooling_run_data_dictionary["<potential_energy>"])
+
+    # Set the initial potential energy to the LTE reference potential energy
+    potential_energy[0] = constant_T_reference_potential_energy
+
+    # Calculate the grand canonical free energy
+    integrated_potential = []
+    for index, value in enumerate(b):
+        index = index + 1
+        if index > 0:
+            current_b = b[0:index]
+            current_potential_energy = potential_energy[0:index]
+            integrated_potential.append(
+                (1 / current_b[-1])
+                * (
+                    b[0] * constant_T_reference_potential_energy
+                    + integrate.simpson(current_potential_energy, current_b)
+                )
+            )
+    return np.asarray(integrated_potential)
+
+
+def lookup_LTE_reference_energy(T_lookup, LTE_run_data_dictionary):
+    """
+    To be used with heating integration. Assuming that the LTE run dictionary coresponds to a run at the same chemical potential as the heating run, 
+    this function finds the LTE reference potential energy at the starting temperature of the heating run.
+    
+    Parameters
+    ----------  
+    T_lookup : float
+        The temperature at which to find the LTE reference potential energy.
+    LTE_run_data_dictionary : dictionary
+        Dictionary containing the data from a LTE run. (Taken directly from a results.json file output by casm monte)
+
+    Returns
+    -------
+    float
+        The integrated grand canonical free energy of a LTE run at the temperature T_lookup.
+    """
+    # Check if the "integrated_potential_energy" key exists in the LTE run dictionary.
+    # If so, load it. Otherwise, calculate it.
+    if "integrated_potential_energy" in LTE_run_data_dictionary:
+        LTE_integrated_free_energy = np.array(
+            LTE_run_data_dictionary["integrated_potential_energy"]
+        )
+    else:
+        LTE_integrated_free_energy = LTE_integration(LTE_run_data_dictionary)
+
+    # Find the index of the temperature closest to the temperature at which to find the LTE reference potential energy
+    T_index = np.argmin(np.abs(np.array(LTE_run_data_dictionary["T"]) - T_lookup))
+
+    # Return the LTE reference potential energy at the starting temperature of the heating run
+    return LTE_integrated_free_energy[T_index]
+
+
+def lookup_constant_T_reference_energy(chemical_potential_lookup, constant_t_run_dict):
+    """
+    To be used with cooling integration. Assuming that the constant T run dictionary coresponds to a run at the same temperature as the cooling run,
+    this function finds the constant T reference potential energy at the starting chemical potential of the cooling run.
+
+    Parameters
+    ----------
+    chemical_potential_lookup : float
+        The chemical potential at which to find the constant T reference potential energy.
+    constant_t_run_dict : dictionary
+        Dictionary containing the data from a constant temperature run. (Taken directly from a results.json file output by casm monte)
+    
+    Returns
+    -------
+    float
+        The integrated grand canonical free energy of a constant temperature run at the chemical potential chemical_potential_lookup.
+    """
+
+    # Check if the "integrated_potential_energy" key exists in the constant T run dictionary.
+    # If so, load it. Otherwise, calculate it.
+    if "integrated_potential_energy" in constant_t_run_dict:
+        constant_T_integrated_free_energy = np.array(
+            constant_t_run_dict["integrated_potential_energy"]
+        )
+    else:
+        constant_T_integrated_free_energy = constant_T_integration(constant_t_run_dict)
+
+    # Find the index of the chemical potential closest to the chemical potential at which to find the constant T reference potential energy
+    chemical_potential_index = np.argmin(
+        np.abs(
+            np.array(constant_t_run_dict["param_chem_pot(a)"])
+            - chemical_potential_lookup
+        )
+    )
+
+    # Return the constant T reference potential energy at the starting chemical potential of the cooling run
+    return constant_T_integrated_free_energy[chemical_potential_index]
+
+
+def lookup_closest_LTE_run(
+    all_LTE_runs: np.ndarray, T_target, chemical_potential_target
+):
+    """
+    Finds the LTE run that is closest to the target chemical potential. 
+    Returns the closest LTE run dictionary.
+
+    Parameters
+    ----------
+    all_LTE_runs_list : list
+        List of dictionaries containing the data from all LTE runs. (Each dictionary is taken directly from a results.json file output by casm monte)
+    T_target : float
+        The target temperature.
+    chemical_potential_target : float
+        The target chemical potential.
+
+    Returns
+    -------
+    dictionary
+        Dictionary containing the data from the LTE run closest to the target temperature and chemical potential.
+    """
+    # First, find the index of the LTE run that is closest to the target chemical potential
+    chemical_potential_index = np.argmin(
+        np.abs(
+            np.array([run["param_chem_pot(a)"][0] for run in all_LTE_runs])
+            - chemical_potential_target
+        )
+    )
+
+    # Then, check that the target temperature is within the temperature range of the closest LTE run. If it is not, print a warning mesage.
+    if not (
+        min(all_LTE_runs[chemical_potential_index]["T"])
+        <= T_target
+        <= max(all_LTE_runs[chemical_potential_index]["T"])
+    ):
+        print(
+            'Warning: Function "lookup_closest_LTE_run": The target temperature is outside the temperature range of the closest LTE run.'
+        )
+
+    # Return list index of the LTE run dictionary with the closest chemical potential
+    return all_LTE_runs[chemical_potential_index]
+
+
+def lookup_closest_constant_T_run(
+    all_constant_T_runs: np.ndarray, T_target: float, chemical_potential_target: float
+):
+    """
+    Finds the constant T run that is closest to the target temperature, and has an initial chemical potential that is closest to the target chemical potential.
+    Returns the list index of the closest constant T run dictionary.
+
+    Parameters
+    ----------
+    all_constant_T_runs_list : np.ndarray
+        List of dictionaries containing the data from all constant temperature runs. (Each dictionary is taken directly from a results.json file output by casm monte)
+    T_target : float
+        The target temperature.
+    chemical_potential_target : float
+        The target chemical potential.
+
+    Returns
+    -------
+    index
+        List index of the constant T run dictionary with the closest temperature and chemical potential.
+    """
+    # If the runs array is not a numpy array, convert it to one
+    if not isinstance(all_constant_T_runs, np.ndarray):
+        all_constant_T_runs = np.array(all_constant_T_runs)
+
+    # Iterate through all constant T runs, collect the temperatures of all the runs in a list
+    all_T = np.array([run["T"][0] for run in all_constant_T_runs])
+
+    # Find the indices of all constant T runs that have a temperature closest to the target temperature
+    T_index = np.ravel(
+        np.argwhere(np.abs(all_T - T_target) == np.min(np.abs(all_T - T_target)))
+    ).astype(int)
+
+    # Of this subset of constant T runs, find the index of the run that has an initial chemical potential closest to the target chemical potential.
+    chemical_potential_index = np.argmin(
+        np.abs(
+            np.array([all_constant_T_runs[i]["param_chem_pot(a)"][0] for i in T_index])
+            - chemical_potential_target
+        )
+    )
+
+    # Return the dictionary of the constant T run with the closest temperature and chemical potential
+    return all_constant_T_runs[T_index][chemical_potential_index]
+
+
+def full_project_integration(project_gcmc_data: dict):
+    """
+    Performs grand canonical free energy integration across all paths (Constant Temperature, LTE, Heating, Cooling) in a casm project. 
+    Takes a dictionary containing data from all grand canonical Monte Carlo runs in a casm project, and returns the same dictionary after appending 'integrated_potential_energy' keys and values to all runs.
+
+    Parameters
+    ----------
+    project_gcmc_data : dictionary
+        Dictionary containing the data from a full project. (Taken directly from a results.json file output by casm monte)
+
+    Returns
+    -------
+    float
+        The integrated grand canonical free energy at the target temperature and chemical potential.
+    """
+
+    # Iterate through all constant temperature runs, and append the integrated potential energy to each run dictionary.
+    for run_index in range(len(project_gcmc_data["t_const"])):
+        project_gcmc_data["integrated_potential_energy"] = constant_T_integration(
+            project_gcmc_data["T_const"][run_index]
+        )
+
+    # Iterate through all LTE runs, and append the integrated potential energy to each run dictionary.
+    for run_index in range(len(project_gcmc_data["LTE"])):
+        project_gcmc_data["LTE"][run_index][
+            "integrated_potential_energy"
+        ] = LTE_integration(project_gcmc_data["LTE"][run_index])
+
+    # Iterate through all heating runs, look up the LTE reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
+    for run_index in range(len(project_gcmc_data["heating"])):
+        # Find the chemical potential, and the starting temperature of the heating run
+        chemical_potential = project_gcmc_data["heating"][run_index][
+            "param_chem_pot(a)"
+        ][0]
+        T_start = project_gcmc_data["heating"][run_index]["T"][0]
+
+        # Look up the LTE run dictionary that is at this chemical potential
+        closest_lte_dict = lookup_closest_LTE_run(
+            project_gcmc_data["LTE"], T_start, chemical_potential
+        )
+        reference_energy = lookup_LTE_reference_energy(closest_lte_dict, T_start)
+
+        # Integrate the grand canonical free energy, and append the integrated potential energy to the heating run dictionary
+        project_gcmc_data["heating"][run_index][
+            "integrated_potential_energy"
+        ] = heating_integration(
+            project_gcmc_data["heating"][run_index], reference_energy
+        )
+
+    # Iterate through all cooling runs, look up the constant temperature reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
+    for run_index in range(len(project_gcmc_data["cooling"])):
+        # Find the chemical potential, and the starting temperature of the cooling run
+        chemical_potential = project_gcmc_data["cooling"][run_index][
+            "param_chem_pot(a)"
+        ][0]
+        T_start = project_gcmc_data["cooling"][run_index]["T"][0]
+
+        # Look up the constant temperature run dictionary that is at this chemical potential
+        closest_const_T_dict = lookup_closest_constant_T_run(
+            project_gcmc_data["t_const"], T_start, chemical_potential
+        )
+        reference_energy = lookup_constant_T_reference_energy(
+            closest_const_T_dict, T_start
+        )
+
+        # Integrate the grand canonical free energy, and append the integrated potential energy to the cooling run dictionary
+        project_gcmc_data["cooling"][run_index][
+            "integrated_potential_energy"
+        ] = cooling_integration(
+            project_gcmc_data["cooling"][run_index], reference_energy
+        )
+
+    return project_gcmc_data
