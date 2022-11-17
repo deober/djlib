@@ -1087,11 +1087,11 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     predicted_comp : np.ndarray
         nx1 matrix of compositions, where n is the number of configurations.
     predicted_energies : np.ndarray
-        nx1 matrix of predicted formation energies.
+        Vector of n predicted formation energies.
     true_comp : np.ndarray
         nx1 matrix of compositions, where n is the number of configurations.
     true_energies : np.ndarray
-        nx1 matrix of predicted formation energies.
+        Vector of n "true" formation energies.
 
     Returns
     -------
@@ -1109,6 +1109,66 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     # Calculate the slope windows for the true convex hull
     true_chemical_potential_windows = stable_chemical_potential_windows_binary(
         true_hull
+    )
+
+    # If the elements 1 or 0 are in the true convex hull vertices, delete them from the array. Do the same for predicted vertices.
+    if 0 in true_vertices:
+        true_vertices = np.delete(true_vertices, np.where(true_vertices == 0))
+    if 1 in true_vertices:
+        true_vertices = np.delete(true_vertices, np.where(true_vertices == 1))
+    if 0 in predicted_vertices:
+        predicted_vertices = np.delete(
+            predicted_vertices, np.where(predicted_vertices == 0)
+        )
+    if 1 in predicted_vertices:
+        predicted_vertices = np.delete(
+            predicted_vertices, np.where(predicted_vertices == 1)
+        )
+
+    # Sort the true convex hull vertices by their compositions
+    true_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # Calculate the ground state accuracy metric
+    numerator = 0
+    for vertex_index in true_vertices_ordered_by_comp:
+        if true_vertices[vertex_index] in predicted_vertices:
+            numerator += true_chemical_potential_windows[vertex_index]
+    return numerator / np.sum(true_chemical_potential_windows)
+
+
+def gsa_fraction_correct_predicted_mu_window_binary(
+    predicted_comp: np.ndarray,
+    predicted_energies: np.ndarray,
+    true_comp: np.ndarray,
+    true_energies: np.ndarray,
+) -> float:
+    """
+    Normalized sum over predicted chemical potential windows. 
+    The numerator sums across chemical potential windows (slope change across a convex hull vertex) of the predicted convex hull. A chemical potential window is only included if its corresponding configuration is also on the true convex hull.
+    The denominator sums across the PREDICTED slope windows of data points that are considered the true ground states of the system. 
+    Unlike the numerator, the denominator does not require that the configurations lie on the predicted convex hull. It is simply a collection of slope windows across the 'true' ground states of the system. 
+    Because the end states have unbounded chemical potential windows, they are excluded from this metric entirely. 
+    """
+    # Calculate the lower convex hull vertices for the predicted and true convex hulls
+    predicted_hull = thull.full_hull(
+        compositions=predicted_comp, energies=predicted_energies
+    )
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies)
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    # Form a convex hull object of the true ground state indices within the predicted data
+    true_ground_staes_within_predicted = thull.full_hull(
+        compositions=predicted_comp[true_vertices],
+        energies=predicted_energies[true_vertices],
+    )
+
+    # Calculate the slope windows for the predicted convex hull
+    predicted_chemical_potential_windows = stable_chemical_potential_windows_binary(
+        predicted_hull
+    )
+    chem_pot_windows_of_true_slice_of_predictions = stable_chemical_potential_windows_binary(
+        true_ground_staes_within_predicted
     )
 
     # Sort the true convex hull vertices by their compositions
@@ -1131,14 +1191,9 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     # Calculate the ground state accuracy metric
     numerator = 0
     for vertex_index in true_vertices_ordered_by_comp:
-        if vertex_index in predicted_vertices:
-            numerator += true_chemical_potential_windows[vertex_index]
-    return numerator / np.sum(true_chemical_potential_windows)
-
-
-def gsa_fraction_correct_predicted_mu_window_binary():
-    print("Not implemented yet")    
-    return None
+        if true_vertices[vertex_index] in predicted_vertices:
+            numerator += predicted_chemical_potential_windows[vertex_index]
+    return numerator / np.sum(chem_pot_windows_of_true_slice_of_predictions)
 
 
 def gsa_number_incorrect(predicted_ground_state_indices, true_ground_state_indices):
