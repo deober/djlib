@@ -1120,12 +1120,8 @@ def LTE_integration(lte_run_data_dictionary):
     """
 
     # Re-define necessary arrays as np.ndarrays
-    b = np.array(lte_run_data_dictionary["Beta"])
+    b = np.array(lte_run_data_dictionary["Beta"]).astype(float)
     potential_energy = np.array(lte_run_data_dictionary["<potential_energy>"])
-
-    # Check that the first element of b is not equal to infinity. If so, raise an error.
-    if b[0] == np.inf:
-        raise ValueError("The first element of Beta is infinite. Cannot integrate.")
 
     # Calculate the grand canonical free energy
     integrated_potential = []
@@ -1406,10 +1402,10 @@ def full_project_integration(project_gcmc_data: dict):
     """
 
     # Iterate through all constant temperature runs, and append the integrated potential energy to each run dictionary.
-    for run_index in range(len(project_gcmc_data["t_const"])):
-        project_gcmc_data["integrated_potential_energy"] = constant_T_integration(
-            project_gcmc_data["T_const"][run_index]
-        )
+    for run_index in range(len(project_gcmc_data["T_const"])):
+        project_gcmc_data["T_const"][run_index][
+            "integrated_potential_energy"
+        ] = constant_T_integration(project_gcmc_data["T_const"][run_index])
 
     # Iterate through all LTE runs, and append the integrated potential energy to each run dictionary.
     for run_index in range(len(project_gcmc_data["LTE"])):
@@ -1429,7 +1425,7 @@ def full_project_integration(project_gcmc_data: dict):
         closest_lte_dict = lookup_closest_LTE_run(
             project_gcmc_data["LTE"], T_start, chemical_potential
         )
-        reference_energy = lookup_LTE_reference_energy(closest_lte_dict, T_start)
+        reference_energy = lookup_LTE_reference_energy(T_start, closest_lte_dict)
 
         # Integrate the grand canonical free energy, and append the integrated potential energy to the heating run dictionary
         project_gcmc_data["heating"][run_index][
@@ -1448,10 +1444,10 @@ def full_project_integration(project_gcmc_data: dict):
 
         # Look up the constant temperature run dictionary that is at this chemical potential
         closest_const_T_dict = lookup_closest_constant_T_run(
-            project_gcmc_data["t_const"], T_start, chemical_potential
+            project_gcmc_data["T_const"], T_start, chemical_potential
         )
         reference_energy = lookup_constant_T_reference_energy(
-            closest_const_T_dict, T_start
+            chemical_potential, closest_const_T_dict
         )
 
         # Integrate the grand canonical free energy, and append the integrated potential energy to the cooling run dictionary
