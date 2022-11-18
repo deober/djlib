@@ -10,7 +10,7 @@ from glob import glob
 import pathlib
 import math as m
 import djlib.djlib as dj
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
@@ -1385,7 +1385,7 @@ def lookup_closest_constant_T_run(
     return all_constant_T_runs[T_index][chemical_potential_index]
 
 
-def full_project_integration(project_gcmc_data: dict):
+def full_project_integration(project_gcmc_data: dict) -> dict:
     """
     Performs grand canonical free energy integration across all paths (Constant Temperature, LTE, Heating, Cooling) in a casm project. 
     Takes a dictionary containing data from all grand canonical Monte Carlo runs in a casm project, and returns the same dictionary after appending 'integrated_potential_energy' keys and values to all runs.
@@ -1460,93 +1460,95 @@ def full_project_integration(project_gcmc_data: dict):
     return project_gcmc_data
 
 
-def find_heating_cooling_crossing(heating_run_dictionary, cooling_run_dictionary):
+def find_heating_cooling_crossing(
+    heating_run_dictionary: dict, cooling_run_dictionary: dict
+) -> Tuple[float, float, float]:
     """
     Finds the nearest temperature at which the heating and cooling runs cross each other.
     Returns the composition at the crossing point
     """
     # Check that lengths of all vectors match and that temp_heating == temp_cooling (i.e., they're not the reverse of each other)
-    if (
-        heating_run_dictionary["integrated_potential_energy"].shape[0]
-        == heating_run_dictionary["T"].shape[0]
-        == cooling_run_dictionary["integrated_potential_energy"].shape[0]
-        == cooling_run_dictionary["T"].shape[0]
-        == heating_run_dictionary["<comp(a)>"].shape[0]
-        == cooling_run_dictionary["<comp(a)>"].shape[0]
-    ):
+    assert (
+        len(heating_run_dictionary["integrated_potential_energy"])
+        == len(heating_run_dictionary["T"])
+        == len(cooling_run_dictionary["integrated_potential_energy"])
+        == len(cooling_run_dictionary["T"])
+        == len(heating_run_dictionary["<comp(a)>"])
+        == len(cooling_run_dictionary["<comp(a)>"])
+    )
 
-        find_intersection = False
+    find_intersection = False
+    if np.allclose(heating_run_dictionary["T"], cooling_run_dictionary["T"]):
+        find_intersection = True
+    else:
+        # If the temperature axes arent the same, try swapping the order of temp_cooling and cooling_integrated_free_energy.
+        cooling_run_dictionary["T"] = np.flip(cooling_run_dictionary["T"])
+        cooling_run_dictionary["integrated_potential_energy"] = np.flip(
+            cooling_run_dictionary["integrated_potential_energy"]
+        )
+        cooling_run_dictionary["<comp(a)>"] = np.flip(
+            cooling_run_dictionary["<comp(a)>"]
+        )
+
+        # If the temperature axes still aren't the same, cancel the function.
         if np.allclose(heating_run_dictionary["T"], cooling_run_dictionary["T"]):
             find_intersection = True
         else:
-            # If the temperature axes arent the same, try swapping the order of temp_cooling and cooling_integrated_free_energy.
-            cooling_run_dictionary["T"] = np.flip(cooling_run_dictionary["T"])
-            cooling_run_dictionary["integrated_potential_energy"] = np.flip(
-                cooling_run_dictionary["integrated_potential_energy"]
+            print(
+                "Heating and cooling run temperature vectors are the same length but do not match. See printout below:\nheating_run  cooling_run"
             )
-            cooling_run_dictionary["<comp(a)>"] = np.flip(
-                cooling_run_dictionary["<comp(a)>"]
-            )
-
-            # If the temperature axes still aren't the same, cancel the function.
-            if np.allclose(heating_run_dictionary["T"], cooling_run_dictionary["T"]):
-                find_intersection = True
-            else:
+            for idx in range(len(heating_run_dictionary["T"])):
                 print(
-                    "Heating and cooling run temperature vectors are the same length but do not match. See printout below:\nheating_run  cooling_run"
+                    "%.3f  %.3f" % heating_run_dictionary["T"][idx],
+                    cooling_run_dictionary["T"][idx],
                 )
-                for idx in range(len(heating_run_dictionary["T"])):
-                    print(
-                        "%.3f  %.3f" % heating_run_dictionary["T"][idx],
-                        cooling_run_dictionary["T"][idx],
-                    )
 
-        if find_intersection:
-            # TODO: Check that there isn't more than one intersection (complete overlap) or no intersection.
+    if find_intersection:
+        # TODO: Check that there isn't more than one intersection (complete overlap) or no intersection.
 
-            # fit spline to each dataset, calculate intersection
-            interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
-                heating_run_dictionary["T"],
-                heating_run_dictionary["integrated_potential_energy"],
+        # fit spline to each dataset, calculate intersection
+        interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
+            heating_run_dictionary["T"],
+            heating_run_dictionary["integrated_potential_energy"],
+        )
+        interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
+            heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
+        )
+        interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
+            cooling_run_dictionary["T"],
+            cooling_run_dictionary["integrated_potential_energy"],
+        )
+        # interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(cooling_run_dictionary["T"], cooling_run_dictionary["<comp(a)>"])
+
+        # define a difference function to calculate the root
+        def difference(t):
+            return np.abs(interp_heating(t) - interp_cooling(t))
+
+        # Provide a composition t0 as a guess for the root finder
+        # This will break if there are multiple identical minimum values
+        t0_index = np.argmin(
+            abs(
+                heating_run_dictionary["integrated_potential_energy"]
+                - cooling_run_dictionary["integrated_potential_energy"]
             )
-            interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-                heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
-            )
-            interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
-                cooling_run_dictionary["T"],
-                cooling_run_dictionary["integrated_potential_energy"],
-            )
-            interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-                cooling_run_dictionary["T"], cooling_run_dictionary["T"]
-            )
+        )
+        t0_guess = heating_run_dictionary["T"][t0_index]
 
-            # define a difference function to calculate the root
-            def difference(t):
-                return np.abs(interp_heating(t) - interp_cooling(t))
+        # Calculate the intersection point
+        t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
+        energy_intersect_predict = interp_heating(t_intersect_predict)
+        composition_intersect_predict = interp_heating_comp(t_intersect_predict)
 
-            # Provide a composition x0 as a guess for the root finder
-            # This will break if there are multiple identical minimum values
-            t0_index = np.argmin(
-                abs(
-                    heating_run_dictionary["integrated_potential_energy"]
-                    - cooling_run_dictionary["integrated_potential_energy"]
-                )
-            )
-            t0_guess = heating_run_dictionary["T"][t0_index]
-
-            # Calculate the intersection point
-            t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
-            energy_intersect_predict = interp_heating(t_intersect_predict)
-            composition_intersect_predict = interp_heating_comp(t_intersect_predict)
-
-            return (
-                t_intersect_predict,
-                energy_intersect_predict,
-                composition_intersect_predict,
-            )
+        return (
+            t_intersect_predict,
+            energy_intersect_predict,
+            composition_intersect_predict,
+        )
 
 
-def find_constant_T_crossing(constant_T_dict_1, constant_T_dict_2):
+def find_constant_T_crossing(
+    constant_T_dict_1: dict, constant_T_dict_2: dict
+) -> Tuple[float, float, float]:
     """
     Finds the nearest chemical potential at which the two constant temperature runs cross each other in (chemical_potential, Temperature) space. 
     Returns the composition at the crossing point
@@ -1571,29 +1573,25 @@ def find_constant_T_crossing(constant_T_dict_1, constant_T_dict_2):
     # Assert that the chemical potentials are the same
     assert np.allclose(
         np.sort(constant_T_dict_1["param_chem_pot(a)"]),
-        np.sort(constant_T_dict_2["<comp(a)>"]),
+        np.sort(constant_T_dict_2["param_chem_pot(a)"]),
     ), "Chemical potentials do not match"
 
     # Ensure that all data is sorted by chemical potential
-    mu_1 = constant_T_dict_1["param_chem_pot(a"][
-        np.argsort(constant_T_dict_2["param_chem_pot(a"])
+    mu_1 = np.array(constant_T_dict_1["param_chem_pot(a)"])[
+        np.argsort(constant_T_dict_1["param_chem_pot(a)"])
     ]
     gc_free_energy_1 = constant_T_dict_1["integrated_potential_energy"][
         np.argsort(constant_T_dict_1["param_chem_pot(a)"])
     ]
-    x_1 = constant_T_dict_1["<comp(a)>"].x[
-        np.argsort(constant_T_dict_1["param_chem_pot(a)"])
-    ]
+    # x_1 = constant_T_dict_1["<comp(a)>"][np.argsort(constant_T_dict_1["param_chem_pot(a)"])]
 
-    mu_2 = constant_T_dict_2["param_chem_pot(a)"].mu[
-        np.argsort(constant_T_dict_2["param_chem_pot(a)"].mu)
+    mu_2 = np.array(constant_T_dict_2["param_chem_pot(a)"])[
+        np.argsort(constant_T_dict_2["param_chem_pot(a)"])
     ]
     gc_free_energy_2 = constant_T_dict_2["integrated_potential_energy"][
         np.argsort(constant_T_dict_2["param_chem_pot(a)"])
     ]
-    x_2 = constant_T_dict_2["<comp(a)>"][
-        np.argsort(constant_T_dict_2["param_chem_pot(a)"])
-    ]
+    # x_2 = constant_T_dict_2["<comp(a)>"][np.argsort(constant_T_dict_2["param_chem_pot(a)"])]
 
     # Fit a spline to the chemical potential vs grand canonical free energy data
     # Spline requires that domain (chemical potential) is strictly increasing
@@ -1635,3 +1633,100 @@ def find_constant_T_crossing(constant_T_dict_1, constant_T_dict_2):
         run_1_comp_intersect,
         run_2_comp_intersect,
     )
+
+
+def order_disorder_crossing_points(project_gcmc_data: dict):
+    """
+    Calculates the points in (composition,Temperature) space where free energy curves cross, indicating an order-disorder transition.
+    Currently only works for a binary system.
+    
+    Parameters
+    ----------
+    project_gcmc_data : dictionary
+        Dictionary containing the GCMC data for the project. This includes all four types of calculation paths: Constant Temperature, LTE, Heating and Cooling. 
+
+    Returns
+    -------
+    crossing_points:list
+        List of dictionaries containing the temperature, composition, chemical potential and integrated grand canonical free energy at each order-disorder transition. 
+        Also includes the path type that the transition was calculated from. Options are 'fixed_T' or 'fixed_chemical_potential'.  
+        For fixed temperature paths, the crossing in (chemical_potential,energy) space has two corresponding compositions. Both are returned.
+        For fixed chemical potential paths, the crossing in (Temperature,energy) space has one corresponding composition. 
+    """
+    # Run full project integration on the data to ensure that all integrated free energies are calculated.
+    project_gcmc_data = full_project_integration(project_gcmc_data)
+
+    # Initialize the list of crossing points
+    crossing_points = []
+
+    # First, check for order-disorder transitions in the constant temperature runs.
+    # Constant temperature runs come in pairs at a given temperature. Find and pair them.
+    constant_T_runs = project_gcmc_data["T_const"]
+    constant_T_temperatures = np.unique([run["T"][0] for run in constant_T_runs])
+    constant_T_run_pairs = []
+    for T in constant_T_temperatures:
+        constant_T_run_pairs.append(
+            [run for run in constant_T_runs if run["T"][0] == T]
+        )
+
+    # Iterate through the pairs of constant temperature runs and find the crossing points.
+    # Append the crossing points to the list of crossing points as a dictionary.
+    for pair in constant_T_run_pairs:
+        (
+            mu_intersect_predict,
+            energy_intersect_predict,
+            x_intersect_1,
+            x_intersect_2,
+        ) = find_constant_T_crossing(pair[0], pair[1])
+        crossing_points.append(
+            {
+                "T": pair[0]["T"][0],
+                "x_1": x_intersect_1,
+                "x_2": x_intersect_2,
+                "mu": mu_intersect_predict,
+                "free_energy": energy_intersect_predict,
+                "path_type": "fixed_T",
+            }
+        )
+
+    # Next, check for order-disorder transitions in the fixed chemical potential runs.
+    # Fixed chemical potential runs come in pairs at a given chemical potential. Find and pair them.
+    heating_runs = project_gcmc_data["heating"]
+    cooling_runs = project_gcmc_data["cooling"]
+    fixed_chem_potential_runs = heating_runs + cooling_runs
+
+    fixed_chem_potential_chem_pots = np.unique(
+        [run["param_chem_pot(a)"][0] for run in fixed_chem_potential_runs]
+    )
+    fixed_chem_potential_run_pairs = []
+    for mu in fixed_chem_potential_chem_pots:
+        fixed_chem_potential_run_pairs.append(
+            [
+                run
+                for run in fixed_chem_potential_runs
+                if run["param_chem_pot(a)"][0] == mu
+            ]
+        )
+
+    # Iterate through the pairs of fixed chemical potential runs and find the crossing points.
+    # Append the crossing points to the list of crossing points as a dictionary.
+    for pair in fixed_chem_potential_run_pairs:
+        (
+            T_intersect_predict,
+            energy_intersect_predict,
+            x_intersect_predict,
+        ) = find_heating_cooling_crossing(pair[0], pair[1])
+        crossing_points.append(
+            {
+                "T": pair[0]["T"][0],
+                "x_1": x_intersect_predict,
+                "x_2": x_intersect_predict,
+                "mu": T_intersect_predict,
+                "free_energy": energy_intersect_predict,
+                "path_type": "fixed_chemical_potential",
+            }
+        )
+
+    # TODO: This function currently returns predicted crossing points that are interpolated from the data.
+    # If it is necessary to only use actual calculated points, this can be done using the "find_crossing_composition" function in this module.
+    return crossing_points

@@ -538,24 +538,24 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
         {
             "mu_start": -3.0,
             "mu_stop": 3.0,
-            "mu_increment": 0.05,
+            "mu_increment": 0.01,
             "T_start": 2000.0,
             "T_stop": 2000.0,
             "T_increment": 0.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
-            "hours": 24,
+            "hours": 35,
         }
     ]
     t_const_param_list_of_dicts += [
         {
             "mu_start": 3.0,
             "mu_stop": -3.0,
-            "mu_increment": -0.05,
+            "mu_increment": -0.01,
             "T_start": 2000.0,
             "T_stop": 2000.0,
             "T_increment": 0.0,
             "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
-            "hours": 24,
+            "hours": 35,
         }
     ]
     t_const_gs = dj.gridspace_manager(
