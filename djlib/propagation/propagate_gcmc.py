@@ -622,6 +622,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     cooling_settings["driver"]["motif"]["configdof"] = os.path.join(
         t_const_runs[0], "conditions.%d/final_state.json" % number_of_conditions
     )
+    cooling_settings["driver"]["motif"].pop("configname", None)
     with open(os.path.join(cooling_runs[0], "mc_settings.json"), "w") as f:
         json.dump(cooling_settings, f, indent=4)
 
@@ -676,6 +677,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     heating_settings["driver"]["motif"]["configdof"] = os.path.join(
         lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
     )
+    heating_settings["driver"]["motif"].pop("configname", None)
     with open(os.path.join(heating_runs[0], "mc_settings.json"), "w") as f:
         json.dump(heating_settings, f, indent=4)
 
