@@ -616,7 +616,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     with open(os.path.join(cooling_runs[0], "mc_settings.json"), "r") as f:
         cooling_settings = json.load(f)
     cooling_settings["driver"]["motif"]["configdof"] = os.path.join(
-        t_const_runs[0], "conditions.%d" % number_of_conditions
+        t_const_runs[0], "conditions.%d/final_state.json" % number_of_conditions
     )
     with open(os.path.join(cooling_runs[0], "mc_settings.json"), "w") as f:
         json.dump(cooling_settings, f, indent=4)
@@ -658,7 +658,9 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     ):
         warnings.warn(
             "LTE run final conditions file cannot be found. Please verify that %s exists."
-            % os.path.join(lte_runs[0], "conditions.%d" % number_of_conditions)
+            % os.path.join(
+                lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
+            )
         )
 
     # Reference the final LTE configuration as the starting configuration for the heating run.
