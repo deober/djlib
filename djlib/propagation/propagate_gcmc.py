@@ -604,11 +604,15 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
 
     # Check that this conditions file exists
     if not os.path.exists(
-        os.path.join(t_const_runs[0], "conditions.%d" % number_of_conditions)
+        os.path.join(
+            t_const_runs[0], "conditions.%d/final_state.json" % number_of_conditions
+        )
     ):
         warnings.warn(
             "High temperature constant t run final conditions file cannot be found. Please verify that %s exists."
-            % os.path.join(t_const_runs[0], "conditions.%d" % number_of_conditions)
+            % os.path.join(
+                t_const_runs[0], "conditions.%d/final_state.json" % number_of_conditions
+            )
         )
 
     # Reference the final constant T configuration as the starting configuration for the cooling run.
@@ -654,7 +658,9 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
 
     # Check that this conditions file exists
     if not os.path.exists(
-        os.path.join(lte_runs[0], "conditions.%d" % number_of_conditions)
+        os.path.join(
+            lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
+        )
     ):
         warnings.warn(
             "LTE run final conditions file cannot be found. Please verify that %s exists."
@@ -668,7 +674,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     with open(os.path.join(heating_runs[0], "mc_settings.json"), "r") as f:
         heating_settings = json.load(f)
     heating_settings["driver"]["motif"]["configdof"] = os.path.join(
-        lte_runs[0], "conditions.%d" % number_of_conditions
+        lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
     )
     with open(os.path.join(heating_runs[0], "mc_settings.json"), "w") as f:
         json.dump(heating_settings, f, indent=4)
