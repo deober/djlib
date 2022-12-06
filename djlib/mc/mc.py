@@ -1462,7 +1462,7 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
         # Integrate the grand canonical free energy, and append the integrated potential energy to the cooling run dictionary
         project_gcmc_data["cooling"][run_index][
             "integrated_potential_energy"
-        ] = cooling_integration(
+        ] = constant_chemical_potential_integration(
             project_gcmc_data["cooling"][run_index], reference_energy
         )
 
