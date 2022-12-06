@@ -12,7 +12,6 @@ import math as m
 import djlib.djlib as dj
 from typing import List, Tuple, Dict
 
-
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
 
@@ -243,7 +242,7 @@ def read_lte_results(
     mu = np.array(results["param_chem_pot(a)"])
     b = np.array(results["Beta"])
     t = np.array(results["T"])
-    x = np.array(results["gs_comp(a)"])
+    x = np.array(results["<comp(a)>"])
     pot_eng = np.array(results["phi_LTE"])
 
     return (mu, b, t, x, pot_eng)
@@ -339,8 +338,8 @@ class lte_run:
         self.mu = results["param_chem_pot(a)"]
         self.b = results["Beta"]
         self.t = results["T"]
-        self.x = results["gs_comp(a)"]
-        self.pot_eng = results["phi_LTE"]
+        self.x = results["<comp(a)>"]
+        self.pot_eng = results["<potential_energy>"]
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
         )
@@ -491,9 +490,14 @@ class cooling_run:
     def __init__(self, cooling_dir, constant_t_run):
         self.path = cooling_dir
         results_file_path = os.path.join(self.path, "results.json")
-        self.mu, self.x, self.b, self.t, self.pot_eng = read_mc_results_file(
-            results_file_path
-        )
+        (
+            self.mu,
+            self.x,
+            self.b,
+            self.t,
+            self.pot_eng,
+            self.formation_energy,
+        ) = read_mc_results_file(results_file_path)
         self.get_constant_t_reference_energy(constant_t_run)
         self.integrate_cooling_from_const_t_run()
         self.superdupercell = read_superdupercell(
@@ -1079,11 +1083,10 @@ def constant_T_integration(t_const_run_data_dictionary):
         Integrated grand canonical free energy in temperature-chemical potential space.
     """
     # Re-define necessary arrays as np.ndarrays
-    free_energy_reference = np.array(
-        t_const_run_data_dictionary["<potential_energy>"][0]
-    )
+    free_energy_reference = np.array(t_const_run_data_dictionary["<potential_energy>"])[
+        0
+    ]
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
-    b = np.array(t_const_run_data_dictionary["Beta"])
     x = np.array(t_const_run_data_dictionary["<comp(a)>"])
 
     # Calculate the grand canonical free energy
@@ -1092,14 +1095,9 @@ def constant_T_integration(t_const_run_data_dictionary):
         index = index + 1
         if index > 0:
             current_mu = mu[0:index]
-            current_b = b[0:index]
             current_x = x[0:index]
             integrated_potential.append(
-                (1 / current_b[-1])
-                * (
-                    b[0] * free_energy_reference
-                    + integrate.simpson((-1 * current_b * current_x), current_mu)
-                )
+                free_energy_reference - integrate.simpson(current_x, current_mu)
             )
     return np.asarray(integrated_potential)
 
@@ -1118,23 +1116,28 @@ def LTE_integration(lte_run_data_dictionary):
     integrated_free_energy : np.ndarray
         Integrated grand canonical free energy in temperature-chemical potential space.
     """
-
     # Re-define necessary arrays as np.ndarrays
-    b = np.array(lte_run_data_dictionary["Beta"]).astype(float)
+    b = np.array(lte_run_data_dictionary["Beta"])
     potential_energy = np.array(lte_run_data_dictionary["<potential_energy>"])
+    mu = np.array(lte_run_data_dictionary["param_chem_pot(a)"])
+    x = np.array(lte_run_data_dictionary["<comp(a)>"])
 
     # Calculate the grand canonical free energy
     integrated_potential = []
-    for index in range(len(b)):
+    for index, value in enumerate(b):
         index = index + 1
         if index > 0:
             current_b = b[0:index]
             current_potential_energy = potential_energy[0:index]
+            current_mu = mu[0:index]
+            current_x = x[0:index]
             integrated_potential.append(
                 (1 / current_b[-1])
                 * (
                     b[0] * potential_energy[0]
-                    + integrate.simpson(current_potential_energy, current_b)
+                    + integrate.simpson(
+                        (current_potential_energy - current_mu * current_x), current_b
+                    )
                 )
             )
     return np.asarray(integrated_potential)
@@ -1181,7 +1184,7 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
     return np.asarray(integrated_potential)
 
 
-def cooling_integration(
+def constant_chemical_potential_integration(
     cooling_run_data_dictionary, constant_T_reference_potential_energy
 ):
     """
@@ -1204,6 +1207,8 @@ def cooling_integration(
     # Re-define necessary arrays as np.ndarrays
     b = np.array(cooling_run_data_dictionary["Beta"])
     potential_energy = np.array(cooling_run_data_dictionary["<potential_energy>"])
+    mu = np.array(cooling_run_data_dictionary["param_chem_pot(a)"])
+    x = np.array(cooling_run_data_dictionary["<comp(a)>"])
 
     # Set the initial potential energy to the LTE reference potential energy
     potential_energy[0] = constant_T_reference_potential_energy
@@ -1215,11 +1220,15 @@ def cooling_integration(
         if index > 0:
             current_b = b[0:index]
             current_potential_energy = potential_energy[0:index]
+            current_mu = mu[0:index]
+            current_x = x[0:index]
             integrated_potential.append(
                 (1 / current_b[-1])
                 * (
                     b[0] * constant_T_reference_potential_energy
-                    + integrate.simpson(current_potential_energy, current_b)
+                    + integrate.simpson(
+                        (current_potential_energy - current_mu * current_x), current_b
+                    )
                 )
             )
     return np.asarray(integrated_potential)
