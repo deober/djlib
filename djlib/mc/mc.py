@@ -1207,28 +1207,21 @@ def constant_chemical_potential_integration(
     # Re-define necessary arrays as np.ndarrays
     b = np.array(cooling_run_data_dictionary["Beta"])
     potential_energy = np.array(cooling_run_data_dictionary["<potential_energy>"])
-    mu = np.array(cooling_run_data_dictionary["param_chem_pot(a)"])
-    x = np.array(cooling_run_data_dictionary["<comp(a)>"])
-
     # Set the initial potential energy to the LTE reference potential energy
     potential_energy[0] = constant_T_reference_potential_energy
 
     # Calculate the grand canonical free energy
     integrated_potential = []
-    for index, value in enumerate(b):
+    for index in list(range(len(b))):
         index = index + 1
         if index > 0:
             current_b = b[0:index]
             current_potential_energy = potential_energy[0:index]
-            current_mu = mu[0:index]
-            current_x = x[0:index]
             integrated_potential.append(
                 (1 / current_b[-1])
                 * (
                     b[0] * constant_T_reference_potential_energy
-                    + integrate.simpson(
-                        (current_potential_energy - current_mu * current_x), current_b
-                    )
+                    + integrate.simpson((current_potential_energy), current_b)
                 )
             )
     return np.asarray(integrated_potential)
