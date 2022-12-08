@@ -1191,6 +1191,10 @@ def constant_chemical_potential_integration(
     Integrates the grand canonical free energy for a cooling run in temperature-chemical potential space.
     Requires a reference potential energy from a constant temperature run at the same chemical potential and initial temperature as the cooling run.
     Currently Assumes there is one parameterized chemical potential
+
+    Notes
+    -----
+    the potential energy key refers to (E-mu x) in the results.json file output by casm monte
     
     Parameters
     ----------
