@@ -346,8 +346,8 @@ def analytic_posterior(
         Posterior covariance matrix.
     """
     # Calculate precision matrices (inverse of covariance matrices)
-    weight_precision_matrix = np.linalg.pinv(np.power(weight_covariance_matrix, 2))
-    label_precision_matrix = np.linalg.pinv(np.power(label_covariance_matrix, 2))
+    weight_precision_matrix = np.linalg.pinv(weight_covariance_matrix)
+    label_precision_matrix = np.linalg.pinv(label_covariance_matrix)
 
     # Calculate the posterior distribution covariance matrix
     posterior_covariance_matrix = np.linalg.pinv(
