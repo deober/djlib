@@ -1081,7 +1081,7 @@ def gsa_fraction_correct_DFT_mu_window_binary(
         The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
         The numerator is the sum across the stable chemical potential windows (slopes) for each configuration that is predicted (by both cluster expansion AND DFT) to be on the convex hull, excluding ground states.
         The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction.
-
+        (1c ground state accuracy metric)
     Parameters
     ----------
     predicted_comp : np.ndarray
