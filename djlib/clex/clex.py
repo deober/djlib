@@ -8,7 +8,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LassoCV
+from sklearn.linear_model import LassoCV, LassoLarsCV
 from sklearn.metrics import mean_squared_error
 import csv
 from glob import glob
@@ -22,6 +22,54 @@ from typing import Callable, List, Tuple, Sequence
 import stan
 from sklearn.decomposition import PCA
 from sklearn.linear_model import BayesianRidge
+
+
+def boltzmann(hulldist, coef, beta, temperature):
+    return coef * np.exp(-(beta * hulldist) / temperature)
+
+
+def weighted_feature_and_target_arrays(
+    corr: np.ndarray,
+    formation_energy: np.ndarray,
+    hulldists: np.ndarray,
+    A: float = 1,
+    B: float = 1,
+    kT: float = 1,
+):
+    """Given boltzmann weighting parameters, returns a weighted feature matrix and corresponding target vector.
+
+    Parameters
+    ----------
+    A : float
+        Boltzmann weighting coefficient.
+    B : float
+        Boltzmann weighting coefficient.
+    kT : float
+        Boltzmann weighting coefficient.
+    corr : numpy.ndarray
+        CASM nxk correlation matrix, n = number of configurations, k = number of ECI.
+    formation_energy : numpy.ndarray
+        n-dimensional vector of formation energies.
+    hulldists : numpy.ndarray
+        n-dimensional vector of hull distances.
+
+    Returns
+    -------
+    x_prime : numpy.ndarray
+        Weighted CASM nxk correlation matrix, n = number of configurations, k = number of ECI.
+    y_prime : numpy.ndarray
+        Weighted n-dimensional vector of formation energies.
+    """
+
+    weight = np.identity(formation_energy.shape[0])
+    for config_index in range(formation_energy.shape[0]):
+        weight[config_index, config_index] = boltzmann(
+            hulldist=hulldists[config_index], coef=A, beta=B, temperature=kT
+        )
+    l = np.linalg.cholesky(weight)
+    y_prime = np.ravel(l @ formation_energy.reshape(-1, 1))
+    x_prime = l @ corr
+    return (x_prime, y_prime)
 
 
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
