@@ -16,8 +16,8 @@ def propagation_project_namer(propagation_info_dict):
         Dictionary containing the following keys:
             'template_project_root_path' : str
                 Path to the casm project root
-            'markov_chain_index' : int
-                Index of the eci selection in the posterior markov chain to be used. Also decides the name of the propagaiton directory.
+            'sample_index' : int
+                Index of the eci selection. Also decides the name of the propagaiton directory.
             'eci' : np.ndarray
                 ECI vector to write to the casm project
             'propagation_directory' : str
@@ -28,8 +28,8 @@ def propagation_project_namer(propagation_info_dict):
     str
         Name of the propagation project
     """
-    markov_chain_index = propagation_info_dict["markov_chain_index"]
-    return "markov_chain_index_" + str(markov_chain_index)
+    sample_index = propagation_info_dict["sample_index"]
+    return "sample_index_" + str(sample_index)
 
 
 def propagation_project_parser(propagated_casm_project_root_path: str):
@@ -518,7 +518,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_start": 5.0,
             "T_stop": 100.0,
             "T_increment": 5.0,
-            "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "supercell": [[24, 0, 0], [0, 24, 0], [0, 0, 24]],
             "hours": 24,
         }
     ]
@@ -538,11 +538,11 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
         {
             "mu_start": -3.0,
             "mu_stop": 3.0,
-            "mu_increment": 0.01,
+            "mu_increment": 0.05,
             "T_start": 2000.0,
             "T_stop": 2000.0,
             "T_increment": 0.0,
-            "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "supercell": [[24, 0, 0], [0, 24, 0], [0, 0, 24]],
             "hours": 35,
         }
     ]
@@ -550,11 +550,11 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
         {
             "mu_start": 3.0,
             "mu_stop": -3.0,
-            "mu_increment": -0.01,
+            "mu_increment": -0.05,
             "T_start": 2000.0,
             "T_stop": 2000.0,
             "T_increment": 0.0,
-            "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "supercell": [[24, 0, 0], [0, 24, 0], [0, 0, 24]],
             "hours": 35,
         }
     ]
@@ -578,7 +578,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_start": 2000.0,
             "T_stop": 50.0,
             "T_increment": -5.0,
-            "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "supercell": [[24, 0, 0], [0, 24, 0], [0, 0, 24]],
             "hours": 24,
         }
     ]
@@ -636,7 +636,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             "T_start": 50.0,
             "T_stop": 2000.0,
             "T_increment": 5.0,
-            "supercell": [[16, 0, 0], [0, 16, 0], [0, 0, 16]],
+            "supercell": [[24, 0, 0], [0, 24, 0], [0, 0, 24]],
             "hours": 24,
         }
     ]
