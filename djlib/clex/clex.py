@@ -1048,7 +1048,9 @@ def upscale_eci_vector(ecis: np.ndarray, mask: np.ndarray):
 
 
 def ground_state_accuracy_metric(
-    composition_predicted, energy_predicted, true_ground_state_indices
+    composition_predicted: np.ndarray,
+    energy_predicted: np.ndarray,
+    true_ground_state_indices: np.ndarray,
 ) -> float:
     """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction. 
         The denominator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull.
@@ -1123,8 +1125,11 @@ def ground_state_accuracy_fraction_correct(
 
 
 def gsa_fraction_correct_DFT_mu_window_binary(
-    predicted_comp, predicted_energies, true_comp, true_energies
-):
+    predicted_comp: np.ndarray,
+    predicted_energies: np.ndarray,
+    true_comp: np.ndarray,
+    true_energies: np.ndarray,
+) -> float:
     """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states. 
         The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
         The numerator is the sum across the stable chemical potential windows (slopes) for each configuration that is predicted (by both cluster expansion AND DFT) to be on the convex hull, excluding ground states.
