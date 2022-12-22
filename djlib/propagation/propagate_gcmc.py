@@ -8,7 +8,7 @@ import warnings
 
 
 def propagation_project_namer(propagation_info_dict):
-    """Takes a dictionary containing the necessary information to set up a new casm project, and returns a name for that project as a string. 
+    """Takes a dictionary containing the necessary information to set up a new casm project, and returns a name for that project as a string.
 
     Parameters
     ----------
@@ -21,7 +21,7 @@ def propagation_project_namer(propagation_info_dict):
             'eci' : np.ndarray
                 ECI vector to write to the casm project
             'propagation_directory' : str
-                Path to the directory which will contain all the propagation directories. 
+                Path to the directory which will contain all the propagation directories.
 
     Returns
     -------
@@ -33,17 +33,17 @@ def propagation_project_namer(propagation_info_dict):
 
 
 def propagation_project_parser(propagated_casm_project_root_path: str):
-    """Pulls all information from grand canonical monte carlo runs, integrates the free energy and returns a dictionary containing all the information. 
-    Will not parse until all run statuses are complete. 
-    
+    """Pulls all information from grand canonical monte carlo runs, integrates the free energy and returns a dictionary containing all the information.
+    Will not parse until all run statuses are complete.
+
     Parameters
     ----------
     propagated_casm_project_root_path: str
-        Path to the casm project root of the propagated project. 
+        Path to the casm project root of the propagated project.
 
     Returns
     -------
-    
+
     """
 
     all_statuses = []
@@ -123,27 +123,27 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
 def propagation_casm_project_creator(
     propagation_info_dict, propagation_project_root_path
 ):
-    """Copies a pre-templated casm project, writes a specific eci vector to 
-        project_root/cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json
-        and creates all standard directories for typical grand canonical monte carlo simulations. 
+    """Copies a pre-templated casm project, writes a specific eci vector to
+    project_root/cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json
+    and creates all standard directories for typical grand canonical monte carlo simulations.
 
-        Parameters
-        ----------
-        propagation_info_dict : dict
-            Dictionary containing the following keys:
-                'template_project_root_path' : str
-                    Path to the casm project root
-                'markov_chain_index' : int
-                    Index of the eci selection in the posterior markov chain to be used. Also decides the name of the propagaiton directory.
-                'eci' : np.ndarray
-                    ECI vector to write to the casm project
-                'propagation_directory' : str
-                    Path to the directory which will contain all the propagation directories. 
+    Parameters
+    ----------
+    propagation_info_dict : dict
+        Dictionary containing the following keys:
+            'template_project_root_path' : str
+                Path to the casm project root
+            'markov_chain_index' : int
+                Index of the eci selection in the posterior markov chain to be used. Also decides the name of the propagaiton directory.
+            'eci' : np.ndarray
+                ECI vector to write to the casm project
+            'propagation_directory' : str
+                Path to the directory which will contain all the propagation directories.
 
-        Returns
-        -------
-        None
-        """
+    Returns
+    -------
+    None
+    """
 
     # Copy the template project to the propagation directory, and name it according to the markov chain index.
     template_project_root_path = propagation_info_dict["template_project_root_path"]
@@ -187,7 +187,8 @@ def propagation_casm_project_creator(
     tmp_propagation_info_dict["eci"] = tmp_propagation_info_dict["eci"].tolist()
     with open(
         os.path.join(
-            propagation_project_root_path, "grand_canonical_monte_carlo/run_info.json",
+            propagation_project_root_path,
+            "grand_canonical_monte_carlo/run_info.json",
         ),
         "w",
     ) as f:
@@ -238,8 +239,8 @@ def propagation_casm_project_creator(
 
 
 def collect_all_statuses_gcmc(MC_gridspace):
-    """Collects statuses from all status.json files within the given gridspace Returns a list of dictionaries, 
-    where each dictionary key is the run directory name, and value is the run status as a string. 
+    """Collects statuses from all status.json files within the given gridspace Returns a list of dictionaries,
+    where each dictionary key is the run directory name, and value is the run status as a string.
 
     Parameters
     ----------
@@ -249,7 +250,7 @@ def collect_all_statuses_gcmc(MC_gridspace):
     Returns
     -------
     list
-        List of dictionaries, where each dictionary key is the run directory name, and value is the run status as a string. 
+        List of dictionaries, where each dictionary key is the run directory name, and value is the run status as a string.
     """
     run_directories = glob(os.path.join(MC_gridspace, "mu_*"))
     status_list = []
@@ -261,10 +262,10 @@ def collect_all_statuses_gcmc(MC_gridspace):
 
 
 def propagation_casm_project_status_updater(propagated_casm_project_root_path: str):
-    """Checks and updates status for the grand canonical monte carlo runs of an entire casm project. 
+    """Checks and updates status for the grand canonical monte carlo runs of an entire casm project.
 
     Parameters
-    ---------- 
+    ----------
     propagated_casm_project_root_path : str
         Path to the casm project root
 
@@ -385,16 +386,16 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
 
 def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
     """Runs all grand canonical monte carlo simulations for an entire casm project.
-    Cooling runs must initialize from completed constant Temperature runs, and heating runs must initialize from completed LTE runs. 
-    Dependent runs will not submit if necessary dependencies are not complete. 
+    Cooling runs must initialize from completed constant Temperature runs, and heating runs must initialize from completed LTE runs.
+    Dependent runs will not submit if necessary dependencies are not complete.
 
     Parameters
     ----------
-    propagated_casm_project_root_path: str 
-        Path to the casm project, where grand canonical monte carlo simulations will be run. 
-    
-    Returns: 
-        None. 
+    propagated_casm_project_root_path: str
+        Path to the casm project, where grand canonical monte carlo simulations will be run.
+
+    Returns:
+        None.
     """
 
     # Create a gridspace manager object for each type of monte carlo run.
@@ -492,21 +493,21 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
 
 def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     """A very specific function: Writes all necessary files for heating and cooling runs for the ground state at 50% composition. This includes:
-            -High temperature constant t runs from very low to very high chemical potential and very high to very low chemical potential
-            -Cooling runs from the high temperature constant t runs
-            -Low Temperature Expansion (LTE) runs 
-            -Heating runs that initialize from LTE runs
+        -High temperature constant t runs from very low to very high chemical potential and very high to very low chemical potential
+        -Cooling runs from the high temperature constant t runs
+        -Low Temperature Expansion (LTE) runs
+        -Heating runs that initialize from LTE runs
 
 
-        Parameters
-        ----------
-        casm_root_path: str
-            Path to the casm project root
+    Parameters
+    ----------
+    casm_root_path: str
+        Path to the casm project root
 
-        Returns
-        -------
-        None
-        """
+    Returns
+    -------
+    None
+    """
 
     # Create a dj.gridspace_manager object to control lte runs. Then format the run directories.
     lte_dir = os.path.join(casm_root_path, "grand_canonical_monte_carlo/MC_LTE")
@@ -525,7 +526,7 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     lte_gs = dj.gridspace_manager(
         origin_dir=lte_dir,
         namer=mc.mc_run_namer,
-        run_creator=mc.mc_run_creator,
+        run_creator=mc.mc_lte_run_creator,
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
         grid_params=lte_param_list_of_dicts,
@@ -684,4 +685,3 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
 
 # TODO: write function to find the clex-predicted ground state for a given chemical potential
 # TODO: write function to find the transformation matrix that forms the supercell of a given configuration (Will involve a casm call, should probably be placed in casmcalls)
-
