@@ -368,14 +368,14 @@ def collect_config_structure_files(
     casm_root: str, config_list: List[str], output_directory
 ) -> None:
     """Collects the config structure.json files from a list of config names.
-    
+
     Parameters:
     -----------
     casm_root: str
         Path to the CASM root directory.
     config_list: List[str]
         List of config names.
-    
+
     Returns:
     --------
     None.
@@ -393,6 +393,29 @@ def collect_config_structure_files(
             os.path.join(casm_root, "training_data", config, "structure.json"),
             os.path.join(output_directory, config),
         )
+        # Check if there is a file called "calctype.default/run.final/CONTCAR" within the config directory.
+        # If so, copy it to the same location as the structure.json file in the output directory.
+        if os.path.isfile(
+            os.path.join(
+                casm_root,
+                "training_data",
+                config,
+                "calctype.default",
+                "run.final",
+                "CONTCAR",
+            )
+        ):
+            shutil.copy(
+                os.path.join(
+                    casm_root,
+                    "training_data",
+                    config,
+                    "calctype.default",
+                    "run.final",
+                    "CONTCAR",
+                ),
+                os.path.join(output_directory, config),
+            )
     print("done")
 
 
@@ -454,4 +477,3 @@ class gridspace_manager:
                 self.run_submitter(dir)
             except:
                 print("Failed to run: ", dir)
-
