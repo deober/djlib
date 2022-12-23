@@ -295,12 +295,12 @@ def read_mc_results_file(
         results = json.load(f)
 
     mu = np.array(results["param_chem_pot(a)"])
-    x = np.array(results["gs_comp(a)"])
+    x = np.array(results["<comp(a)>"])
     b = np.array(results["Beta"])
     temperature = np.array(results["T"])
-    semi_grand_canonical_free_energy = np.array(results["phi_LTE"])
-    formation_energy = np.array(results["gs_formation_energy"])
-    return (mu, x, b, temperature, semi_grand_canonical_free_energy, formation_energy)
+    potential_energy = np.array(results["<potential_energy>"])
+    formation_energy = np.array(results["<formation_energy>"])
+    return (mu, x, b, temperature, potential_energy, formation_energy)
 
 
 def read_lte_results(
@@ -333,10 +333,11 @@ def read_lte_results(
     mu = np.array(results["param_chem_pot(a)"])
     b = np.array(results["Beta"])
     t = np.array(results["T"])
-    x = np.array(results["<comp(a)>"])
-    pot_eng = np.array(results["phi_LTE"])
+    x = np.array(results["gs_comp(a)"])
+    semi_grand_canonical_free_energy = np.array(results["phi_LTE"])
+    formation_energy = np.array(results["gs_formation_energy"])
 
-    return (mu, b, t, x, pot_eng)
+    return (mu, b, t, x, semi_grand_canonical_free_energy, formation_energy)
 
 
 def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
