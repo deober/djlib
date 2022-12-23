@@ -1340,20 +1340,14 @@ def lookup_LTE_reference_energy(T_lookup, LTE_run_data_dictionary):
     float
         The integrated grand canonical free energy of a LTE run at the temperature T_lookup.
     """
-    # Check if the "integrated_potential_energy" key exists in the LTE run dictionary.
-    # If so, load it. Otherwise, calculate it.
-    if "integrated_potential_energy" in LTE_run_data_dictionary:
-        LTE_integrated_free_energy = np.array(
-            LTE_run_data_dictionary["integrated_potential_energy"]
-        )
-    else:
-        LTE_integrated_free_energy = LTE_integration(LTE_run_data_dictionary)
+    # Read the phi_LTE (semi grand canonical free energy) from the LTE run data dictionary
+    semi_grand_canonical_free_energy = np.array(LTE_run_data_dictionary["phi_LTE"])
 
     # Find the index of the temperature closest to the temperature at which to find the LTE reference potential energy
     T_index = np.argmin(np.abs(np.array(LTE_run_data_dictionary["T"]) - T_lookup))
 
     # Return the LTE reference potential energy at the starting temperature of the heating run
-    return LTE_integrated_free_energy[T_index]
+    return semi_grand_canonical_free_energy[T_index]
 
 
 def lookup_constant_T_reference_energy(chemical_potential_lookup, constant_t_run_dict):
@@ -1506,10 +1500,11 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
         ] = constant_T_integration(project_gcmc_data["T_const"][run_index])
 
     # Iterate through all LTE runs, and append the integrated potential energy to each run dictionary.
-    for run_index in range(len(project_gcmc_data["LTE"])):
-        project_gcmc_data["LTE"][run_index][
-            "integrated_potential_energy"
-        ] = LTE_integration(project_gcmc_data["LTE"][run_index])
+    # Note: NO LONGER NEED THIS. 'phi_LTE' key IS the semi grand canonical free energy. No need to integrate.
+    # for run_index in range(len(project_gcmc_data["LTE"])):
+    #    project_gcmc_data["LTE"][run_index][
+    #        "integrated_potential_energy"
+    #    ] = LTE_integration(project_gcmc_data["LTE"][run_index])
 
     # Iterate through all heating runs, look up the LTE reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
     for run_index in range(len(project_gcmc_data["heating"])):
