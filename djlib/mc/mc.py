@@ -63,8 +63,21 @@ def mc_status_updater(run_dir):
     settings_file = os.path.join(run_dir, "mc_settings.json")
     length = read_mc_settings(settings_file)[0].shape[0]
     results_file = os.path.join(run_dir, "results.json")
+
+    run_type = None
     if os.path.exists(results_file):
-        results_length = read_mc_results_file(results_file)[0].shape[0]
+        # Open the file, and check that 'phi_LTE' is a key in the file.
+        with open(results_file) as f:
+            results = json.load(f)
+        if "phi_LTE" in results.keys():
+            run_type = "LTE"
+        else:
+            run_type = "metropolis"
+
+        if run_type == "metropolis":
+            results_length = read_mc_results_file(results_file)[0].shape[0]
+        elif run_type == "LTE":
+            results_length = read_lte_results(results_file)[0].shape[0]
         if results_length == length:
             status = "complete"
         else:
@@ -282,12 +295,12 @@ def read_mc_results_file(
         results = json.load(f)
 
     mu = np.array(results["param_chem_pot(a)"])
-    x = np.array(results["<comp(a)>"])
+    x = np.array(results["gs_comp(a)"])
     b = np.array(results["Beta"])
     temperature = np.array(results["T"])
-    potential_energy = np.array(results["<potential_energy>"])
-    formation_energy = np.array(results["<formation_energy>"])
-    return (mu, x, b, temperature, potential_energy, formation_energy)
+    semi_grand_canonical_free_energy = np.array(results["phi_LTE"])
+    formation_energy = np.array(results["gs_formation_energy"])
+    return (mu, x, b, temperature, semi_grand_canonical_free_energy, formation_energy)
 
 
 def read_lte_results(
