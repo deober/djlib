@@ -1811,10 +1811,10 @@ def order_disorder_crossing_points(project_gcmc_data: dict):
         ) = find_heating_cooling_crossing(pair[0], pair[1])
         crossing_points.append(
             {
-                "T": pair[0]["T"][0],
+                "T": T_intersect_predict,
                 "x_1": x_intersect_predict,
                 "x_2": x_intersect_predict,
-                "mu": T_intersect_predict,
+                "mu": pair[0]["param_chem_pot(a)"][0],
                 "free_energy": energy_intersect_predict,
                 "path_type": "fixed_chemical_potential",
             }
