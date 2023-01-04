@@ -1561,6 +1561,7 @@ def find_heating_cooling_crossing(
     Returns the composition at the crossing point
     """
     # Check that lengths of all vectors match and that temp_heating == temp_cooling (i.e., they're not the reverse of each other)
+
     assert (
         len(heating_run_dictionary["integrated_potential_energy"])
         == len(heating_run_dictionary["T"])
@@ -1611,7 +1612,9 @@ def find_heating_cooling_crossing(
             cooling_run_dictionary["T"],
             cooling_run_dictionary["integrated_potential_energy"],
         )
-        # interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(cooling_run_dictionary["T"], cooling_run_dictionary["<comp(a)>"])
+        interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
+            cooling_run_dictionary["T"], cooling_run_dictionary["<comp(a)>"]
+        )
 
         # define a difference function to calculate the root
         def difference(t):
@@ -1630,12 +1633,14 @@ def find_heating_cooling_crossing(
         # Calculate the intersection point
         t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
         energy_intersect_predict = interp_heating(t_intersect_predict)
-        composition_intersect_predict = interp_heating_comp(t_intersect_predict)
+        composition_intersect_predict_heating = interp_heating_comp(t_intersect_predict)
+        composition_intersect_predict_cooling = interp_cooling_comp(t_intersect_predict)
 
         return (
             t_intersect_predict,
             energy_intersect_predict,
-            composition_intersect_predict,
+            composition_intersect_predict_heating,
+            composition_intersect_predict_cooling,
         )
 
 
@@ -1807,13 +1812,14 @@ def order_disorder_crossing_points(project_gcmc_data: dict):
         (
             T_intersect_predict,
             energy_intersect_predict,
-            x_intersect_predict,
+            x_intersect_predict_heating,
+            x_intersect_predict_cooling,
         ) = find_heating_cooling_crossing(pair[0], pair[1])
         crossing_points.append(
             {
                 "T": T_intersect_predict,
-                "x_1": x_intersect_predict,
-                "x_2": x_intersect_predict,
+                "x_1": x_intersect_predict_heating,
+                "x_2": x_intersect_predict_cooling,
                 "mu": pair[0]["param_chem_pot(a)"][0],
                 "free_energy": energy_intersect_predict,
                 "path_type": "fixed_chemical_potential",
