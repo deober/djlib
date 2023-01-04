@@ -1182,10 +1182,7 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     predicted_vertices = np.delete(predicted_vertices, predicted_energies_to_remove)
 
     # Sort the true convex hull vertices by their compositions
-    print(true_vertices)
-    print(true_comp[true_vertices])
     true_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
-    print(true_vertices[true_vertices_ordered_by_comp])
 
     # Calculate the ground state accuracy metric
     numerator = 0
