@@ -1164,22 +1164,28 @@ def gsa_fraction_correct_DFT_mu_window_binary(
         true_hull
     )
 
-    # If the elements 1 or 0 are in the true convex hull vertices, delete them from the array. Do the same for predicted vertices.
-    if 0 in true_vertices:
-        true_vertices = np.delete(true_vertices, np.where(true_vertices == 0))
-    if 1 in true_vertices:
-        true_vertices = np.delete(true_vertices, np.where(true_vertices == 1))
-    if 0 in predicted_vertices:
-        predicted_vertices = np.delete(
-            predicted_vertices, np.where(predicted_vertices == 0)
-        )
-    if 1 in predicted_vertices:
-        predicted_vertices = np.delete(
-            predicted_vertices, np.where(predicted_vertices == 1)
-        )
+    # The end state structures with composition 0 and 1 will always be on the convex hull. However, they are not useful for this metric.
+    # Check the compositions of the true and predicted convex hull vertices.
+    # If the compositions of any of the vertices are 0 or 1, delete them from the array.
+
+    true_indices_to_remove = np.union1d(
+        np.where(true_comp[true_vertices] == 0),
+        np.where(true_comp[true_vertices] == 1),
+    )
+    true_vertices = np.delete(true_vertices, true_indices_to_remove)
+    del true_indices_to_remove
+
+    predicted_energies_to_remove = np.union1d(
+        np.where(predicted_comp[predicted_vertices] == 0),
+        np.where(predicted_comp[predicted_vertices] == 1),
+    )
+    predicted_vertices = np.delete(predicted_vertices, predicted_energies_to_remove)
 
     # Sort the true convex hull vertices by their compositions
+    print(true_vertices)
+    print(true_comp[true_vertices])
     true_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+    print(true_vertices[true_vertices_ordered_by_comp])
 
     # Calculate the ground state accuracy metric
     numerator = 0
