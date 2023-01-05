@@ -28,7 +28,6 @@
       "write_observations": false,
       "write_trajectory": false,
       "output_format": [
-        "csv",
         "json"
       ]
     }
