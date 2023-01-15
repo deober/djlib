@@ -433,28 +433,29 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
         status_updater=mc.mc_status_updater,
         run_submitter=mc.mc_run_submitter,
     )
+    heating_gridspace_manager.run_valid_calculations()
     # Collect all LTE run statuses in a list. If all are "complete", then submit heating runs.
     # Otherwise, warn the user that heating runs cannot be submitted until LTE runs are complete.
-    with open(
-        os.path.join(
-            propagated_casm_project_root_path, "grand_canonical_monte_carlo/status.json"
-        ),
-        "r",
-    ) as f:
-        status_dict = json.load(f)
-    lte_statuses = [
-        list(status_dict["MC_LTE"][i].values())[0]
-        for i in range(len(status_dict["MC_LTE"]))
-    ]
-    if all(status == "complete" for status in lte_statuses):
-        heating_gridspace_manager.run_valid_calculations()
-    else:
-        print(
-            "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete. Check LTE runs in %s "
-            % os.path.join(
-                propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
-            )
-        )
+    # with open(
+    #    os.path.join(
+    #        propagated_casm_project_root_path, "grand_canonical_monte_carlo/status.json"
+    #    ),
+    #    "r",
+    # ) as f:
+    #    status_dict = json.load(f)
+    # lte_statuses = [
+    #    list(status_dict["MC_LTE"][i].values())[0]
+    #    for i in range(len(status_dict["MC_LTE"]))
+    # ]
+    # if all(status == "complete" for status in lte_statuses):
+    #    heating_gridspace_manager.run_valid_calculations()
+    # else:
+    #    print(
+    #        "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete. Check LTE runs in %s "
+    #        % os.path.join(
+    #            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
+    #        )
+    #    )
 
     # Cooling run submit
     cooling_gridspace_manager = dj.gridspace_manager(
