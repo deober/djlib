@@ -19,10 +19,14 @@ class GeneticAlgorithm:
         mutation_function,
         regularization_function=None,
         initial_chromosome=None,
+        weighted_feature_matrix=None,
+        weighted_target_values=None,
     ):
         self.target_values = target_values
+        self.weighted_target_values = weighted_target_values
         self.composition = composition
         self.feature_matrix = feature_matrix
+        self.weighted_feature_matrix = weighted_feature_matrix
         self.population_size = population_size
         self.chromosome_size = feature_matrix.shape[1]
         self.mutation_rate = mutation_rate
@@ -104,6 +108,31 @@ class GeneticAlgorithm:
         for i in range(population.shape[0]):
             # Downsample features according to the chromosome. Then fit.
             selected_features = np.where(population[i, :] == 1)[0]
+
+            # If a weighted feature matrix is provided, use it in place of the feature matrix when fitting eci.
+            if (
+                self.weighted_feature_matrix is not None
+                and self.weighted_target_values is not None
+            ):
+                eci = self.regularization_function.fit(
+                    self.weighted_feature_matrix[:, selected_features],
+                    self.weighted_target_values,
+                ).coef_
+                predicted_energies = (
+                    self.weighted_feature_matrix[:, selected_features] @ eci
+                )
+            elif (
+                self.weighted_feature_matrix is None
+                and self.weighted_target_values is None
+            ):
+                eci = self.regularization_function.fit(
+                    self.feature_matrix[:, selected_features], self.target_values
+                ).coef_
+            else:
+                raise ValueError(
+                    "Must provide both a weighted feature matrix and a weighted target values array."
+                )
+            predicted_energies = self.feature_matrix[:, selected_features] @ eci
             eci = self.regularization_function.fit(
                 self.feature_matrix[:, selected_features], self.target_values
             ).coef_
@@ -114,6 +143,8 @@ class GeneticAlgorithm:
                 true_energies=self.target_values[0 : self.composition.shape[0]],
                 predicted_comp=self.composition,
                 predicted_energies=predicted_energies[0 : self.composition.shape[0]],
+                complexity=np.count_nonzero(population[i, :])
+                / population[i, :].shape[0],
             ) * (
                 (population[i, :].shape[0] - np.count_nonzero(population[i, :]))
                 / population[i, :].shape[0]
@@ -202,6 +233,7 @@ def model_fitness(
     true_energies: np.ndarray,
     predicted_comp: np.ndarray,
     predicted_energies: np.ndarray,
+    complexity: np.ndarray,
 ):
     """Determines the performance of a given model prediction. Takes composition and energy arrays for the 
         true and predicted values, and returns a single value [0,1] representing the performance of the model.
@@ -251,7 +283,7 @@ def model_fitness(
     # The two gsa metrics are best when the are high (~1)
     # The rmse is best when it is low (~0).
 
-    return holistic_gsa * dft_gsa * (1 - scaled_rmse)
+    return holistic_gsa * dft_gsa * (1 - scaled_rmse) * (1 - complexity)
 
 
 def select_survivors(population, fitness):
