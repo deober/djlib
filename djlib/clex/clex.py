@@ -72,6 +72,31 @@ def weighted_feature_and_target_arrays(
     return (x_prime, y_prime)
 
 
+def general_weighted_feature_and_target_arrays(
+    feature_matrix: np.ndarray, target_array: np.ndarray, weight_matrix: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """A more abstracted version of weighted_feature_and_target_arrays, where the weight matrix is passed in directly.
+
+    Parameters
+    ----------
+    feature_matrix : np.ndarray
+        nxk feature matrix, n = number of configurations, k = number of features.
+    target_array : np.ndarray
+        n-dimensional target vector.
+    weight_matrix : np.ndarray
+        n x n weight matrix.
+
+    Returns
+    -------
+    Tuple[np.ndarray,np.ndarray]
+        Weighted feature matrix and target vector.
+    """
+    l = np.linalg.cholesky(weight_matrix)
+    y_prime = np.ravel(l @ target_array.reshape(-1, 1))
+    x_prime = l @ feature_matrix
+    return (x_prime, y_prime)
+
+
 def lower_hull(hull: ConvexHull, energy_index=-2) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the lower convex hull (with respect to energy direction) given  complete convex hull.
     Parameters
