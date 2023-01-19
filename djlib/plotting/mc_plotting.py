@@ -40,7 +40,9 @@ def plot_heating_and_cooling(
 
 
 def plot_t_vs_x_rainplot(
-    mc_runs_directory: str, show_labels: bool = False
+    mc_runs_directory: str,
+    show_labels: bool = False,
+    show_chemical_potential_labels: bool = False,
 ) -> plt.figure:
     """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
 
@@ -65,7 +67,17 @@ def plot_t_vs_x_rainplot(
                 labels.append(current_mc)
                 composition = data["<comp(a)>"]
                 temperature = data["T"]
+                chemical_potential = data["param_chem_pot(a)"][0]
                 plt.scatter(composition, temperature)
+                # Also, plot chemical potential as a number in a text box next to the highest temperature point.
+                if show_chemical_potential_labels:
+                    max_temp_index = np.argmax(temperature)
+                    plt.text(
+                        composition[max_temp_index],
+                        temperature[max_temp_index],
+                        chemical_potential,
+                        fontsize=8,
+                    )
 
     if show_labels:
         plt.legend(labels)
