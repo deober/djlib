@@ -734,6 +734,62 @@ Auto
         )
 
 
+def encut_convergence(
+    encut_values: list,
+    run_dir: str,
+    incar_template_path: str,
+    kpoints_path: str,
+    poscar_path: str,
+    potcar_path: str,
+    user_command: str,
+    hours: int,
+) -> None:
+    """Run a sweep of static vasp calculations for varying encut values. 
+
+    Parameters
+    ----------
+    encut_values : list
+        List of encut values to test.
+    run_dir : str
+        Directory to run encut convergence calculations in.
+    incar_template_path : str
+        Path to INCAR file. Should allow encut to be templated. Replace encut value with {encut}.
+    kpoints_path : str
+        Path to KPOINTS file.
+    poscar_path : str
+        Path to POSCAR file
+    potcar_path : str
+        Path to POTCAR file
+    user_command : str
+        Command to run vasp.
+    hours : int
+        Number of hours to run calculation for.
+    
+    Returns
+    -------
+    None
+    """
+
+    for encut_value in encut_values:
+        encut_value = float(encut_value)
+        print("Formatting encut value: %s" % encut_value)
+        calc_dir = os.path.join(run_dir, "encut.%s" % encut_value)
+        os.makedirs(calc_dir, exist_ok=True)
+        os.system("cp %s %s" % (poscar_path, os.path.join(calc_dir, "POSCAR")))
+        os.system("cp %s %s" % (potcar_path, os.path.join(calc_dir, "POTCAR")))
+        with open(incar_template_path, "r") as f:
+            incar_template = f.read()
+        with open(os.path.join(calc_dir, "INCAR"), "w") as f:
+            f.write(incar_template.format(encut=encut_value))
+        os.system("cp %s %s" % (kpoints_path, os.path.join(calc_dir, "KPOINTS")))
+        dj.format_slurm_job(
+            jobname="encut.%s" % encut_value,
+            hours=hours,
+            user_command=user_command,
+            output_dir=calc_dir,
+        )
+
+
 def check_vasp_run_is_complete(vasp_run_dir) -> bool:
     """
     Check if a vasp run is complete by checking the OUTCAR file for the string "General timing and accounting informations for this job:"
