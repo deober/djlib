@@ -76,7 +76,8 @@ def plot_t_vs_x_rainplot(
                         composition[max_temp_index],
                         temperature[max_temp_index],
                         chemical_potential,
-                        fontsize=8,
+                        fontsize=7,
+                        rotation=90,
                     )
 
     if show_labels:
