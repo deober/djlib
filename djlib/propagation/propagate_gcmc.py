@@ -424,7 +424,6 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
     t_const_gridspace_manager.run_valid_calculations()
 
     # Heating run submit
-    # TODO: Enforce that heating runs must initialize from completed LTE runs. If LTE is not complete not, do not submit.
     heating_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_heating"
@@ -434,28 +433,6 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
         run_submitter=mc.mc_run_submitter,
     )
     heating_gridspace_manager.run_valid_calculations()
-    # Collect all LTE run statuses in a list. If all are "complete", then submit heating runs.
-    # Otherwise, warn the user that heating runs cannot be submitted until LTE runs are complete.
-    # with open(
-    #    os.path.join(
-    #        propagated_casm_project_root_path, "grand_canonical_monte_carlo/status.json"
-    #    ),
-    #    "r",
-    # ) as f:
-    #    status_dict = json.load(f)
-    # lte_statuses = [
-    #    list(status_dict["MC_LTE"][i].values())[0]
-    #    for i in range(len(status_dict["MC_LTE"]))
-    # ]
-    # if all(status == "complete" for status in lte_statuses):
-    #    heating_gridspace_manager.run_valid_calculations()
-    # else:
-    #    print(
-    #        "Not all LTE runs are complete. Heating runs cannot be submitted until LTE runs are complete. Check LTE runs in %s "
-    #        % os.path.join(
-    #            propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
-    #        )
-    #    )
 
     # Cooling run submit
     cooling_gridspace_manager = dj.gridspace_manager(
@@ -514,8 +491,8 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     lte_dir = os.path.join(casm_root_path, "grand_canonical_monte_carlo/MC_LTE")
     lte_param_list_of_dicts = [
         {
-            "mu_start": 0.0,
-            "mu_stop": 0.0,
+            "mu_start": -0.221,
+            "mu_stop": -0.221,
             "mu_increment": 0.0,
             "T_start": 40.0,
             "T_stop": 40.0,
@@ -574,8 +551,8 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     cooling_dir = os.path.join(casm_root_path, "grand_canonical_monte_carlo/MC_cooling")
     cooling_param_list_of_dicts = [
         {
-            "mu_start": 0.0,
-            "mu_stop": 0.0,
+            "mu_start": -0.221,
+            "mu_stop": -0.221,
             "mu_increment": 0.0,
             "T_start": 2000.0,
             "T_stop": 40.0,
@@ -594,15 +571,72 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
     )
     cooling_gs.format_run_dirs()
 
-    # Ensure that the cooling run initializes from the necessary high temperature, constant temperature configuration
-    t_const_runs = glob(os.path.join(t_const_dir, "mu_*"))
-    t_const_mu = []
-    for t_const_run in t_const_runs:
-        t_const_mu.append(
-            mc.read_mc_settings(os.path.join(t_const_run, "mc_settings.json"))[0]
-        )
-    t_const_mu = np.array(t_const_mu)
+    # Make sure the cooling run initializes from the constant temperature run with the closest chemical potential value
+    # Assuming there are only two constant temperature runs, that they are at the high temperature, and that they cover the same chemical potential
+    # values (in opposite orders)
+    # First, look up the constant temperature run with the closest starting chemical potential.
+    # Then, find the index of the chemical potential with the closest value in the cooling run.
+    # This index marks the conditions directory that the cooling run should initialize from.
 
+    t_const_runs = np.array(glob(os.path.join(t_const_dir, "mu_*")))
+    t_const_mu = []
+    t_const_temperatures = []
+    for t_const_run in t_const_runs:
+        mu_temporary = mc.read_mc_settings(
+            os.path.join(t_const_run, "mc_settings.json")
+        )[0]
+        temperature_temporary = mc.read_mc_settings(
+            os.path.join(t_const_run, "mc_settings.json")
+        )[1][0]
+        t_const_mu.append(mu_temporary)
+        t_const_temperatures.append(temperature_temporary)
+    t_const_mu = np.array(t_const_mu)
+    t_const_temperatures = np.array(t_const_temperatures)
+
+    # find the indices of t_const_temperatures that are equal to 2000
+    t_const_2000_indices = np.where(t_const_temperatures == 2000)[0]
+
+    # Downsample t_const_mu to only include the mu values at 2000 K
+    t_const_mu_2000 = t_const_mu[t_const_2000_indices]
+
+    # Iterate through all cooling runs
+    for cooling_run_path in glob(os.path.join(cooling_dir, "mu_*")):
+        # Get the chemical potential from the cooling run
+        cooling_mu = mc.read_mc_settings(
+            os.path.join(cooling_run_path, "mc_settings.json")
+        )[0][0]
+
+        # Find the index of the constant temperature run with the closest initial chemical potential
+        closest_t_const_index = np.argmin(np.abs(t_const_mu_2000[:, 0] - cooling_mu))
+
+        # Find the closest conditions index in the constant temperature run to initialize the cooling run from.
+        closest_conditions_index = np.argmin(
+            np.abs(t_const_mu_2000[closest_t_const_index, :] - cooling_mu)
+        )
+
+        # First, check that the closest conditions file exists. Raise a warning if it does not.
+        if not os.path.exists(
+            os.path.join(
+                t_const_runs[t_const_2000_indices][closest_t_const_index],
+                "conditions.%d/final_state.json" % closest_conditions_index,
+            )
+        ):
+            print(
+                "The closest conditions file does not exist. Check that the constant temperature runs have been run."
+            )
+        else:
+            # Write the closest conditions index to the cooling run's mc_settings.json file
+            with open(os.path.join(cooling_run_path, "mc_settings.json"), "r") as f:
+                cooling_settings = json.load(f)
+            cooling_settings["driver"]["motif"]["configdof"] = os.path.join(
+                t_const_runs[closest_t_const_index],
+                "conditions.%d/final_state.json" % closest_conditions_index,
+            )
+            cooling_settings["driver"]["motif"].pop("configname", None)
+            with open(os.path.join(cooling_run_path, "mc_settings.json"), "w") as f:
+                json.dump(cooling_settings, f, indent=4)
+    """
+    #Old code
     # Iterate through all cooling runs
     for cooling_run_path in glob(os.path.join(cooling_dir, "mu_*")):
         # Get the chemical potential from the cooling run
@@ -639,13 +673,14 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
             cooling_settings["driver"]["motif"].pop("configname", None)
             with open(os.path.join(cooling_run_path, "mc_settings.json"), "w") as f:
                 json.dump(cooling_settings, f, indent=4)
+    """
 
     # Create a dj.gridspace_manager object to control heating runs
     heating_dir = os.path.join(casm_root_path, "grand_canonical_monte_carlo/MC_heating")
     heating_param_list_of_dicts = [
         {
-            "mu_start": 0.0,
-            "mu_stop": 0.0,
+            "mu_start": -0.221,
+            "mu_stop": -0.221,
             "mu_increment": 0.0,
             "T_start": 40.0,
             "T_stop": 2000.0,
@@ -663,40 +698,6 @@ def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
         grid_params=heating_param_list_of_dicts,
     )
     heating_gs.format_run_dirs()
-    # ***Make sure that the heating run initializes at the final configuration of the LTE run***
-    # LTE runs do not output conditions files.
-    # Does not make sense to read the final configuration from the LTE run.
-
-    # Read the LTE run settings file to check how many conditions will be generated.
-    # lte_runs = glob(lte_dir + "/*")
-    # lte_settings = mc.read_mc_settings(os.path.join(lte_runs[0], "mc_settings.json"))
-    # number_of_conditions = (
-    #    len(lte_settings[0]) - 1
-    # )  # -1 is required because conditions indexing starts at 0
-
-    ## Check that this conditions file exists
-    # if not os.path.exists(
-    #    os.path.join(
-    #        lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
-    #    )
-    # ):
-    #    warnings.warn(
-    #        "LTE run final conditions file cannot be found. Please verify that %s exists."
-    #        % os.path.join(
-    #            lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
-    #        )
-    #    )
-
-    # Reference the final LTE configuration as the starting configuration for the heating run.
-    # heating_runs = glob(heating_dir + "/*")
-    # with open(os.path.join(heating_runs[0], "mc_settings.json"), "r") as f:
-    #    heating_settings = json.load(f)
-    # heating_settings["driver"]["motif"]["configdof"] = os.path.join(
-    #    lte_runs[0], "conditions.%d/final_state.json" % number_of_conditions
-    # )
-    # heating_settings["driver"]["motif"].pop("configname", None)
-    # with open(os.path.join(heating_runs[0], "mc_settings.json"), "w") as f:
-    #    json.dump(heating_settings, f, indent=4)
 
 
 # TODO: write function to find the clex-predicted ground state for a given chemical potential
