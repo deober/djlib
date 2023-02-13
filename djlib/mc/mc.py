@@ -11,6 +11,7 @@ import pathlib
 import math as m
 import djlib.djlib as dj
 from typing import List, Tuple, Dict
+import copy
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
@@ -1560,8 +1561,8 @@ def find_heating_cooling_crossing(
     Finds the nearest temperature at which the heating and cooling runs cross each other.
     Returns the composition at the crossing point
     """
-    # Check that lengths of all vectors match and that temp_heating == temp_cooling (i.e., they're not the reverse of each other)
-
+    # Verify that the heating and cooling runs have the same temperature axis.
+    # First, check that the length of the temperature axis is the same for both runs.
     assert (
         len(heating_run_dictionary["integrated_potential_energy"])
         == len(heating_run_dictionary["T"])
@@ -1572,20 +1573,31 @@ def find_heating_cooling_crossing(
     )
 
     find_intersection = False
+    # IMPORTANT: The spline interpolation requires that the temperature axis be monotonically increasing.
+    # The temperature axis is decreasing for the cooling run, so it needs to be flipped.
+    # To avoid altering the original dictionary that is passed to the function, a temporary deep copy is made and flipped.
+    # This is only necessary for the cooling run because the heating run is already in the correct order.
     if np.allclose(heating_run_dictionary["T"], cooling_run_dictionary["T"]):
+        temporary_cooling_T = copy.deepcopy(cooling_run_dictionary["T"])
+        temporary_cooling_integrated_free_energy = copy.deepcopy(
+            cooling_run_dictionary["integrated_potential_energy"]
+        )
+        temporary_cooling_composition = copy.deepcopy(
+            cooling_run_dictionary["<comp(a)>"]
+        )
         find_intersection = True
     else:
         # If the temperature axes arent the same, try swapping the order of temp_cooling and cooling_integrated_free_energy.
-        cooling_run_dictionary["T"] = np.flip(cooling_run_dictionary["T"])
-        cooling_run_dictionary["integrated_potential_energy"] = np.flip(
-            cooling_run_dictionary["integrated_potential_energy"]
+        temporary_cooling_T = np.flip(copy.deepcopy(cooling_run_dictionary["T"]))
+        temporary_cooling_integrated_free_energy = np.flip(
+            copy.deepcopy(cooling_run_dictionary["integrated_potential_energy"])
         )
-        cooling_run_dictionary["<comp(a)>"] = np.flip(
-            cooling_run_dictionary["<comp(a)>"]
+        temporary_cooling_composition = np.flip(
+            copy.deepcopy(cooling_run_dictionary["<comp(a)>"])
         )
 
         # If the temperature axes still aren't the same, cancel the function.
-        if np.allclose(heating_run_dictionary["T"], cooling_run_dictionary["T"]):
+        if np.allclose(heating_run_dictionary["T"], temporary_cooling_T):
             find_intersection = True
         else:
             print(
@@ -1609,11 +1621,10 @@ def find_heating_cooling_crossing(
             heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
         )
         interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
-            cooling_run_dictionary["T"],
-            cooling_run_dictionary["integrated_potential_energy"],
+            temporary_cooling_T, temporary_cooling_integrated_free_energy,
         )
         interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-            cooling_run_dictionary["T"], cooling_run_dictionary["<comp(a)>"]
+            temporary_cooling_T, temporary_cooling_composition
         )
 
         # define a difference function to calculate the root
@@ -1625,7 +1636,7 @@ def find_heating_cooling_crossing(
         t0_index = np.argmin(
             abs(
                 heating_run_dictionary["integrated_potential_energy"]
-                - cooling_run_dictionary["integrated_potential_energy"]
+                - temporary_cooling_integrated_free_energy
             )
         )
         t0_guess = heating_run_dictionary["T"][t0_index]
