@@ -930,15 +930,27 @@ def sgcmc_casm_project_creator(propagation_info_dict, propagation_project_root_p
     eci = propagation_info_dict["eci"]
     eci_dict = cio.append_ECIs_to_basis_data(ecis=eci, basis_data=basis_dict)
 
-    # Write the dictionary to eci.json within the new project.
-    with open(
-        os.path.join(
-            propagation_project_root_path,
-            "cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json",
-        ),
-        "w",
-    ) as f:
-        json.dump(eci_dict, f)
+    # If it doesn't already exist, Write the dictionary to eci.json within the new project.
+    if (
+        os.path.isfile(
+            os.path.join(
+                propagation_project_root_path,
+                "cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json",
+            )
+        )
+        == False
+    ):
+        with open(
+            os.path.join(
+                propagation_project_root_path,
+                "cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json",
+            ),
+            "w",
+        ) as f:
+            json.dump(eci_dict, f)
+
+    else:
+        print("ECI file already exists. Skipping.")
 
     # Create a grand canonical monte carlo directory within the new project.
     os.system(

@@ -1774,9 +1774,9 @@ def order_disorder_crossing_points(project_gcmc_data: dict):
     constant_T_temperatures = np.unique([run["T"][0] for run in constant_T_runs])
     constant_T_run_pairs = []
     for T in constant_T_temperatures:
-        constant_T_run_pairs.append(
-            [run for run in constant_T_runs if run["T"][0] == T]
-        )
+        temporary_pair = [run for run in constant_T_runs if run["T"][0] == T]
+        if len(temporary_pair) > 1:
+            constant_T_run_pairs.append(temporary_pair)
 
     # Iterate through the pairs of constant temperature runs and find the crossing points.
     # Append the crossing points to the list of crossing points as a dictionary.
