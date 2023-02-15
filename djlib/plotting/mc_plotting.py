@@ -87,3 +87,82 @@ def plot_t_vs_x_rainplot(
     fig = plt.gcf()
     fig.set_size_inches(18.5, 10)
     return fig
+
+
+def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> None:
+    """Takes a dictionary of run data from a full MC project (generated from propagate_gcmc.py propagation_project_parser) and generates diagnostic plots.
+    These plots include: chemical potential vs composition, Integrated sgc free energy vs temperature, heat capacity plots, and rainplot. 
+
+    Parameters
+    ----------
+    sgcmc_project_data_dictionary : dict
+        Dictionary of run data from a full MC project (generated from propagate_gcmc.py propagation_project_parser)
+    
+    Returns
+    -------
+    Matplotlib.pyplot figure object
+        Diagnostic plots.
+    """
+    # First, integrate the semi grand canonical free energy for all runs:
+    integrated_data = mc.full_project_integration(sgcmc_project_data_dictionary)
+
+    # Make a 2x2 grid of subplots
+    fig, axs = plt.subplots(2, 2)
+    fig.set_size_inches(18.5, 10.5)
+
+    # Plot chemical potential vs composition for the constant temperature runs
+    for run in integrated_data["T_const"]:
+        axs[0, 0].scatter(run["<comp(a)>"], run["param_chem_pot(a)"], s=3)
+
+    # Plot integrated sgc free energy vs temperature for the heating and cooling runs
+    for run in integrated_data["heating"]:
+        axs[0, 1].scatter(run["T"], run["integrated_potential_energy"], s=3, color="r")
+    for run in integrated_data["cooling"]:
+        axs[0, 1].scatter(run["T"], run["integrated_potential_energy"], s=3, color="b")
+
+    # Plot heat capacity vs temperature for the heating and cooling runs
+    for run in integrated_data["heating"]:
+        axs[1, 0].scatter(run["T"], run["heat_capacity"], s=3, color="r")
+    for run in integrated_data["cooling"]:
+        axs[1, 0].scatter(run["T"], run["heat_capacity"], s=3, color="b")
+
+    # Plot rainplot
+    for constant_temperature in integrated_data["T_const"]:
+        axs[1, 1].scatter(
+            constant_temperature["<comp(a)>"], constant_temperature["T"], s=3, color="k"
+        )
+    for run in integrated_data["heating"]:
+        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="r")
+    for run in integrated_data["cooling"]:
+        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="b")
+    # Also, plot the chemical potential as a number in a text box next to the highest temperature point.
+    for run in integrated_data["heating"]:
+        max_temp_index = np.argmax(run["T"])
+        axs[1, 1].text(
+            run["<comp(a)>"][max_temp_index],
+            run["T"][max_temp_index],
+            run["param_chem_pot(a)"][0],
+            fontsize=7,
+            rotation=90,
+        )
+    for run in integrated_data["cooling"]:
+        max_temp_index = np.argmax(run["T"])
+        axs[1, 1].text(
+            run["<comp(a)>"][max_temp_index],
+            run["T"][max_temp_index],
+            run["param_chem_pot(a)"][0],
+            fontsize=7,
+            rotation=90,
+        )
+
+    # Set labels
+    axs[0, 0].set_xlabel("Composition", fontsize=18)
+    axs[0, 0].set_ylabel("Chemical Potential", fontsize=18)
+    axs[0, 1].set_xlabel("Temperature (K)", fontsize=18)
+    axs[0, 1].set_ylabel("Semi Grand Canonical Free Energy", fontsize=18)
+    axs[1, 0].set_xlabel("Temperature (K)", fontsize=18)
+    axs[1, 0].set_ylabel("Heat Capacity", fontsize=18)
+    axs[1, 1].set_xlabel("Composition", fontsize=18)
+    axs[1, 1].set_ylabel("Temperature (K)", fontsize=18)
+
+    return fig

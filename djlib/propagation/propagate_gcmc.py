@@ -33,7 +33,9 @@ def propagation_project_namer(propagation_info_dict):
     return "sample_index_" + str(sample_index)
 
 
-def propagation_project_parser(propagated_casm_project_root_path: str):
+def propagation_project_parser(
+    propagated_casm_project_root_path: str, incomplete_override: bool = False
+):
     """Pulls all information from grand canonical monte carlo runs, integrates the free energy and returns a dictionary containing all the information.
     Will not parse until all run statuses are complete.
 
@@ -42,7 +44,7 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
     propagated_casm_project_root_path: str
         Path to the casm project root of the propagated project.
 
-    Returns
+    Return
     -------
 
     """
@@ -61,7 +63,10 @@ def propagation_project_parser(propagated_casm_project_root_path: str):
         for dictionary in status[key]:
             all_statuses.append(list(dictionary.values())[0])
     # Check that all runs are "complete"
-    if not all(status == "complete" for status in all_statuses):
+    if (
+        not all(status == "complete" for status in all_statuses)
+        and incomplete_override == False
+    ):
         warnings.warn(
             "Not all runs are complete. Cannot parse until all runs are complete."
         )
