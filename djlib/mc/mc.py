@@ -1495,17 +1495,17 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
     """
 
     # Iterate through all constant temperature runs, and append the integrated potential energy to each run dictionary.
+    # Also, calculate and append the gibbs free energy to each run dictionary.
     for run_index in range(len(project_gcmc_data["T_const"])):
         project_gcmc_data["T_const"][run_index][
             "integrated_potential_energy"
         ] = constant_T_integration(project_gcmc_data["T_const"][run_index])
 
-    # Iterate through all LTE runs, and append the integrated potential energy to each run dictionary.
-    # Note: NO LONGER NEED THIS. 'phi_LTE' key IS the semi grand canonical free energy. No need to integrate.
-    # for run_index in range(len(project_gcmc_data["LTE"])):
-    #    project_gcmc_data["LTE"][run_index][
-    #        "integrated_potential_energy"
-    #    ] = LTE_integration(project_gcmc_data["LTE"][run_index])
+        project_gcmc_data["T_const"][run_index]["gibbs"] = (
+            project_gcmc_data["T_const"][run_index]["integrated_potential_energy"]
+            + project_gcmc_data["T_const"][run_index]["param_chem_pot(a)"]
+            * project_gcmc_data["T_const"][run_index]["<comp(a)>"]
+        )
 
     # Iterate through all heating runs, look up the LTE reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
     for run_index in range(len(project_gcmc_data["heating"])):
