@@ -106,35 +106,61 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     # First, integrate the semi grand canonical free energy for all runs:
     integrated_data = mc.full_project_integration(sgcmc_project_data_dictionary)
 
-    # Make a 2x2 grid of subplots
-    fig, axs = plt.subplots(2, 2)
-    fig.set_size_inches(18.5, 10.5)
+    # Make a 3x3 grid of subplots
+    fig, axs = plt.subplots(3, 3)
+    fig.set_size_inches(22, 22)
 
     # Plot chemical potential vs composition for the constant temperature runs
     for run in integrated_data["T_const"]:
-        axs[0, 0].scatter(run["<comp(a)>"], run["param_chem_pot(a)"], s=3)
+        axs[0, 0].scatter(
+            run["<comp(a)>"],
+            run["param_chem_pot(a)"],
+            s=3,
+            color="k",
+            label="Constant T",
+        )
 
     # Plot integrated sgc free energy vs temperature for the heating and cooling runs
     for run in integrated_data["heating"]:
-        axs[0, 1].scatter(run["T"], run["integrated_potential_energy"], s=3, color="r")
+        axs[0, 1].scatter(
+            run["T"],
+            run["integrated_potential_energy"],
+            s=3,
+            color="r",
+            label="Heating",
+        )
     for run in integrated_data["cooling"]:
-        axs[0, 1].scatter(run["T"], run["integrated_potential_energy"], s=3, color="b")
+        axs[0, 1].scatter(
+            run["T"],
+            run["integrated_potential_energy"],
+            s=3,
+            color="b",
+            label="Cooling",
+        )
 
     # Plot heat capacity vs temperature for the heating and cooling runs
     for run in integrated_data["heating"]:
-        axs[1, 0].scatter(run["T"], run["heat_capacity"], s=3, color="r")
+        axs[1, 0].scatter(
+            run["T"], run["heat_capacity"], s=3, color="r", label="Heating"
+        )
     for run in integrated_data["cooling"]:
-        axs[1, 0].scatter(run["T"], run["heat_capacity"], s=3, color="b")
+        axs[1, 0].scatter(
+            run["T"], run["heat_capacity"], s=3, color="b", label="Cooling"
+        )
 
     # Plot rainplot
     for constant_temperature in integrated_data["T_const"]:
         axs[1, 1].scatter(
-            constant_temperature["<comp(a)>"], constant_temperature["T"], s=3, color="k"
+            constant_temperature["<comp(a)>"],
+            constant_temperature["T"],
+            s=3,
+            color="k",
+            label="Constant T",
         )
     for run in integrated_data["heating"]:
-        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="r")
+        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="r", label="Heating")
     for run in integrated_data["cooling"]:
-        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="b")
+        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="b", label="Cooling")
     # Also, plot the chemical potential as a number in a text box next to the highest temperature point.
     for run in integrated_data["heating"]:
         max_temp_index = np.argmax(run["T"])
@@ -155,14 +181,68 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
             rotation=90,
         )
 
+    # Plot gibbs vs composition for the constant temperature runs
+    for run in integrated_data["T_const"]:
+        axs[0, 2].scatter(
+            run["<comp(a)>"], run["gibbs"], s=3, color="k", label="Constant T"
+        )
+
+    # Plot semi grand canonical free energy vs chemical potential for the constant temperature runs
+    for run in integrated_data["T_const"]:
+        axs[1, 2].scatter(
+            run["param_chem_pot(a)"],
+            run["integrated_potential_energy"],
+            s=3,
+            color="k",
+            label="Constant T",
+        )
+
+    # Plot the gibbs - formation energy divided by kT vs composition for the constant temperature runs
+    k = 8.617333262e-5  # eV/K
+    for run in integrated_data["T_const"]:
+        mc_entropy = (
+            -1
+            * np.array(np.array(run["gibbs"]) - np.array(run["<formation_energy>"]))
+            / (k * np.array(run["T"]))
+        )
+        ideal_mixing_entropy = -1 * (
+            np.array(run["<comp(a)>"]) * np.log(np.array(run["<comp(a)>"]))
+            + (1 - np.array(run["<comp(a)>"])) * np.log(1 - np.array(run["<comp(a)>"]))
+        )
+        axs[2, 0].scatter(
+            run["<comp(a)>"], mc_entropy, s=3, color="k", label="MC Entropy"
+        )
+        axs[2, 0].scatter(
+            run["<comp(a)>"],
+            ideal_mixing_entropy,
+            s=3,
+            color="orange",
+            label="Ideal Solution Entropy",
+        )
+    # Display the legend for the entropy plot
+
     # Set labels
     axs[0, 0].set_xlabel("Composition", fontsize=18)
     axs[0, 0].set_ylabel("Chemical Potential", fontsize=18)
+    axs[0, 0].legend(fontsize=18)
     axs[0, 1].set_xlabel("Temperature (K)", fontsize=18)
     axs[0, 1].set_ylabel("Semi Grand Canonical Free Energy", fontsize=18)
+    axs[0, 1].legend(fontsize=18)
     axs[1, 0].set_xlabel("Temperature (K)", fontsize=18)
     axs[1, 0].set_ylabel("Heat Capacity", fontsize=18)
+    axs[1, 0].legend(fontsize=18)
     axs[1, 1].set_xlabel("Composition", fontsize=18)
     axs[1, 1].set_ylabel("Temperature (K)", fontsize=18)
+    axs[1, 1].legend(fontsize=18)
+    axs[0, 2].set_xlabel("Composition", fontsize=18)
+    axs[0, 2].set_ylabel("Gibbs Free Energy", fontsize=18)
+    axs[0, 2].legend(fontsize=18)
+    axs[1, 2].set_xlabel("Chemical Potential", fontsize=18)
+    axs[1, 2].set_ylabel("Semi Grand Canonical Free Energy", fontsize=18)
+    axs[1, 2].legend(fontsize=18)
+    axs[2, 0].set_xlabel("Composition", fontsize=18)
+    axs[2, 0].set_ylabel("MC Entropy and Ideal Entropy", fontsize=18)
+    axs[2, 0].legend(fontsize=18)
 
     return fig
+
