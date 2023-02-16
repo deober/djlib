@@ -1750,7 +1750,7 @@ def find_constant_T_crossing(
     gc_free_energy_1 = constant_T_dict_1["integrated_potential_energy"][
         np.argsort(constant_T_dict_1["param_chem_pot(a)"])
     ]
-    x_1 = constant_T_dict_1["<comp(a)>"][
+    x_1 = np.array(constant_T_dict_1["<comp(a)>"])[
         np.argsort(constant_T_dict_1["param_chem_pot(a)"])
     ]
 
@@ -1760,7 +1760,7 @@ def find_constant_T_crossing(
     gc_free_energy_2 = constant_T_dict_2["integrated_potential_energy"][
         np.argsort(constant_T_dict_2["param_chem_pot(a)"])
     ]
-    x_2 = constant_T_dict_2["<comp(a)>"][
+    x_2 = np.array(constant_T_dict_2["<comp(a)>"])[
         np.argsort(constant_T_dict_2["param_chem_pot(a)"])
     ]
 
