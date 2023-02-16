@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 import matplotlib.pyplot as plt
 import os
-from scipy import integrate
+from scipy.integrate import cumulative_trapezoid
 import scipy.interpolate
 import scipy.optimize
 import numpy as np
@@ -1261,20 +1261,25 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
     potential_energy[0] = LTE_reference_potential_energy
 
     # Calculate the grand canonical free energy
-    integrated_potential = []
-    for index in range(len(b)):
-        index = index + 1
-        if index > 0:
-            current_b = b[0:index]
-            current_potential_energy = potential_energy[0:index]
-            integrated_potential.append(
-                (1 / current_b[-1])
-                * (
-                    b[0] * potential_energy[0]
-                    + integrate.simpson(current_potential_energy, current_b)
-                )
-            )
-    return np.asarray(integrated_potential)
+    # integrated_potential = []
+    # for index in range(len(b)):
+    #    index = index + 1
+    #    if index > 0:
+    #        current_b = b[0:index]
+    #        current_potential_energy = potential_energy[0:index]
+    #        integrated_potential.append(
+    #            (1 / current_b[-1])
+    #            * (
+    #                b[0] * potential_energy[0]
+    #                + integrate.simpson(current_potential_energy, current_b)
+    #            )
+    #        )
+    sgcfe = (
+        b[0] * potential_energy[0]
+        + cumulative_trapezoid(potential_energy, b, initial=potential_energy[0])
+    ) / b
+    sgcfe[0] = potential_energy[0]
+    return np.array(sgcfe)
 
 
 def constant_chemical_potential_integration(
@@ -1308,20 +1313,28 @@ def constant_chemical_potential_integration(
     potential_energy[0] = constant_T_reference_potential_energy
 
     # Calculate the grand canonical free energy
-    integrated_potential = []
-    for index in list(range(len(b))):
-        index = index + 1
-        if index > 0:
-            current_b = b[0:index]
-            current_potential_energy = potential_energy[0:index]
-            integrated_potential.append(
-                (1 / current_b[-1])
-                * (
-                    b[0] * constant_T_reference_potential_energy
-                    + integrate.simpson((current_potential_energy), current_b)
-                )
-            )
-    return np.asarray(integrated_potential)
+    sgcfe = (
+        b[0] * constant_T_reference_potential_energy
+        + cumulative_trapezoid(
+            potential_energy, b, initial=constant_T_reference_potential_energy
+        )
+    ) / b
+    sgcfe[0] = constant_T_reference_potential_energy
+
+    # integrated_potential = []
+    # for index in list(range(len(b))):
+    #    index = index + 1
+    #    if index > 0:
+    #        current_b = b[0:index]
+    #        current_potential_energy = potential_energy[0:index]
+    #        integrated_potential.append(
+    #            (1 / current_b[-1])
+    #            * (
+    #                b[0] * constant_T_reference_potential_energy
+    #                + integrate.simpson((current_potential_energy), current_b)
+    #            )
+    #        )
+    return np.array(sgcfe)
 
 
 def lookup_LTE_reference_energy(T_lookup, LTE_run_data_dictionary):
@@ -1501,10 +1514,12 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
             "integrated_potential_energy"
         ] = constant_T_integration(project_gcmc_data["T_const"][run_index])
 
-        project_gcmc_data["T_const"][run_index]["gibbs"] = (
-            project_gcmc_data["T_const"][run_index]["integrated_potential_energy"]
-            + project_gcmc_data["T_const"][run_index]["param_chem_pot(a)"]
-            * project_gcmc_data["T_const"][run_index]["<comp(a)>"]
+        project_gcmc_data["T_const"][run_index]["gibbs"] = project_gcmc_data["T_const"][
+            run_index
+        ]["integrated_potential_energy"] + np.array(
+            project_gcmc_data["T_const"][run_index]["param_chem_pot(a)"]
+        ) * np.array(
+            project_gcmc_data["T_const"][run_index]["<comp(a)>"]
         )
 
     # Iterate through all heating runs, look up the LTE reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
@@ -1610,49 +1625,91 @@ def find_heating_cooling_crossing(
                 )
 
     if find_intersection:
-        # TODO: Check that there isn't more than one intersection (complete overlap) or no intersection.
+        # Take the heating run temperature array.
+        # Find the minimum and maximum, and the difference between them.
+        # Create a linspace array with double the number of points as the difference between the min and max.
+        # Use np.interp to interpolate the heating integrated_potential vs T and the cooling integrated_potential vs T.
+        # Also use np.interp to interpolate the heating composition vs T and the cooling composition vs T.
+        # Find the index of the minimum difference between the two interpolated integrated_potential vs T arrays.
+        # Return the temperature at that index, and the two compositions at that index.
 
-        # fit spline to each dataset, calculate intersection
-        interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
+        # Find the minimum and maximum temperature of the heating run
+        T_min = np.min(heating_run_dictionary["T"])
+        T_max = np.max(heating_run_dictionary["T"])
+        T_diff = T_max - T_min
+
+        # Create a linspace array with double the number of points as the difference between the min and max
+        T_linspace = np.linspace(T_min, T_max, 2 * int(T_diff))
+
+        # Interpolate the heating and cooling runs to the linspace array
+        heating_integrated_potential_interp = np.interp(
+            T_linspace,
             heating_run_dictionary["T"],
             heating_run_dictionary["integrated_potential_energy"],
         )
-        interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-            heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
-        )
-        interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
-            temporary_cooling_T, temporary_cooling_integrated_free_energy,
-        )
-        interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-            temporary_cooling_T, temporary_cooling_composition
+        cooling_integrated_potential_interp = np.interp(
+            T_linspace, temporary_cooling_T, temporary_cooling_integrated_free_energy
         )
 
-        # define a difference function to calculate the root
-        def difference(t):
-            return np.abs(interp_heating(t) - interp_cooling(t))
+        heating_composition_interp = np.interp(
+            T_linspace, heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
+        )
+        cooling_composition_interp = np.interp(
+            T_linspace, temporary_cooling_T, temporary_cooling_composition
+        )
 
-        # Provide a composition t0 as a guess for the root finder
-        # This will break if there are multiple identical minimum values
-        t0_index = np.argmin(
+        # Find the index of the minimum difference between the two interpolated integrated_potential vs T arrays
+        crossing_index = np.argmin(
             abs(
-                heating_run_dictionary["integrated_potential_energy"]
-                - temporary_cooling_integrated_free_energy
+                heating_integrated_potential_interp
+                - cooling_integrated_potential_interp
             )
         )
-        t0_guess = heating_run_dictionary["T"][t0_index]
+
+        # Return the interpolated temperature, semi grand canonical free energy, heating composition and cooling composition at the crossing point
+        return (
+            T_linspace[crossing_index],
+            heating_integrated_potential_interp[crossing_index],
+            heating_composition_interp[crossing_index],
+            cooling_composition_interp[crossing_index],
+        )
+
+        # fit spline to each dataset, calculate intersection
+        # interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
+        #    heating_run_dictionary["T"],
+        #    heating_run_dictionary["integrated_potential_energy"],
+        # )
+        # interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
+        #    heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
+        # )
+        # interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
+        #    temporary_cooling_T, temporary_cooling_integrated_free_energy,
+        # )
+        # interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
+        #    temporary_cooling_T, temporary_cooling_composition
+        # )
+
+        # This will break if there are multiple identical minimum values
+        # t0_index = np.argmin(
+        #    abs(
+        #        heating_run_dictionary["integrated_potential_energy"]
+        #        - temporary_cooling_integrated_free_energy
+        #    )
+        # )
+        # t0_guess = heating_run_dictionary["T"][t0_index]
 
         # Calculate the intersection point
-        t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
-        energy_intersect_predict = interp_heating(t_intersect_predict)
-        composition_intersect_predict_heating = interp_heating_comp(t_intersect_predict)
-        composition_intersect_predict_cooling = interp_cooling_comp(t_intersect_predict)
+        # t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
+        # energy_intersect_predict = interp_heating(t_intersect_predict)
+        # composition_intersect_predict_heating = interp_heating_comp(t_intersect_predict)
+        # composition_intersect_predict_cooling = interp_cooling_comp(t_intersect_predict)
 
-        return (
-            t_intersect_predict,
-            energy_intersect_predict,
-            composition_intersect_predict_heating,
-            composition_intersect_predict_cooling,
-        )
+        # return (
+        #    t_intersect_predict,
+        #    energy_intersect_predict,
+        #    composition_intersect_predict_heating,
+        #    composition_intersect_predict_cooling,
+        # )
 
 
 def find_constant_T_crossing(
@@ -1692,7 +1749,9 @@ def find_constant_T_crossing(
     gc_free_energy_1 = constant_T_dict_1["integrated_potential_energy"][
         np.argsort(constant_T_dict_1["param_chem_pot(a)"])
     ]
-    # x_1 = constant_T_dict_1["<comp(a)>"][np.argsort(constant_T_dict_1["param_chem_pot(a)"])]
+    x_1 = constant_T_dict_1["<comp(a)>"][
+        np.argsort(constant_T_dict_1["param_chem_pot(a)"])
+    ]
 
     mu_2 = np.array(constant_T_dict_2["param_chem_pot(a)"])[
         np.argsort(constant_T_dict_2["param_chem_pot(a)"])
@@ -1700,48 +1759,72 @@ def find_constant_T_crossing(
     gc_free_energy_2 = constant_T_dict_2["integrated_potential_energy"][
         np.argsort(constant_T_dict_2["param_chem_pot(a)"])
     ]
-    # x_2 = constant_T_dict_2["<comp(a)>"][np.argsort(constant_T_dict_2["param_chem_pot(a)"])]
+    x_2 = constant_T_dict_2["<comp(a)>"][
+        np.argsort(constant_T_dict_2["param_chem_pot(a)"])
+    ]
 
-    # Fit a spline to the chemical potential vs grand canonical free energy data
-    # Spline requires that domain (chemical potential) is strictly increasing
-    interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
-        mu_1, gc_free_energy_1
+    # Find the minimum and maximum chemical potentials, and create a linspace array between the minimum and maximum values incrementing by 0.001.
+    mu_min = np.min([np.min(mu_1), np.min(mu_2)])
+    mu_max = np.max([np.max(mu_1), np.max(mu_2)])
+    mu_diff = int(np.abs(mu_max - mu_min))
+    mu_linspace = np.linspace(mu_min, mu_max, mu_diff * 1000)
+
+    # Create a piecewise linear interpolation of the  semi grand canonical free energy vs chemical potential for each run using np.interp.
+    # Also create a piecewise linear interpolation of the composition vs chemical potential for each run using np.interp.
+    gc_free_energy_1_interp = np.interp(mu_linspace, mu_1, gc_free_energy_1)
+    gc_free_energy_2_interp = np.interp(mu_linspace, mu_2, gc_free_energy_2)
+    x_1_interp = np.interp(mu_linspace, mu_1, x_1)
+    x_2_interp = np.interp(mu_linspace, mu_2, x_2)
+
+    # Find the index of the minimum difference between the two interpolated semi grand canonical free energy functions
+    min_diff_index = np.argmin(abs(gc_free_energy_1_interp - gc_free_energy_2_interp))
+
+    # Return the chemical potential, integrated grand canonical free energy, and two compositions at the minimum difference index
+    return (
+        mu_linspace[min_diff_index],
+        gc_free_energy_1_interp[min_diff_index],
+        x_1_interp[min_diff_index],
+        x_2_interp[min_diff_index],
     )
-    interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
-        mu_2, gc_free_energy_2
-    )
+
+    # interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
+    #    mu_1, gc_free_energy_1
+    # )
+    # interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
+    #    mu_2, gc_free_energy_2
+    # )
 
     # Define a difference function to be used in the root finding algorithm
-    def difference(m):
-        return np.abs(interp_run_1(m) - interp_run_2(m))
+    # def difference(m):
+    #    return np.abs(interp_run_1(m) - interp_run_2(m))
 
     # Find an initial guess for the root finding algorithm
-    m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
-    m0_guess = mu_1[m0_index]
+    # m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
+    # m0_guess = mu_1[m0_index]
 
     # find the root of the difference function (chemical potential at crossing)
-    mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
-    energy_intersect_predict = interp_run_1(mu_intersect_predict)
+    # mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
+    # energy_intersect_predict = interp_run_1(mu_intersect_predict)
 
     # Find the calculated chemical potential that is closest to the predicted chemical potential
-    mu_intersect_index_1 = np.argmin(
-        abs(mu_intersect_predict - constant_T_dict_1["param_chem_pot(a)"])
-    )
-    mu_intersect_index_2 = np.argmin(
-        abs(mu_intersect_predict - constant_T_dict_2["param_chem_pot(a)"])
-    )
+    # mu_intersect_index_1 = np.argmin(
+    #    abs(mu_intersect_predict - constant_T_dict_1["param_chem_pot(a)"])
+    # )
+    # mu_intersect_index_2 = np.argmin(
+    #   abs(mu_intersect_predict - constant_T_dict_2["param_chem_pot(a)"])
+    # )
 
     # Find the crossing composition at a point mu, x that is actually calculated
-    difference = np.abs(-mu_intersect_predict)
+    # difference = np.abs(-mu_intersect_predict)
 
-    run_1_comp_intersect = constant_T_dict_1["<comp(a)>"][mu_intersect_index_1]
-    run_2_comp_intersect = constant_T_dict_2["<comp(a)>"][mu_intersect_index_2]
-    return (
-        mu_intersect_predict,
-        energy_intersect_predict,
-        run_1_comp_intersect,
-        run_2_comp_intersect,
-    )
+    # run_1_comp_intersect = constant_T_dict_1["<comp(a)>"][mu_intersect_index_1]
+    # run_2_comp_intersect = constant_T_dict_2["<comp(a)>"][mu_intersect_index_2]
+    # return (
+    #    mu_intersect_predict,
+    #    energy_intersect_predict,
+    #    run_1_comp_intersect,
+    #    run_2_comp_intersect,
+    # )
 
 
 def order_disorder_crossing_points(project_gcmc_data: dict):
