@@ -138,14 +138,27 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
             label="Cooling",
         )
 
-    # Plot heat capacity vs temperature for the heating and cooling runs
+    # Plot heat capacity vs temperature for the heating and cooling runs. Also plot a vertical line at the temperature with the maximum heat capacity.
     for run in integrated_data["heating"]:
         axs[1, 0].scatter(
             run["T"], run["heat_capacity"], s=3, color="r", label="Heating"
         )
+        axs[1, 0].axvline(
+            x=run["T"][np.argmax(run["heat_capacity"])],
+            color="r",
+            linestyle=":",
+            label="Max Heat Capacity",
+        )
+
     for run in integrated_data["cooling"]:
         axs[1, 0].scatter(
             run["T"], run["heat_capacity"], s=3, color="b", label="Cooling"
+        )
+        axs[1, 0].axvline(
+            x=run["T"][np.argmax(run["heat_capacity"])],
+            color="b",
+            linestyle=":",
+            label="Max Heat Capacity",
         )
 
     # Plot rainplot
