@@ -1,4 +1,5 @@
 from __future__ import annotations
+from scipy import integrate
 import json
 import matplotlib.pyplot as plt
 import os
