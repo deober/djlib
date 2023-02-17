@@ -847,42 +847,6 @@ def run_heating(
             """
 
 
-def plot_const_t_x_vs_mu(const_t_left, const_t_right):
-    print(
-        "mc.mc.plot_const_t_x_vs_mu() is deprecated. Use plotting.mc_plotting.plot_const_t_x_vs_mu() instead."
-    )
-    full_mu = np.concatenate((const_t_left.mu, const_t_right.mu))
-    full_x = np.concatenate((const_t_left.x, const_t_right.x))
-
-    plt.scatter(full_x, full_mu, color="xkcd:crimson")
-    plt.xlabel("Composition (a)", fontsize=18)
-    plt.ylabel("Chemical Potential (a)", fontsize=18)
-    fig = plt.gcf()
-    fig.set_size_inches(15, 19)
-
-    return fig
-
-
-def plot_heating_and_cooling(heating_run, cooling_run):
-    print(
-        "mc.mc.plot_heating_and_cooling() is deprecated. Use plotting.mc_plotting.plot_heating_and_cooling() instead."
-    )
-    bullet_size = 3
-    if heating_run.mu[0] != cooling_run.mu[0]:
-        print(
-            "WARNING: Chemical potentials do not match between the heating and cooling runs"
-        )
-    plt.title("Constant Mu: %.4f" % heating_run.mu[0])
-    plt.xlabel("Temperature (K)", fontsize=18)
-    plt.ylabel("Grand Canonical Free Energy", fontsize=18)
-    plt.scatter(cooling_run.t, cooling_run.integ_grand_canonical, s=bullet_size)
-    plt.scatter(heating_run.t, heating_run.integ_grand_canonical, s=bullet_size)
-    plt.legend(["Cooling", "Heating"])
-    fig = plt.gcf()
-    fig.set_size_inches(15, 19)
-    return fig
-
-
 def predict_mu_vs_free_energy_crossing(
     const_t_run_1: constant_t_run, const_t_run_2: constant_t_run
 ) -> Tuple[float, float, float, float]:
@@ -1180,6 +1144,23 @@ def constant_T_integration(t_const_run_data_dictionary):
     free_energy_reference = np.array(t_const_run_data_dictionary["<potential_energy>"])[
         0
     ]
+
+    # Assuming that the composition is very dilute (~ 1e-4), the system entropy should be nearly identical to the ideal solution entropy.
+    # Correct for this by adding the entropic contribution to the free energy.
+    # For now, enforce that the system is dilute by requiring compositions that are less than 1e-4 or greater than (1-1e-4)
+    if t_const_run_data_dictionary["<comp(a)>"][
+        0
+    ] < 1e-4 or t_const_run_data_dictionary["<comp(a)>"][0] > (1 - 1e-4):
+        k = 8.617333262145e-5  # eV/K
+        free_energy_reference = free_energy_reference + k * t_const_run_data_dictionary[
+            "T"
+        ][0] * (
+            t_const_run_data_dictionary["<comp(a)>"][0]
+            * np.log(t_const_run_data_dictionary["<comp(a)>"][0])
+            + (1 - t_const_run_data_dictionary["<comp(a)>"][0])
+            * np.log(1 - t_const_run_data_dictionary["<comp(a)>"][0])
+        )
+
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
     x = np.array(t_const_run_data_dictionary["<comp(a)>"])
 
