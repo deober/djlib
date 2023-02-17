@@ -847,183 +847,6 @@ def run_heating(
             """
 
 
-def predict_mu_vs_free_energy_crossing(
-    const_t_run_1: constant_t_run, const_t_run_2: constant_t_run
-) -> Tuple[float, float, float, float]:
-    """Function to predict the free energy crossing chemical potential and compositions between two mu vs grand canonical plots
-
-    Parameters:
-    -----------
-    const_t_run_1: constant_t_run
-        A djlib constant_t_run object, containing the data for a constant temperature run
-    const_t_run_2: constant_t_run
-        A djlib constant_t_run object, containing the data for a constant temperature run
-
-    Returns:
-    --------
-    mu_intersect_predict: float
-        Predicted chemical potential at the crossing point in (chemical_potential vs grand canonical free energy) space
-    energy_intersect_predict: float
-        predicted grand canonical free energy at the crossing point in (chemical_potential vs grand canonical free energy) space
-    run_1_comp_intersect: float
-        composition for the first constant temperature run that is closest to the corresponding chemical potential at the crossing point
-    run_2_comp_intersect: float
-        composition for the second constant temperature run that is closest to the corresponding chemical potential at the crossing point
-
-    """
-    # Assert that the chemical potentials are the same
-    assert np.allclose(
-        np.sort(const_t_run_1.mu), np.sort(const_t_run_2.mu)
-    ), "Chemical potentials do not match"
-
-    # Ensure that all data is sorted by chemical potential
-    mu_1 = const_t_run_1.mu[np.argsort(const_t_run_1.mu)]
-    gc_free_energy_1 = const_t_run_1.integ_grand_canonical[np.argsort(const_t_run_1.mu)]
-    x_1 = const_t_run_1.x[np.argsort(const_t_run_1.mu)]
-
-    mu_2 = const_t_run_2.mu[np.argsort(const_t_run_2.mu)]
-    gc_free_energy_2 = const_t_run_2.integ_grand_canonical[np.argsort(const_t_run_2.mu)]
-    x_2 = const_t_run_2.x[np.argsort(const_t_run_2.mu)]
-
-    # Fit a spline to the chemical potential vs grand canonical free energy data
-    # Spline requires that domain (chemical potential) is strictly increasing
-    interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
-        mu_1, gc_free_energy_1
-    )
-    interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
-        mu_2, gc_free_energy_2
-    )
-
-    # Define a difference function to be used in the root finding algorithm
-    def difference(m):
-        return np.abs(interp_run_1(m) - interp_run_2(m))
-
-    # Find an initial guess for the root finding algorithm
-    m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
-    m0_guess = mu_1[m0_index]
-
-    # find the root of the difference function (chemical potential at crossing)
-    mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
-    energy_intersect_predict = interp_run_1(mu_intersect_predict)
-
-    # Find the calculated chemical potential that is closest to the predicted chemical potential
-    mu_intersect_index_1 = np.argmin(abs(mu_intersect_predict - const_t_run_1.mu))
-    mu_intersect_index_2 = np.argmin(abs(mu_intersect_predict - const_t_run_2.mu))
-
-    # Find the crossing composition at a point mu, x that is actually calculated
-    difference = np.abs(-mu_intersect_predict)
-
-    run_1_comp_intersect = const_t_run_1.x[mu_intersect_index_1]
-    run_2_comp_intersect = const_t_run_2.x[mu_intersect_index_2]
-    return (
-        mu_intersect_predict,
-        energy_intersect_predict,
-        run_1_comp_intersect,
-        run_2_comp_intersect,
-    )
-
-
-def predict_free_energy_crossing(heating_run, cooling_run):
-    """Function to find crossing point between two (energy vs T) curves.
-    Args:
-        heating_run(djlib.mc.heating_run):  Heating run object defined in djlib.mc
-        cooling_run(djlib.mc.cooling_run): Cooling run object defined in djlib.mc
-    Returns:
-        tuple(
-            t_intersect_predict,
-            energy_intersect_predict, composition_intersect_predict
-        )
-
-    """
-    # Check that lengths of all vectors match and that temp_heating == temp_cooling (i.e., they're not the reverse of each other)
-    if (
-        heating_run.integ_grand_canonical.shape[0]
-        == heating_run.t.shape[0]
-        == cooling_run.integ_grand_canonical.shape[0]
-        == cooling_run.t.shape[0]
-        == heating_run.x.shape[0]
-        == cooling_run.x.shape[0]
-    ):
-
-        find_intersection = False
-        if np.allclose(heating_run.t, cooling_run.t):
-            find_intersection = True
-        else:
-            # If the temperature axes arent the same, try swapping the order of temp_cooling and cooling_integrated_free_energy.
-            cooling_run.t = np.flip(cooling_run.t)
-            cooling_run.integ_grand_canonical = np.flip(
-                cooling_run.integ_grand_canonical
-            )
-            cooling_run.x = np.flip(cooling_run.x)
-
-            # If the temperature axes still aren't the same, cancel the function.
-            if np.allclose(heating_run.t, cooling_run.t):
-                find_intersection = True
-            else:
-                print(
-                    "Heating and cooling run temperature vectors are the same length but do not match. See printout below:\nheating_run  cooling_run"
-                )
-                for idx in range(len(heating_run.t)):
-                    print("%.3f  %.3f" % heating_run.t[idx], cooling_run.t[idx])
-
-        if find_intersection:
-            # TODO: Check that there isn't more than one intersection (complete overlap) or no intersection.
-
-            # fit spline to each dataset, calculate intersection
-            interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
-                heating_run.t, heating_run.integ_grand_canonical
-            )
-            interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-                heating_run.t, heating_run.x
-            )
-            interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
-                cooling_run.t, cooling_run.integ_grand_canonical
-            )
-            interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-                cooling_run.t, cooling_run.x
-            )
-
-            # define a difference function to calculate the root
-            def difference(t):
-                return np.abs(interp_heating(t) - interp_cooling(t))
-
-            # Provide a composition x0 as a guess for the root finder
-            # This will break if there are multiple identical minimum values
-            t0_index = np.argmin(
-                abs(
-                    heating_run.integ_grand_canonical
-                    - cooling_run.integ_grand_canonical
-                )
-            )
-            t0_guess = heating_run.t[t0_index]
-
-            # Calculate the intersection point
-            t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
-            energy_intersect_predict = interp_heating(t_intersect_predict)
-            composition_intersect_predict = interp_heating_comp(t_intersect_predict)
-
-            return (
-                t_intersect_predict,
-                energy_intersect_predict,
-                composition_intersect_predict,
-            )
-
-    else:
-        print(
-            "The free energies and composition vectors do not have the same lengths.\nCurrent lengths are:"
-        )
-        print("length of temp_heating: %d" % len(heating_run.t))
-        print(
-            "length of heating run integrated free energy: %d"
-            % len(heating_run.integ_grand_canonical)
-        )
-        print("length of temp_cooling: %d" % len(cooling_run.t))
-        print(
-            "length of cooling run integrated free energy: %d"
-            % len(cooling_run.integ_grand_canonical)
-        )
-
-
 def find_crossing_composition(
     integrated_energies, temperature, x, t_intersect_predict, energy_intersect_predict
 ):
@@ -1087,44 +910,6 @@ def simulation_is_complete(mc_run_dir):
     return simulation_status
 
 
-def plot_t_vs_x_rainplot(mc_runs_directory: str, show_labels: bool = False):
-    """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
-
-    Generate a single (T vs composition) plot using all monte carlo runs in mc_runs_directory.
-    Args:
-        mc_runs_directory(str): Path to the directory containing all grand canonical monte carlo runs.
-        same_image(bool): Whether the image will be saved to the run directory or not.
-        show_labels(bool): Whether or not the plot legend displays.
-
-    Returns:
-        fig(matplotlib.pyplot figure object): 2D plot object. Can do fig.show() to display the plot.
-    """
-    print(
-        "mc.mc.plot_t_vs_x_rainplot() is deprecated. Use plotting.mc_plotting.plot_t_vs_x() instead."
-    )
-    labels = []
-    run_list = glob(os.path.join(mc_runs_directory, "mu*"))
-    for run in run_list:
-        results_file = os.path.join(run, "results.json")
-        if os.path.isfile(results_file):
-            with open(results_file) as f:
-                data = json.load(f)
-                f.close()
-                current_mc = run.split("/")[-1]
-                labels.append(current_mc)
-                composition = data["<comp(a)>"]
-                temperature = data["T"]
-                plt.scatter(composition, temperature)
-
-    if show_labels:
-        plt.legend(labels)
-    plt.xlabel("Composition", fontsize=18)
-    plt.ylabel("Temperature (K)", fontsize=18)
-    fig = plt.gcf()
-    fig.set_size_inches(18.5, 10)
-    return fig
-
-
 def constant_T_integration(t_const_run_data_dictionary):
     """
     Integrates the grand canonical free energy for a constant temperature run in temperature-chemical potential space.
@@ -1170,57 +955,21 @@ def constant_T_integration(t_const_run_data_dictionary):
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
     x = np.array(t_const_run_data_dictionary["<comp(a)>"])
 
-    # Calculate the grand canonical free energy
-    integrated_potential = []
-    for index in range(len(mu)):
-        index = index + 1
-        if index > 0:
-            current_mu = mu[0:index]
-            current_x = x[0:index]
-            integrated_potential.append(
-                free_energy_reference - integrate.simpson(current_x, current_mu)
-            )
-    return np.asarray(integrated_potential)
-
-
-def LTE_integration(lte_run_data_dictionary):
-    """Integrates the grand canonical free energy for a LTE run in temperature-chemical potential space.
-    Currently Assumes there is one parameterized chemical potential
-
-    Parameters
-    ----------
-    lte_run_data_dictionary : dictionary
-        Dictionary containing the data from a LTE run. (Taken directly from a results.json file output by casm monte)
-
-    Returns
-    -------
-    integrated_free_energy : np.ndarray
-        Integrated grand canonical free energy in temperature-chemical potential space.
-    """
-    # Re-define necessary arrays as np.ndarrays
-    b = np.array(lte_run_data_dictionary["Beta"])
-    potential_energy = np.array(lte_run_data_dictionary["<potential_energy>"])
-    mu = np.array(lte_run_data_dictionary["param_chem_pot(a)"])
-    x = np.array(lte_run_data_dictionary["<comp(a)>"])
+    integrated_potential = free_energy_reference - cumulative_trapezoid(
+        x, mu, initial=free_energy_reference
+    )
+    integrated_potential[0] = free_energy_reference
 
     # Calculate the grand canonical free energy
-    integrated_potential = []
-    for index, value in enumerate(b):
-        index = index + 1
-        if index > 0:
-            current_b = b[0:index]
-            current_potential_energy = potential_energy[0:index]
-            current_mu = mu[0:index]
-            current_x = x[0:index]
-            integrated_potential.append(
-                (1 / current_b[-1])
-                * (
-                    b[0] * potential_energy[0]
-                    + integrate.simpson(
-                        (current_potential_energy - current_mu * current_x), current_b
-                    )
-                )
-            )
+    # integrated_potential = []
+    # for index in range(len(mu)):
+    #    index = index + 1
+    #    if index > 0:
+    #        current_mu = mu[0:index]
+    #        current_x = x[0:index]
+    #        integrated_potential.append(
+    #            free_energy_reference - integrate.simpson(current_x, current_mu)
+    #        )
     return np.asarray(integrated_potential)
 
 
