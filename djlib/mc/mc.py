@@ -1147,19 +1147,25 @@ def constant_T_integration(t_const_run_data_dictionary):
 
     # Assuming that the composition is very dilute (~ 1e-4), the system entropy should be nearly identical to the ideal solution entropy.
     # Correct for this by adding the entropic contribution to the free energy.
-    # For now, enforce that the system is dilute by requiring compositions that are less than 1e-4 or greater than (1-1e-4)
-    if t_const_run_data_dictionary["<comp(a)>"][
-        0
-    ] < 1e-4 or t_const_run_data_dictionary["<comp(a)>"][0] > (1 - 1e-4):
-        k = 8.617333262145e-5  # eV/K
-        free_energy_reference = free_energy_reference + k * t_const_run_data_dictionary[
-            "T"
-        ][0] * (
-            t_const_run_data_dictionary["<comp(a)>"][0]
-            * np.log(t_const_run_data_dictionary["<comp(a)>"][0])
-            + (1 - t_const_run_data_dictionary["<comp(a)>"][0])
-            * np.log(1 - t_const_run_data_dictionary["<comp(a)>"][0])
-        )
+    # For now, enforce that the system is dilute by requiring compositions that are less than 1e-4 or greater than (1-1e-4), but not equal to 0 or 1.
+    if (
+        t_const_run_data_dictionary["<comp(a)>"][0] != 0
+        and t_const_run_data_dictionary["<comp(a)>"][0] != 1
+    ):
+        if t_const_run_data_dictionary["<comp(a)>"][
+            0
+        ] < 1e-4 or t_const_run_data_dictionary["<comp(a)>"][0] > (1 - 1e-4):
+            k = 8.617333262145e-5  # eV/K
+            free_energy_reference = free_energy_reference + k * t_const_run_data_dictionary[
+                "T"
+            ][
+                0
+            ] * (
+                t_const_run_data_dictionary["<comp(a)>"][0]
+                * np.log(t_const_run_data_dictionary["<comp(a)>"][0])
+                + (1 - t_const_run_data_dictionary["<comp(a)>"][0])
+                * np.log(1 - t_const_run_data_dictionary["<comp(a)>"][0])
+            )
 
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
     x = np.array(t_const_run_data_dictionary["<comp(a)>"])
