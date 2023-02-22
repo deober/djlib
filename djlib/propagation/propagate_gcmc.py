@@ -283,6 +283,7 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
     # For each type of monte carlo run, collect the statuses of all runs, and append to grand_canonical_monte_carlo/status.json
 
     # LTE run update and collect status
+    print("Updating LTE runs")
     lte_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_LTE"
@@ -308,6 +309,7 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f)
 
     # T_const update and collect status
+    print("Updating constant temperature runs. ")
     t_const_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_t_const"
@@ -335,6 +337,7 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f)
 
     # Heating run update and collect status
+    print("Updating heating runs")
     heating_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_heating"
@@ -362,6 +365,7 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f)
 
     # Cooling run update and collect status
+    print("Updating cooling runs")
     cooling_gridspace_manager = dj.gridspace_manager(
         origin_dir=os.path.join(
             propagated_casm_project_root_path, "grand_canonical_monte_carlo/MC_cooling"
