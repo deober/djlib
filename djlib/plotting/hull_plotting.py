@@ -67,6 +67,11 @@ def general_binary_convex_hull_plotter(
     plt.plot(
         dft_lower_hull[:, 0], dft_lower_hull[:, 1], marker="D", markersize=15, color="k"
     )
+    if print_extra_info:
+        print("DFT lower hull vertices:")
+        print("Index", "Composition")
+        for index in dft_lower_hull_vertices:
+            print(index, composition[index])
     if any(predicted_energies):
         plt.plot(
             predicted_lower_hull[:, 0],
@@ -75,6 +80,11 @@ def general_binary_convex_hull_plotter(
             markersize=10,
             color=predicted_color,
         )
+        if print_extra_info:
+            print("Predicted lower hull vertices:")
+            print("Index", "Composition")
+            for index in predicted_lower_hull_vertices:
+                print(index, composition[index])
     if any(predicted_energies):
         plt.scatter(
             composition,
