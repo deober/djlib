@@ -955,43 +955,13 @@ def constant_T_integration(t_const_run_data_dictionary):
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
     x = np.array(t_const_run_data_dictionary["<comp(a)>"])
 
-    integrated_potential = free_energy_reference - cumulative_trapezoid(
-        x, mu, initial=free_energy_reference
-    )
-    integrated_potential[0] = free_energy_reference
+    integrated_potential = free_energy_reference - cumulative_trapezoid(x, mu)
+
+    # Using cumulative trapezoid for integration results in a reduction of one data point.
+    # because the reference energy is the first data point assuming d\beta is zero, append the reference energy to the beginning of the array.
+    integrated_potential = np.insert(integrated_potential, 0, free_energy_reference)
 
     return np.asarray(integrated_potential)
-
-
-def heating_integration(heating_run_data_dictionary, LTE_reference_potential_energy):
-    """
-    Integrates the grand canonical free energy for a heating run in temperature-chemical potential space.
-    Currently Assumes there is one parameterized chemical potential
-
-    Parameters
-    ----------
-    heating_run_data_dictionary : dictionary
-        Dictionary containing the data from a heating run. (Taken directly from a results.json file output by casm monte)
-    LTE_reference_potential_energy : float
-        The integrated grand canonical free energy of a heating run at the starting (chemical_potential, Temperature) point of the heating run.
-
-    Returns
-    -------
-    integrated_free_energy : np.ndarray
-        Integrated grand canonical free energy in temperature-chemical potential space.
-    """
-    # Re-define necessary arrays as np.ndarrays
-    b = np.array(heating_run_data_dictionary["Beta"])
-    potential_energy = np.array(heating_run_data_dictionary["<potential_energy>"])
-
-    sgcfe = (
-        b[0] * LTE_reference_potential_energy  # potential_energy[0]
-        + cumulative_trapezoid(
-            potential_energy, b, initial=LTE_reference_potential_energy
-        )
-    ) / b
-    sgcfe[0] = LTE_reference_potential_energy  # potential_energy[0]
-    return np.array(sgcfe)
 
 
 def constant_chemical_potential_integration(
