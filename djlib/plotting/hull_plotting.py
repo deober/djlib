@@ -9,7 +9,10 @@ import djlib.clex.clex as cl
 
 
 def general_binary_convex_hull_plotter(
-    composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None], print_extra_info: bool = False
+    composition: np.ndarray,
+    true_energies: np.ndarray,
+    predicted_energies=[None],
+    print_extra_info: bool = False,
 ) -> matplotlib.figure.Figure:
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
@@ -26,7 +29,7 @@ def general_binary_convex_hull_plotter(
     predicted_color = "red"
     predicted_label = "Predicted Energies"
     plt.scatter(
-        composition, true_energies, color="k", marker="x", label='"True" Energies'
+        composition, true_energies, color="k", marker="1", label='"True" Energies'
     )
     dft_hull = thull.full_hull(compositions=composition, energies=true_energies)
 
@@ -90,7 +93,7 @@ def general_binary_convex_hull_plotter(
             composition,
             predicted_energies,
             color="red",
-            marker="x",
+            marker="2",
             label=predicted_label,
         )
 
@@ -104,12 +107,12 @@ def general_binary_convex_hull_plotter(
 
     plt.xlabel("Composition X", fontsize=21)
     plt.ylabel("Formation Energy per Primitive Cell (eV)", fontsize=21)
-    plt.legend(fontsize=19)
+    plt.legend(fontsize=19, loc="upper right")
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
 
     fig = plt.gcf()
-    fig.set_size_inches(19, 14)
+    fig.set_size_inches(15, 12)
     return fig
 
 
