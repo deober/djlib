@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import thermocore.geometry.hull as thull
 from glob import glob
 import os
 import numpy as np
@@ -106,9 +107,9 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     # First, integrate the semi grand canonical free energy for all runs:
     integrated_data = mc.full_project_integration(sgcmc_project_data_dictionary)
 
-    # Make a 3x3 grid of subplots
-    fig, axs = plt.subplots(3, 3)
-    fig.set_size_inches(22, 22)
+    # Make a 4x3 grid of subplots
+    fig, axs = plt.subplots(4, 3)
+    fig.set_size_inches(22, 30)
 
     # Plot chemical potential vs composition for the constant temperature runs
     for run in integrated_data["T_const"]:
@@ -232,7 +233,93 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
             color="orange",
             label="Ideal Solution Entropy",
         )
-    # Display the legend for the entropy plot
+
+    # Plot the formation energy vs chemical potential for the constant temperature runs
+    for run in integrated_data["T_const"]:
+        axs[2, 1].scatter(
+            run["param_chem_pot(a)"],
+            run["<formation_energy>"],
+            s=3,
+            color="k",
+            label="Constant T",
+        )
+
+    # Plot the potential energy vs chemical potential for the constant temperature runs
+    for run in integrated_data["T_const"]:
+        axs[2, 2].scatter(
+            run["param_chem_pot(a)"],
+            run["<potential_energy>"],
+            s=3,
+            color="k",
+            label="Constant T",
+        )
+
+    # For all cooling runs, find the composition and formation energy at the lowest temperature. Store the composition and formation energy in a list.
+    # Do the same for all heating runs.
+    # If there is more than one cooling run, find the lower convex hull of the cooling compositions and formation energies.
+    # If there is more than one heating run, find the lower convex hull of the heating compositions and formation energies.
+    # Plot all this data on the same plot.
+    cooling_compositions = []
+    cooling_formation_energies = []
+    for cooling_run in integrated_data["cooling"]:
+        cooling_compositions.append(
+            cooling_run["<comp(a)>"][np.argmin(cooling_run["T"])]
+        )
+        cooling_formation_energies.append(
+            cooling_run["<formation_energy>"][np.argmin(cooling_run["T"])]
+        )
+    cooling_compositions = np.array(cooling_compositions)
+    cooling_formation_energies = np.array(cooling_formation_energies)
+    axs[3, 0].scatter(
+        cooling_compositions,
+        cooling_formation_energies,
+        marker="x",
+        color="b",
+        label="Cooling",
+    )
+    if len(integrated_data["cooling"]) > 1:
+        cooling_hull = thull.full_hull(
+            compositions=cooling_compositions.reshape(-1, 1),
+            formation_energies=cooling_formation_energies,
+        )
+        cooling_hull_vertices, _ = thull.lower_hull(cooling_hull)
+        axs[3, 0].plot(
+            cooling_compositions[cooling_hull_vertices],
+            cooling_formation_energies[cooling_hull_vertices],
+            color="b",
+            label="Cooling Hull",
+        )
+
+    heating_compositions = []
+    heating_formation_energies = []
+    for heating_run in integrated_data["heating"]:
+        heating_compositions.append(
+            heating_run["<comp(a)>"][np.argmin(heating_run["T"])]
+        )
+        heating_formation_energies.append(
+            heating_run["<formation_energy>"][np.argmin(heating_run["T"])]
+        )
+    heating_compositions = np.array(heating_compositions)
+    heating_formation_energies = np.array(heating_formation_energies)
+    axs[3, 0].scatter(
+        heating_compositions,
+        heating_formation_energies,
+        marker="+",
+        color="r",
+        label="Heating",
+    )
+    if len(integrated_data["heating"]) > 1:
+        heating_hull = thull.full_hull(
+            compositions=heating_compositions.reshape(-1, 1),
+            formation_energies=heating_formation_energies,
+        )
+        heating_hull_vertices, _ = thull.lower_hull(heating_hull)
+        axs[3, 0].plot(
+            heating_compositions[heating_hull_vertices],
+            heating_formation_energies[heating_hull_vertices],
+            color="r",
+            label="Heating Hull",
+        )
 
     # Set labels
     axs[0, 0].set_xlabel("Composition", fontsize=18)
@@ -256,6 +343,15 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     axs[2, 0].set_xlabel("Composition", fontsize=18)
     axs[2, 0].set_ylabel("MC Entropy and Ideal Entropy", fontsize=18)
     axs[2, 0].legend(fontsize=18)
+    axs[2, 1].set_xlabel("Chemical Potential", fontsize=18)
+    axs[2, 1].set_ylabel("Formation Energy", fontsize=18)
+    axs[2, 1].legend(fontsize=18)
+    axs[2, 2].set_xlabel("Chemical Potential", fontsize=18)
+    axs[2, 2].set_ylabel("Potential Energy", fontsize=18)
+    axs[2, 2].legend(fontsize=18)
+    axs[3, 0].set_xlabel("Composition", fontsize=18)
+    axs[3, 0].set_ylabel("Formation Energy", fontsize=18)
+    axs[3, 0].legend(fontsize=18)
 
     return fig
 
