@@ -9,7 +9,7 @@ import djlib.clex.clex as cl
 
 
 def general_binary_convex_hull_plotter(
-    composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None]
+    composition: np.ndarray, true_energies: np.ndarray, predicted_energies=[None], print_extra_info: bool = False
 ) -> matplotlib.figure.Figure:
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
@@ -52,6 +52,11 @@ def general_binary_convex_hull_plotter(
                 label="Spurious Predictions",
                 s=400,
             )
+            if print_extra_info:
+                print("Spurious predictions:")
+                print("Index", "Composition")
+                for index in spurious:
+                    print(index, composition[index])
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
     if any(predicted_energies):
@@ -62,6 +67,11 @@ def general_binary_convex_hull_plotter(
     plt.plot(
         dft_lower_hull[:, 0], dft_lower_hull[:, 1], marker="D", markersize=15, color="k"
     )
+    if print_extra_info:
+        print("DFT lower hull vertices:")
+        print("Index", "Composition")
+        for index in dft_lower_hull_vertices:
+            print(index, composition[index])
     if any(predicted_energies):
         plt.plot(
             predicted_lower_hull[:, 0],
@@ -70,6 +80,11 @@ def general_binary_convex_hull_plotter(
             markersize=10,
             color=predicted_color,
         )
+        if print_extra_info:
+            print("Predicted lower hull vertices:")
+            print("Index", "Composition")
+            for index in predicted_lower_hull_vertices:
+                print(index, composition[index])
     if any(predicted_energies):
         plt.scatter(
             composition,
