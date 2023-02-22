@@ -995,7 +995,7 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
     potential_energy = np.array(heating_run_data_dictionary["<potential_energy>"])
 
     # Set the initial potential energy to the LTE reference potential energy
-    potential_energy[0] = LTE_reference_potential_energy
+    # potential_energy[0] = LTE_reference_potential_energy
 
     # Calculate the grand canonical free energy
     # integrated_potential = []
@@ -1012,15 +1012,17 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
     #            )
     #        )
     sgcfe = (
-        b[0] * potential_energy[0]
-        + cumulative_trapezoid(potential_energy, b, initial=potential_energy[0])
+        b[0] * LTE_reference_potential_energy  # potential_energy[0]
+        + cumulative_trapezoid(
+            potential_energy, b, initial=LTE_reference_potential_energy
+        )
     ) / b
-    sgcfe[0] = potential_energy[0]
+    sgcfe[0] = LTE_reference_potential_energy  # potential_energy[0]
     return np.array(sgcfe)
 
 
 def constant_chemical_potential_integration(
-    cooling_run_data_dictionary, constant_T_reference_potential_energy
+    cooling_run_data_dictionary, constant_T_integrated_potential_energy_reference
 ):
     """
     Integrates the grand canonical free energy for a cooling run in temperature-chemical potential space.
@@ -1035,7 +1037,7 @@ def constant_chemical_potential_integration(
     ----------
     cooling_run_data_dictionary : dictionary
         Dictionary containing the data from a cooling run. (Taken directly from a results.json file output by casm monte)
-    constant_T_reference_potential_energy : float
+    constant_T_integrated_potential_energy_reference : float
         The integrated grand canonical free energy of a constant temperature run at the same chemical potential and initial temperature as the cooling run.
 
     Returns
@@ -1046,17 +1048,17 @@ def constant_chemical_potential_integration(
     # Re-define necessary arrays as np.ndarrays
     b = np.array(cooling_run_data_dictionary["Beta"])
     potential_energy = np.array(cooling_run_data_dictionary["<potential_energy>"])
-    # Set the initial potential energy to the LTE reference potential energy
-    potential_energy[0] = constant_T_reference_potential_energy
 
     # Calculate the grand canonical free energy
     sgcfe = (
-        b[0] * constant_T_reference_potential_energy
+        b[0] * constant_T_integrated_potential_energy_reference
         + cumulative_trapezoid(
-            potential_energy, b, initial=constant_T_reference_potential_energy
+            potential_energy,
+            b,
+            initial=constant_T_integrated_potential_energy_reference,
         )
     ) / b
-    sgcfe[0] = constant_T_reference_potential_energy
+    sgcfe[0] = constant_T_integrated_potential_energy_reference
 
     # integrated_potential = []
     # for index in list(range(len(b))):
