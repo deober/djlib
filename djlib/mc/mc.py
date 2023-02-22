@@ -960,16 +960,6 @@ def constant_T_integration(t_const_run_data_dictionary):
     )
     integrated_potential[0] = free_energy_reference
 
-    # Calculate the grand canonical free energy
-    # integrated_potential = []
-    # for index in range(len(mu)):
-    #    index = index + 1
-    #    if index > 0:
-    #        current_mu = mu[0:index]
-    #        current_x = x[0:index]
-    #        integrated_potential.append(
-    #            free_energy_reference - integrate.simpson(current_x, current_mu)
-    #        )
     return np.asarray(integrated_potential)
 
 
@@ -994,23 +984,6 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
     b = np.array(heating_run_data_dictionary["Beta"])
     potential_energy = np.array(heating_run_data_dictionary["<potential_energy>"])
 
-    # Set the initial potential energy to the LTE reference potential energy
-    # potential_energy[0] = LTE_reference_potential_energy
-
-    # Calculate the grand canonical free energy
-    # integrated_potential = []
-    # for index in range(len(b)):
-    #    index = index + 1
-    #    if index > 0:
-    #        current_b = b[0:index]
-    #        current_potential_energy = potential_energy[0:index]
-    #        integrated_potential.append(
-    #            (1 / current_b[-1])
-    #            * (
-    #                b[0] * potential_energy[0]
-    #                + integrate.simpson(current_potential_energy, current_b)
-    #            )
-    #        )
     sgcfe = (
         b[0] * LTE_reference_potential_energy  # potential_energy[0]
         + cumulative_trapezoid(
@@ -1022,11 +995,11 @@ def heating_integration(heating_run_data_dictionary, LTE_reference_potential_ene
 
 
 def constant_chemical_potential_integration(
-    cooling_run_data_dictionary, constant_T_integrated_potential_energy_reference
+    run_data_dictionary, integrated_potential_energy_reference
 ):
     """
-    Integrates the grand canonical free energy for a cooling run in temperature-chemical potential space.
-    Requires a reference potential energy from a constant temperature run at the same chemical potential and initial temperature as the cooling run.
+    Integrates the grand canonical free energy for a constant chemical potential run in temperature-chemical potential space.
+    Requires a reference potential energy from a constant temperature run or LTE run at the same chemical potential and initial temperature as the cooling run.
     Currently Assumes there is one parameterized chemical potential
 
     Notes
@@ -1035,10 +1008,10 @@ def constant_chemical_potential_integration(
 
     Parameters
     ----------
-    cooling_run_data_dictionary : dictionary
-        Dictionary containing the data from a cooling run. (Taken directly from a results.json file output by casm monte)
-    constant_T_integrated_potential_energy_reference : float
-        The integrated grand canonical free energy of a constant temperature run at the same chemical potential and initial temperature as the cooling run.
+    run_data_dictionary : dictionary
+        Dictionary containing the data from a constant chemical potential run. (Taken directly from a results.json file output by casm monte)
+    integrated_potential_energy_reference : float
+        The integrated grand canonical free energy of a constant temperature or LTE run at the same chemical potential and initial temperature as the constant chemical potential run.
 
     Returns
     -------
@@ -1046,33 +1019,19 @@ def constant_chemical_potential_integration(
         Integrated grand canonical free energy in temperature-chemical potential space.
     """
     # Re-define necessary arrays as np.ndarrays
-    b = np.array(cooling_run_data_dictionary["Beta"])
-    potential_energy = np.array(cooling_run_data_dictionary["<potential_energy>"])
+    b = np.array(run_data_dictionary["Beta"])
+    potential_energy = np.array(run_data_dictionary["<potential_energy>"])
 
     # Calculate the grand canonical free energy
+    # Cumulative Trapezoid will produce n-1 values, which is why the denominator is b[1:].
+    # The first value of the semi grand canonical free energy is known, and is the integrated potential energy reference.
     sgcfe = (
-        b[0] * constant_T_integrated_potential_energy_reference
-        + cumulative_trapezoid(
-            potential_energy,
-            b,
-            initial=constant_T_integrated_potential_energy_reference,
-        )
-    ) / b
-    sgcfe[0] = constant_T_integrated_potential_energy_reference
+        b[0] * integrated_potential_energy_reference
+        + cumulative_trapezoid(potential_energy, b,)
+    ) / b[1:]
 
-    # integrated_potential = []
-    # for index in list(range(len(b))):
-    #    index = index + 1
-    #    if index > 0:
-    #        current_b = b[0:index]
-    #        current_potential_energy = potential_energy[0:index]
-    #        integrated_potential.append(
-    #            (1 / current_b[-1])
-    #            * (
-    #                b[0] * constant_T_reference_potential_energy
-    #                + integrate.simpson((current_potential_energy), current_b)
-    #            )
-    #        )
+    # Append integrated potential energy reference to the beginning of the array
+    sgcfe = np.insert(sgcfe, 0, integrated_potential_energy_reference)
     return np.array(sgcfe)
 
 
@@ -1278,7 +1237,7 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
         # Integrate the grand canonical free energy, and append the integrated potential energy to the heating run dictionary
         project_gcmc_data["heating"][run_index][
             "integrated_potential_energy"
-        ] = heating_integration(
+        ] = constant_chemical_potential_integration(
             project_gcmc_data["heating"][run_index], reference_energy
         )
 
@@ -1525,45 +1484,6 @@ def find_constant_T_crossing(
         x_1_interp[min_diff_index],
         x_2_interp[min_diff_index],
     )
-
-    # interp_run_1 = scipy.interpolate.InterpolatedUnivariateSpline(
-    #    mu_1, gc_free_energy_1
-    # )
-    # interp_run_2 = scipy.interpolate.InterpolatedUnivariateSpline(
-    #    mu_2, gc_free_energy_2
-    # )
-
-    # Define a difference function to be used in the root finding algorithm
-    # def difference(m):
-    #    return np.abs(interp_run_1(m) - interp_run_2(m))
-
-    # Find an initial guess for the root finding algorithm
-    # m0_index = np.argmin(abs(gc_free_energy_1 - gc_free_energy_2))
-    # m0_guess = mu_1[m0_index]
-
-    # find the root of the difference function (chemical potential at crossing)
-    # mu_intersect_predict = scipy.optimize.fsolve(difference, x0=m0_guess)
-    # energy_intersect_predict = interp_run_1(mu_intersect_predict)
-
-    # Find the calculated chemical potential that is closest to the predicted chemical potential
-    # mu_intersect_index_1 = np.argmin(
-    #    abs(mu_intersect_predict - constant_T_dict_1["param_chem_pot(a)"])
-    # )
-    # mu_intersect_index_2 = np.argmin(
-    #   abs(mu_intersect_predict - constant_T_dict_2["param_chem_pot(a)"])
-    # )
-
-    # Find the crossing composition at a point mu, x that is actually calculated
-    # difference = np.abs(-mu_intersect_predict)
-
-    # run_1_comp_intersect = constant_T_dict_1["<comp(a)>"][mu_intersect_index_1]
-    # run_2_comp_intersect = constant_T_dict_2["<comp(a)>"][mu_intersect_index_2]
-    # return (
-    #    mu_intersect_predict,
-    #    energy_intersect_predict,
-    #    run_1_comp_intersect,
-    #    run_2_comp_intersect,
-    # )
 
 
 def order_disorder_crossing_points(project_gcmc_data: dict):
