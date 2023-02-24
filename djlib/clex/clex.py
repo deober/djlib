@@ -1,16 +1,11 @@
 from __future__ import annotations
-
-import matplotlib
 import djlib.djlib as dj
 import json
 import os
 import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.interpolate import griddata
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LassoCV, LassoLarsCV
 from sklearn.metrics import mean_squared_error
-import csv
 from glob import glob
 import pickle
 from string import Template
@@ -151,14 +146,6 @@ def checkhull(
     # Check if the test_energy points are above or below the hull
     hull_dist = test_energy - interp_hull
     return np.ravel(np.array(hull_dist))
-
-
-def run_lassocv(corr: np.ndarray, formation_energy: np.ndarray) -> np.ndarray:
-    reg = LassoCV(fit_intercept=False, n_jobs=4, max_iter=50000).fit(
-        corr, formation_energy
-    )
-    eci = reg.coef_
-    return eci
 
 
 def find_proposed_ground_states(
