@@ -273,19 +273,22 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     axs[3, 0].scatter(
         cooling_compositions,
         cooling_formation_energies,
-        marker="x",
+        marker="1",
         color="b",
         label="Cooling",
     )
     if len(integrated_data["cooling"]) > 1:
         cooling_hull = thull.full_hull(
             compositions=cooling_compositions.reshape(-1, 1),
-            formation_energies=cooling_formation_energies,
+            energies=cooling_formation_energies,
         )
         cooling_hull_vertices, _ = thull.lower_hull(cooling_hull)
+
+        hull_vertices_argsort = np.argsort(cooling_compositions[cooling_hull_vertices])
+
         axs[3, 0].plot(
-            cooling_compositions[cooling_hull_vertices],
-            cooling_formation_energies[cooling_hull_vertices],
+            cooling_compositions[cooling_hull_vertices][hull_vertices_argsort],
+            cooling_formation_energies[cooling_hull_vertices][hull_vertices_argsort],
             color="b",
             label="Cooling Hull",
         )
@@ -304,19 +307,22 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     axs[3, 0].scatter(
         heating_compositions,
         heating_formation_energies,
-        marker="+",
+        marker="2",
         color="r",
         label="Heating",
     )
     if len(integrated_data["heating"]) > 1:
         heating_hull = thull.full_hull(
             compositions=heating_compositions.reshape(-1, 1),
-            formation_energies=heating_formation_energies,
+            energies=heating_formation_energies,
         )
         heating_hull_vertices, _ = thull.lower_hull(heating_hull)
+        heating_vertices_argsort = np.argsort(
+            heating_compositions[heating_hull_vertices]
+        )
         axs[3, 0].plot(
-            heating_compositions[heating_hull_vertices],
-            heating_formation_energies[heating_hull_vertices],
+            heating_compositions[heating_hull_vertices][heating_vertices_argsort],
+            heating_formation_energies[heating_hull_vertices][heating_vertices_argsort],
             color="r",
             label="Heating Hull",
         )
@@ -352,6 +358,5 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     axs[3, 0].set_xlabel("Composition", fontsize=18)
     axs[3, 0].set_ylabel("Formation Energy", fontsize=18)
     axs[3, 0].legend(fontsize=18)
-
     return fig
 
