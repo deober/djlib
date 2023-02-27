@@ -8,6 +8,7 @@ import pathlib
 import djlib.djlib as dj
 from typing import List, Tuple, Dict
 import copy
+import thermocore.geometry.hull as thull
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
@@ -642,6 +643,119 @@ class cooling_run:
                     )
                 )
         self.integ_grand_canonical = np.asarray(integrated_potential)
+
+
+def find_mc_cooling_lower_convex_hull(sgcmc_project_data_dictionary: dict):
+    """Cooling runs can sometimes find new ground states. These manifest as new vertices in the lower convex hull of the cooling runs.
+    Finds the lower convex hulls of sgmcmc cooling runs and heating runs, and compares them. 
+    Also returns the lower convex hulls of the cooling and heating runs. For each point in each lower convex hull, 
+    returns the composition, formation energy, chemical potential and temperature at that point. 
+
+    Parameters
+    ----------
+    sgcmc_project_data_dictionary : dict
+        Dictionary containing the data from all the sgmcmc runs in a project. 
+        Direct output of djlib.propagation.propagation.propagation_project_parser
+    
+    Returns
+    -------
+    dict
+        Dictionary containing the lower convex hulls of the cooling and heating runs:
+        Their compositions, formation energies, chemical potentials and temperatures at each point in the lower convex hulls.
+    """
+
+    # Integrate the semi grand canonica free energies for the cooling and heating runs.
+    integrated_data = full_project_integration(sgcmc_project_data_dictionary)
+
+    # If there is more than one cooling run, find the lower convex hull of the cooling runs.
+    # Otherwise, collect the data from the single cooling run.
+    cooling_compositions = []
+    cooling_formation_energies = []
+    cooling_chemical_potentials = []
+    cooling_temperatures = []
+    for cooling_run in integrated_data["cooling"]:
+        cooling_compositions.append(
+            cooling_run["<comp(a)>"][np.argmin(cooling_run["T"])]
+        )
+        cooling_formation_energies.append(
+            cooling_run["<formation_energy>"][np.argmin(cooling_run["T"])]
+        )
+        cooling_chemical_potentials.append(cooling_run["mu"])
+        cooling_temperatures.append(cooling_run["T"][np.argmin(cooling_run["T"])])
+
+    cooling_compositions = np.array(cooling_compositions)
+    cooling_formation_energies = np.array(cooling_formation_energies)
+    cooling_chemical_potentials = np.array(cooling_chemical_potentials)
+    cooling_temperatures = np.array(cooling_temperatures)
+    if len(integrated_data["cooling"]) > 1:
+        cooling_hull = thull.full_hull(
+            compositions=cooling_compositions.reshape(-1, 1),
+            energies=cooling_formation_energies,
+        )
+        cooling_hull_vertices, _ = thull.lower_hull(cooling_hull)
+
+        hull_vertices_argsort = np.argsort(cooling_compositions[cooling_hull_vertices])
+    else:
+        cooling_hull = None
+
+    # Collect the same lower convex hull data for the heating runs.
+    heating_compositions = []
+    heating_formation_energies = []
+    heating_chemical_potentials = []
+    heating_temperatures = []
+    for heating_run in integrated_data["heating"]:
+        heating_compositions.append(
+            heating_run["<comp(a)>"][np.argmin(heating_run["T"])]
+        )
+        heating_formation_energies.append(
+            heating_run["<formation_energy>"][np.argmin(heating_run["T"])]
+        )
+        heating_chemical_potentials.append(heating_run["mu"])
+        heating_temperatures.append(heating_run["T"][np.argmin(heating_run["T"])])
+    heating_compositions = np.array(heating_compositions)
+    heating_formation_energies = np.array(heating_formation_energies)
+    heating_chemical_potentials = np.array(heating_chemical_potentials)
+    heating_temperatures = np.array(heating_temperatures)
+    if len(integrated_data["heating"]) > 1:
+        heating_hull = thull.full_hull(
+            compositions=heating_compositions.reshape(-1, 1),
+            energies=heating_formation_energies,
+        )
+        heating_hull_vertices, _ = thull.lower_hull(heating_hull)
+        heating_vertices_argsort = np.argsort(
+            heating_compositions[heating_hull_vertices]
+        )
+    else:
+        heating_hull = None
+
+    if cooling_hull is not None:
+        cooling_hull_vertices = cooling_hull_vertices[hull_vertices_argsort]
+        cooling_compositions = cooling_compositions[cooling_hull_vertices]
+        cooling_formation_energies = cooling_formation_energies[cooling_hull_vertices]
+        cooling_chemical_potentials = cooling_chemical_potentials[cooling_hull_vertices]
+        cooling_temperatures = cooling_temperatures[cooling_hull_vertices]
+
+    if heating_hull is not None:
+        heating_hull_vertices = heating_hull_vertices[heating_vertices_argsort]
+        heating_compositions = heating_compositions[heating_hull_vertices]
+        heating_formation_energies = heating_formation_energies[heating_hull_vertices]
+        heating_chemical_potentials = heating_chemical_potentials[heating_hull_vertices]
+        heating_temperatures = heating_temperatures[heating_hull_vertices]
+
+    return {
+        "cooling": {
+            "compositions": cooling_compositions,
+            "formation_energies": cooling_formation_energies,
+            "chemical_potentials": cooling_chemical_potentials,
+            "temperatures": cooling_temperatures,
+        },
+        "heating": {
+            "compositions": heating_compositions,
+            "formation_energies": heating_formation_energies,
+            "chemical_potentials": heating_chemical_potentials,
+            "temperatures": heating_temperatures,
+        },
+    }
 
 
 def format_mc_settings(

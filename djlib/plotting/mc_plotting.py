@@ -150,7 +150,6 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
             linestyle=":",
             label="Max Heat Capacity",
         )
-
     for run in integrated_data["cooling"]:
         axs[1, 0].scatter(
             run["T"], run["heat_capacity"], s=3, color="b", label="Cooling"
@@ -174,7 +173,9 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     for run in integrated_data["heating"]:
         axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="r", label="Heating")
     for run in integrated_data["cooling"]:
-        axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="b", label="Cooling")
+        axs[1, 1].scatter(
+            run["<comp(a)>"], run["T"], s=3, color="b", alpha=0.5, label="Cooling"
+        )
     # Also, plot the chemical potential as a number in a text box next to the highest temperature point.
     for run in integrated_data["heating"]:
         max_temp_index = np.argmax(run["T"])
