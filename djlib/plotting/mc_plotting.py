@@ -90,15 +90,17 @@ def plot_t_vs_x_rainplot(
     return fig
 
 
-def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> None:
+def sgcmc_full_project_diagnostic_plots(
+    sgcmc_project_data_dictionary: dict, show_legends=True
+) -> None:
     """Takes a dictionary of run data from a full MC project (generated from propagate_gcmc.py propagation_project_parser) and generates diagnostic plots.
-    These plots include: chemical potential vs composition, Integrated sgc free energy vs temperature, heat capacity plots, and rainplot. 
+    These plots include: chemical potential vs composition, Integrated sgc free energy vs temperature, heat capacity plots, and rainplot.
 
     Parameters
     ----------
     sgcmc_project_data_dictionary : dict
         Dictionary of run data from a full MC project (generated from propagate_gcmc.py propagation_project_parser)
-    
+
     Returns
     -------
     Matplotlib.pyplot figure object
@@ -139,7 +141,8 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
             label="Cooling",
         )
 
-    # Plot heat capacity vs temperature for the heating and cooling runs. Also plot a vertical line at the temperature with the maximum heat capacity.
+    # Plot heat capacity vs temperature for the heating and cooling runs.
+    # Also plot a vertical line at the temperature with the maximum heat capacity.
     for run in integrated_data["heating"]:
         axs[1, 0].scatter(
             run["T"], run["heat_capacity"], s=3, color="r", label="Heating"
@@ -172,9 +175,24 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
         )
     for run in integrated_data["heating"]:
         axs[1, 1].scatter(run["<comp(a)>"], run["T"], s=3, color="r", label="Heating")
+        axs[1, 1].scatter(
+            run["<comp(a)>"][np.argmax(run["heat_capacity"])],
+            run["T"][np.argmax(run["heat_capacity"])],
+            marker="^",
+            color="indianred",
+            label="Heating",
+        )
     for run in integrated_data["cooling"]:
         axs[1, 1].scatter(
             run["<comp(a)>"], run["T"], s=3, color="b", alpha=0.5, label="Cooling"
+        )
+        axs[1, 1].scatter(
+            run["<comp(a)>"][np.argmax(run["heat_capacity"])],
+            run["T"][np.argmax(run["heat_capacity"])],
+            marker="v",
+            alpha=0.5,
+            color="royalblue",
+            label="Cooling",
         )
     # Also, plot the chemical potential as a number in a text box next to the highest temperature point.
     for run in integrated_data["heating"]:
@@ -256,10 +274,8 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
         )
 
     # For all cooling runs, find the composition and formation energy at the lowest temperature. Store the composition and formation energy in a list.
-    # Do the same for all heating runs.
     # If there is more than one cooling run, find the lower convex hull of the cooling compositions and formation energies.
-    # If there is more than one heating run, find the lower convex hull of the heating compositions and formation energies.
-    # Plot all this data on the same plot.
+    # Do the same for heating runs.
     cooling_compositions = []
     cooling_formation_energies = []
     for cooling_run in integrated_data["cooling"]:
@@ -331,33 +347,35 @@ def sgcmc_full_project_diagnostic_plots(sgcmc_project_data_dictionary: dict) -> 
     # Set labels
     axs[0, 0].set_xlabel("Composition", fontsize=18)
     axs[0, 0].set_ylabel("Chemical Potential", fontsize=18)
-    axs[0, 0].legend(fontsize=18)
     axs[0, 1].set_xlabel("Temperature (K)", fontsize=18)
     axs[0, 1].set_ylabel("Semi Grand Canonical Free Energy", fontsize=18)
-    axs[0, 1].legend(fontsize=18)
     axs[1, 0].set_xlabel("Temperature (K)", fontsize=18)
     axs[1, 0].set_ylabel("Heat Capacity", fontsize=18)
-    axs[1, 0].legend(fontsize=18)
     axs[1, 1].set_xlabel("Composition", fontsize=18)
     axs[1, 1].set_ylabel("Temperature (K)", fontsize=18)
-    axs[1, 1].legend(fontsize=18)
     axs[0, 2].set_xlabel("Composition", fontsize=18)
     axs[0, 2].set_ylabel("Gibbs Free Energy", fontsize=18)
-    axs[0, 2].legend(fontsize=18)
     axs[1, 2].set_xlabel("Chemical Potential", fontsize=18)
     axs[1, 2].set_ylabel("Semi Grand Canonical Free Energy", fontsize=18)
-    axs[1, 2].legend(fontsize=18)
     axs[2, 0].set_xlabel("Composition", fontsize=18)
     axs[2, 0].set_ylabel("MC Entropy and Ideal Entropy", fontsize=18)
-    axs[2, 0].legend(fontsize=18)
     axs[2, 1].set_xlabel("Chemical Potential", fontsize=18)
     axs[2, 1].set_ylabel("Formation Energy", fontsize=18)
-    axs[2, 1].legend(fontsize=18)
     axs[2, 2].set_xlabel("Chemical Potential", fontsize=18)
     axs[2, 2].set_ylabel("Potential Energy", fontsize=18)
-    axs[2, 2].legend(fontsize=18)
     axs[3, 0].set_xlabel("Composition", fontsize=18)
     axs[3, 0].set_ylabel("Formation Energy", fontsize=18)
-    axs[3, 0].legend(fontsize=18)
-    return fig
 
+    if show_legends:
+        axs[0, 0].legend(fontsize=18)
+        axs[0, 1].legend(fontsize=18)
+        axs[1, 0].legend(fontsize=18)
+        axs[1, 1].legend(fontsize=18)
+        axs[0, 2].legend(fontsize=18)
+        axs[1, 2].legend(fontsize=18)
+        axs[2, 0].legend(fontsize=18)
+        axs[2, 1].legend(fontsize=18)
+        axs[2, 2].legend(fontsize=18)
+        axs[3, 0].legend(fontsize=18)
+
+    return fig
