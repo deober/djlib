@@ -10,9 +10,21 @@ import djlib.mc.mc as mc
 def plot_const_t_x_vs_mu(
     const_t_left: mc.constant_t_run, const_t_right: mc.constant_t_run
 ) -> plt.figure:
+    """Generates a plot of chemical potential vs composition for two constant temperature runs, at the same temperature.
+
+    Parameters
+    ----------
+    const_t_left : mc.constant_t_run
+        Constant temperature run, with chemical potential values ranging from low to high.
+    const_t_right : mc.constant_t_run
+        Constant temperature run, with chemical potential values ranging from high to low.
+
+    Returns
+    -------
+    plt.figure
+    """
     full_mu = np.concatenate((const_t_left.mu, const_t_right.mu))
     full_x = np.concatenate((const_t_left.x, const_t_right.x))
-
     plt.scatter(full_x, full_mu, color="xkcd:crimson")
     plt.xlabel("Composition (a)", fontsize=18)
     plt.ylabel("Chemical Potential (a)", fontsize=18)
@@ -24,6 +36,10 @@ def plot_const_t_x_vs_mu(
 def plot_heating_and_cooling(
     heating_run: mc.heating_run, cooling_run: mc.cooling_run
 ) -> plt.figure:
+
+    print(
+        "Using heating and cooling run objects is now deprecated. Instead, it is recommended that you use the gridspace manager object from djlib.py. Example use will be shown in the examples directory of djlib."
+    )
     bullet_size = 3
     if heating_run.mu[0] != cooling_run.mu[0]:
         print(
@@ -48,13 +64,18 @@ def plot_t_vs_x_rainplot(
     """plot_rain_plots(mc_runs_directory, save_image_path=False, show_labels=False)
 
     Generate a single (T vs composition) plot using all monte carlo runs in mc_runs_directory.
-    Args:
-        mc_runs_directory(str): Path to the directory containing all grand canonical monte carlo runs.
-        same_image(bool): Whether the image will be saved to the run directory or not.
-        show_labels(bool): Whether or not the plot legend displays.
+    Parameters
+    ----------
+    mc_runs_directory : str
+        Path to the directory containing all grand canonical monte carlo runs.
+    show_labels : bool, optional
+        Whether or not the plot legend displays. False by default.
+    show_chemical_potential_labels : bool, optional
+        Whether or not to show chemical potential text labels next to each constant chemical potential run. False by default.
 
-    Returns:
-        fig(matplotlib.pyplot figure object): 2D plot object. Can do fig.show() to display the plot.
+    Returns
+    -------
+    plt.figure
     """
     labels = []
     run_list = glob(os.path.join(mc_runs_directory, "mu*"))
