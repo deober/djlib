@@ -354,6 +354,10 @@ def read_lte_results(
     pot_eng: np.ndarray
         Vector of phi values (grand canonical potential energy)
     """
+    print(
+        "This function is obsoleted by the mc_run_parser function, which is intended to be passed to a djlib gridspace manager."
+    )
+
     with open(results_file_path) as f:
         results = json.load(f)
 
@@ -371,17 +375,19 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     """
     Function to read chemical potential and temperature values from a mc_settings.json file.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     settings_file: str
         Path to mc_settings.json file.
 
-    Returns:
-    --------
+    Returns
+    -------
+    Tuple[
     mu: np.ndarray
         Vector of chemical potentials (species "a")
     t: np.ndarray
         Vector of temperatures.
+        ]
     """
     with open(settings_file) as f:
         settings = json.load(f)
@@ -417,12 +423,12 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
 def read_superdupercell(mc_settings_file: str) -> List:
     """Function to read mu / temperature values as well as superdupercell from a monte carlo settings.json file.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     mc_settings_file: str
         Path to mc_settings.json file.
-    Returns:
-    --------
+    Returns
+    -------
     superdupercell: List
         Matrix (list of 3 lists) that describes a supercell for the monte carlo simulation.
     """
@@ -445,6 +451,11 @@ class lte_run:
     read_lte_results:
         Function to parse lte results.json files.
     """
+
+    print(
+        "The LTE run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+    )
+    print("Please see gridspace manager examples in the djlib examples directory.")
 
     def __init__(self, lte_dir):
         self.path = lte_dir
@@ -478,6 +489,11 @@ class constant_t_run:
         Function to integrate the Grand Canonical Free Energy over varying chemical potential at constant temperature.
 
     """
+
+    print(
+        "The constant temperature run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+    )
+    print("Please see gridspace manager examples in the djlib examples directory.")
 
     def __init__(self, const_t_dir):
         self.path = const_t_dir
@@ -538,8 +554,12 @@ class heating_run:
         Function to look up the lte reference energy at a given chemical potential, from a lte run object.
     integrate_heating_grand_canonical_from_lte:
         Function to integrate the Grand Canonical Free Energy over varying temperature from the end state of a lte run; all at constant chemical potential.
-
     """
+
+    print(
+        "The heating run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+    )
+    print("Please see gridspace manager examples in the djlib examples directory.")
 
     def __init__(self, heating_dir, lte_run):
         self.path = heating_dir
@@ -605,6 +625,11 @@ class cooling_run:
     get_constant_t_reference_energy:
         Function to look up the lte reference energy at a given chemical potential, from a constant temperature run object.
     """
+
+    print(
+        "The cooling run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+    )
+    print("Please see gridspace manager examples in the djlib examples directory.")
 
     def __init__(self, cooling_dir, constant_t_run):
         self.path = cooling_dir
@@ -771,8 +796,8 @@ def format_mc_settings(
 ) -> None:
     """Function to format the CASM monte carlo settings json file file for a monte carlo run.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     superdupercell: list
         Tranformation matrix to apply to the CASM project primitive cell. Represented as a list of lists.
     mu_init: float
@@ -792,8 +817,8 @@ def format_mc_settings(
     start_config_path: str, optional
         Path to the starting configuration file, contained within one of the conditions.* files.
 
-    Returns:
-    --------
+    Returns
+    -------
     None.
     """
 
@@ -986,8 +1011,12 @@ def run_heating(
 
 
 def find_crossing_composition(
-    integrated_energies, temperature, x, t_intersect_predict, energy_intersect_predict
-):
+    integrated_energies: np.ndarray,
+    temperature: np.ndarray,
+    x: np.ndarray,
+    t_intersect_predict: float,
+    energy_intersect_predict: float,
+) -> Tuple[float, float]:
     """Given an interpolated point in (energy vs temperature) space, find the closest existing (energy, temperature) and return the corresponding composition x and corresponding temperature.
     Args:
         integrated_energies(ndarray): Vector of integrated energy values.
@@ -997,10 +1026,10 @@ def find_crossing_composition(
         energy_intersect_predict(float): Interpolated prediction of the free energy at the crossing temperature between a heating and cooling grand canonical monte carlo simulation.
 
     Returns:
-        tuple(
+        Tuple[
             x_at_crossing(float): Composition at the actual coordinates closest to the predicted
             t_at_crossing(float): Temperature (K) at the actual coordinates closest to the predicted
-        )
+        ]
     """
 
     temperature_and_energy = np.zeros((len(temperature), 2))
@@ -1171,7 +1200,9 @@ def lookup_LTE_reference_energy(T_lookup, LTE_run_data_dictionary):
     return semi_grand_canonical_free_energy[T_index]
 
 
-def lookup_constant_T_reference_energy(chemical_potential_lookup, constant_t_run_dict):
+def lookup_constant_T_reference_energy(
+    chemical_potential_lookup: float, constant_t_run_dict: dict
+) -> float:
     """
     To be used with cooling integration. Assuming that the constant T run dictionary coresponds to a run at the same temperature as the cooling run,
     this function finds the constant T reference potential energy at the starting chemical potential of the cooling run.
@@ -1310,8 +1341,9 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
 
     Returns
     -------
-    float
-        The integrated grand canonical free energy at the target temperature and chemical potential.
+    project_gcmc_data : dictionary
+        The same dictionary, with an added key "integrated_potential_energy" This is equal to the 
+        integrated grand canonical free energy at each calculated temperature and chemical potential point.
     """
 
     # Iterate through all constant temperature runs, and append the integrated potential energy to each run dictionary.
@@ -1378,10 +1410,26 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
 
 def find_heating_cooling_crossing(
     heating_run_dictionary: dict, cooling_run_dictionary: dict
-) -> Tuple[float, float, float]:
+) -> Tuple[float, float, float, float]:
     """
     Finds the nearest temperature at which the heating and cooling runs cross each other.
-    Returns the composition at the crossing point
+    Returns the temperature, composition (heating and cooling), semi grand canonical free energy ("integrated_potential_energy") 
+    at the crossing point. All returned values are linearly interpolated between calculated data points.
+
+    Parameters
+    ----------
+    heating_run_dictionary : dictionary
+        Dictionary containing the data from a heating run. (Taken directly from a results.json file output by casm monte)
+    cooling_run_dictionary : dictionary
+        Dictionary containing the data from a cooling run. (Taken directly from a results.json file output by casm monte)
+        
+    Returns
+    -------
+    Tuple[crossing_Temperature:float,           The temperature at which the heating and cooling runs cross each other.
+        crossing_sgcfe:float,                   The semi grand canonical free energy at the crossing point.
+        crossig_composition_heating:float,      The composition of the heating run at the crossing point.
+        crossing_composition_cooling:float      The composition of the cooling run at the crossing point.
+        ]
     """
     # Verify that the heating and cooling runs have the same temperature axis.
     # First, check that the length of the temperature axis is the same for both runs.
@@ -1481,47 +1529,10 @@ def find_heating_cooling_crossing(
             cooling_composition_interp[crossing_index],
         )
 
-        # fit spline to each dataset, calculate intersection
-        # interp_heating = scipy.interpolate.InterpolatedUnivariateSpline(
-        #    heating_run_dictionary["T"],
-        #    heating_run_dictionary["integrated_potential_energy"],
-        # )
-        # interp_heating_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-        #    heating_run_dictionary["T"], heating_run_dictionary["<comp(a)>"]
-        # )
-        # interp_cooling = scipy.interpolate.InterpolatedUnivariateSpline(
-        #    temporary_cooling_T, temporary_cooling_integrated_free_energy,
-        # )
-        # interp_cooling_comp = scipy.interpolate.InterpolatedUnivariateSpline(
-        #    temporary_cooling_T, temporary_cooling_composition
-        # )
-
-        # This will break if there are multiple identical minimum values
-        # t0_index = np.argmin(
-        #    abs(
-        #        heating_run_dictionary["integrated_potential_energy"]
-        #        - temporary_cooling_integrated_free_energy
-        #    )
-        # )
-        # t0_guess = heating_run_dictionary["T"][t0_index]
-
-        # Calculate the intersection point
-        # t_intersect_predict = scipy.optimize.fsolve(difference, x0=t0_guess)
-        # energy_intersect_predict = interp_heating(t_intersect_predict)
-        # composition_intersect_predict_heating = interp_heating_comp(t_intersect_predict)
-        # composition_intersect_predict_cooling = interp_cooling_comp(t_intersect_predict)
-
-        # return (
-        #    t_intersect_predict,
-        #    energy_intersect_predict,
-        #    composition_intersect_predict_heating,
-        #    composition_intersect_predict_cooling,
-        # )
-
 
 def find_constant_T_crossing(
     constant_T_dict_1: dict, constant_T_dict_2: dict
-) -> Tuple[float, float, float]:
+) -> Tuple[float, float, float, float]:
     """
     Finds the nearest chemical potential at which the two constant temperature runs cross each other in (chemical_potential, Temperature) space.
     Returns the composition at the crossing point
@@ -1535,12 +1546,16 @@ def find_constant_T_crossing(
 
     Returns
     -------
+    Tuple[
     mu_intersect_predict : float
         Chemical potential at the intersection point
     energy_intersect_predict : float
-        integrated grand canonical free energy at the intersection point.
-    composition_intersect_predict : float
-        Composition at the intersection point.
+        Semi grand canonical free energy ("integrated_potential_energy") at the intersection point.
+    composition_intersect_predict_1 : float
+        Composition at the intersection point, for the first constant temperature run.
+    composition_intersect_predict_2 : float
+        Composition at the intersection point, for the second constant temperature run.
+        ]
     """
 
     # Assert that the chemical potentials are the same
@@ -1595,7 +1610,7 @@ def find_constant_T_crossing(
     )
 
 
-def order_disorder_crossing_points(project_gcmc_data: dict):
+def order_disorder_crossing_points(project_gcmc_data: dict) -> List[dict]:
     """
     Calculates the points in (composition,Temperature) space where free energy curves cross, indicating an order-disorder transition.
     Currently only works for a binary system.
