@@ -47,8 +47,9 @@ def regroup_dicts_by_keys(list_of_dictionaries: list) -> dict:
 
 def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
     """Reads keys and values from casm query json dictionary.
-    Parameters:
-    -----------
+
+    Parameters
+    ----------
     casm_query_json_path: str
         Absolute path to casm query json file.
         Defaults to 'pass' which means that the function will look to take a dictionary directly.
@@ -56,10 +57,14 @@ def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
         Can also directly take the casm query json dictionary.
         Default is None.
 
-    Returns:
+    Returns
+    -------
     results: dict
         Dictionary of all data grouped by keys (not grouped by configuraton)
     """
+    print(
+        "This function is deprecated. As an alternative, please load a casm query json file, then pass the dictionary to regroup_dicts_by_keys."
+    )
     if casm_query_json_data is None:
         with open(casm_query_json_path) as f:
             data = json.load(f)
@@ -243,6 +248,18 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
 
 
 def submit_slurm_job(run_dir: str, submit_script_name: str = "submit_slurm.sh"):
+    """Submits a job using the slurm job scheduler. 
+    Parameters
+    ----------
+    run_dir : str
+        Path to the directory that contains the submit file.
+    submit_script_name : str, optional
+        Name of the submit file. The default is "submit_slurm.sh".
+
+    Returns
+    -------
+    None.
+    """
     submit_file = os.path.join(run_dir, submit_script_name)
     os.system("cd %s" % run_dir)
     os.system("sbatch %s" % submit_file)
@@ -260,14 +277,28 @@ def format_slurm_job(
 ):
     """
     Formats a slurm job submission script. Assumes that the task only needs one thread.
-    Args:
-        jobname(str): Name of the slurm job.
-        hours(int): number of hours to run the job. Only accepts integer values.
-        user_command(str): command line command submitted by the user as a string.
-        output_dir(str): Path to the directory that will contain the submit file. Assumes that submit file will be named "submit.sh"
-        delete_submit_script(bool): Whether the submission script should delete itself upon completion.
-        queue(str): Queue to submit the job to. "batch" or "short"
-    Returns:
+
+    Parameters
+    ----------
+    jobname: str
+        Name of the slurm job.
+    hours: int
+        number of hours to run the job. Only accepts integer values.
+    user_command: str
+        command line command submitted by the user as a string.
+    output_dir: str
+        Path to the directory that will contain the submit file. Assumes that submit file will be named "submit.sh"
+    delete_submit_script: bool, optional
+        Whether the submission script should delete itself upon completion. The default is False.
+    queue: str, optional
+        Queue to submit the job to. "batch" or "short". The default is "batch".
+    nodes: int, optional
+        Number of nodes to use. The default is 1.
+    ntasks_per_node: int, optional
+        Number of tasks per node. The default is 1.
+
+    Returns
+    -------
         None.
     """
     submit_file_path = os.path.join(output_dir, "submit_slurm.sh")
@@ -302,13 +333,13 @@ def format_slurm_job(
 def mode(vec: np.ndarray) -> float:
     """Calculates and returns the mode of a vector of continuous data.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     vec: numpy.ndarray
         Vector of floats
 
-    Returns:
-    --------
+    Returns
+    -------
     hist_mode: float
         Value corresponding to the peak of the histogram.
     """
@@ -326,9 +357,10 @@ def analytic_posterior(
     label_covariance_matrix: np.ndarray,
     label_vec: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector, weight covariance matrix, target values vector, and target values covariance matrix.
+    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector, 
+    weight covariance matrix, target values vector, and target values covariance matrix.
 
-    Parameters:
+    Parameters
     ----------
     weight_covariance_matrix: np.ndarray
         Weight covariance matrix.
@@ -338,8 +370,9 @@ def analytic_posterior(
         Target values covariance matrix.
     label_vec: np.ndarray
         Target values vector.
-    Returns:
-    --------
+
+    Returns
+    -------
     posterior_mean_vec: np.ndarray
         Posterior mean vector.
     posterior_covariance_matrix: np.ndarray
@@ -420,6 +453,55 @@ def collect_config_structure_files(
 
 
 class gridspace_manager:
+    """
+    A class for managing repetitive experiments in a grid of parameter space.
+
+    Parameters
+    ----------
+    origin_dir : str, optional
+        The path to the directory that will contain the grid of experiments. Default is the current directory.
+    namer : callable, optional
+        A function that maps a dictionary of parameters to a unique string that will be used as a directory name.
+    run_parser : callable, optional
+        A function that extracts data from the output of each experiment.
+    run_creator : callable, optional
+        A function that creates input files for each experiment.
+    status_updater : callable, optional
+        A function that updates the status of each experiment based on its output.
+    run_submitter : callable, optional
+        A function that runs each experiment.
+
+    Attributes
+    ----------
+    data : list
+        A list containing the output data of each experiment.
+    origin_dir : str
+        The path to the directory that will contain the grid of experiments.
+    namer : callable
+        A function that maps a dictionary of parameters to a unique string that will be used as a directory name.
+    run_parser : callable
+        A function that extracts data from the output of each experiment.
+    run_creator : callable
+        A function that creates input files for each experiment.
+    grid_params : dict
+        A dictionary containing the parameters of each experiment.
+    status_updater : callable
+        A function that updates the status of each experiment based on its output.
+    run_submitter : callable
+        A function that runs each experiment.
+
+    Methods
+    -------
+    collect_data()
+        Collects data from the output of each experiment.
+    format_run_dirs()
+        Creates directories for each experiment according to the namer function and the parameters specified in grid_params.
+    update_status()
+        Updates the status of each experiment based on its output.
+    run_valid_calculations()
+        Runs each experiment.
+    """
+
     def __init__(
         self,
         origin_dir: str = "./",
