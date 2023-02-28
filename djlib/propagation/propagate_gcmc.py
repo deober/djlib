@@ -6,10 +6,12 @@ import djlib.mc.mc as mc
 from glob import glob
 import warnings
 import numpy as np
+from typing import List, Dict, Tuple
 
 
-def propagation_project_namer(propagation_info_dict):
+def propagation_project_namer(propagation_info_dict: dict):
     """Takes a dictionary containing the necessary information to set up a new casm project, and returns a name for that project as a string.
+    Intended to be used as the namer argument in a gridspace_manager object.
 
     Parameters
     ----------
@@ -35,9 +37,11 @@ def propagation_project_namer(propagation_info_dict):
 
 def propagation_project_parser(
     propagated_casm_project_root_path: str, incomplete_override: bool = False
-):
-    """Pulls all information from grand canonical monte carlo runs, integrates the free energy and returns a dictionary containing all the information.
+) -> dict:
+    """Pulls all information from grand canonical monte carlo runs, 
+    integrates the free energy and returns a dictionary containing all the information.
     Will not parse until all run statuses are complete.
+    Intended to be used as the run_parser argument in a gridspace_manager object.
 
     Parameters
     ----------
@@ -46,7 +50,9 @@ def propagation_project_parser(
 
     Return
     -------
-
+    all_data : dict
+        Dictionary containing all the data from the grand canonical monte carlo project, 
+        including all LTE, constant_temperature, cooling, and heating runs.
     """
 
     all_statuses = []
@@ -116,22 +122,17 @@ def propagation_project_parser(
     all_data["heating"] = heating_gridspace.data
     return all_data
 
-    # TODO: integrate the free energy across t_const runs
-    # TODO: integrate the free energy across LTE runs
-    # TODO: integrate the free energy across cooling runs:
-    # Needs to initialize from a t_const run, but there are multiple t_const paths.
-    # Choose the path that starts at a chemical potential that is closest to the chemical potential of the cooling run.
-    # TODO: integrate the free energy across heating runs:
-    # Needs to initialize from a LTE run; make sure that the selected LTE configuration and free energy reference are at the same temperature as the heating run initial temperature.
-    # Also, heating runs are sensitive to the initial supercell choice. Heating runs should start from the clex-predicted supercell
-
 
 def propagation_casm_project_creator(
-    propagation_info_dict, propagation_project_root_path
-):
+    propagation_info_dict: dict, propagation_project_root_path: str
+) -> None:
     """Copies a pre-templated casm project, writes a specific eci vector to
     project_root/cluster_expansions/clex.formation_energy/calctype.default/ref.default/bset.default/eci.default/eci.json
     and creates all standard directories for typical grand canonical monte carlo simulations.
+    Intended to be used as the project_creator argument in a gridspace_manager object.
+
+    NOTE: details in this function, and its helper function are very specific to the material system being studied. 
+    Please copy and modify as needed.
 
     Parameters
     ----------
@@ -145,6 +146,8 @@ def propagation_casm_project_creator(
                 ECI vector to write to the casm project
             'propagation_directory' : str
                 Path to the directory which will contain all the propagation directories.
+    propagation_project_root_path : str
+        Path to the casm project root of the propagation project.
 
     Returns
     -------
@@ -243,8 +246,8 @@ def propagation_casm_project_creator(
     heating_and_cooling_at_50_percent_ground_state(propagation_project_root_path)
 
 
-def collect_all_statuses_gcmc(MC_gridspace):
-    """Collects statuses from all status.json files within the given gridspace Returns a list of dictionaries,
+def collect_all_statuses_gcmc(MC_gridspace: str) -> List[Dict]:
+    """Collects statuses from all status.json files within the given gridspace. Returns a list of dictionaries,
     where each dictionary key is the run directory name, and value is the run status as a string.
 
     Parameters
@@ -254,7 +257,7 @@ def collect_all_statuses_gcmc(MC_gridspace):
 
     Returns
     -------
-    list
+    status_list : list
         List of dictionaries, where each dictionary key is the run directory name, and value is the run status as a string.
     """
     run_directories = glob(os.path.join(MC_gridspace, "mu_*"))
@@ -266,8 +269,13 @@ def collect_all_statuses_gcmc(MC_gridspace):
     return status_list
 
 
-def propagation_casm_project_status_updater(propagated_casm_project_root_path: str):
+def propagation_casm_project_status_updater(
+    propagated_casm_project_root_path: str,
+) -> None:
     """Checks and updates status for the grand canonical monte carlo runs of an entire casm project.
+    Operates by creating gridspace managers for each run type (heating, cooling, constant temperature, LTE) in a given casm project, 
+    then running the status update method for each. 
+    Intended to be used as a status updater for a casm project.
 
     Parameters
     ----------
@@ -393,10 +401,15 @@ def propagation_casm_project_status_updater(propagated_casm_project_root_path: s
         json.dump(status_dict, f, indent=4)
 
 
-def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
+def propagation_casm_project_submitter(propagated_casm_project_root_path: str) -> None:
     """Runs all grand canonical monte carlo simulations for an entire casm project.
     Cooling runs must initialize from completed constant Temperature runs, and heating runs must initialize from completed LTE runs.
-    Dependent runs will not submit if necessary dependencies are not complete.
+    Intended to be used as a submitter for a gridspace manager object.
+    
+    NOTE:Dependent runs will not submit if necessary dependencies are not complete. 
+    Because of this, the gridspace manager "format_run_dirs()" method 
+    should be used AGAIN after constant temperature runs are complete, and before cooling runs are submitted. 
+    This allows cooling runs to initialize from completed constant temperature runs. 
 
     Parameters
     ----------
@@ -479,7 +492,10 @@ def propagation_casm_project_submitter(propagated_casm_project_root_path: str):
 
 
 def heating_and_cooling_at_50_percent_ground_state(casm_root_path: str):
-    """A very specific function: Writes all necessary files for heating and cooling runs for the ground state at 50% composition. This includes:
+    """A very specific helper function to be used with "propagation_casm_project_creator()". Details of this function depend heavily on 
+    the specific material system being studied. Users should copy and modify this function to suit their needs.
+    
+    Writes all necessary files for heating and cooling runs for the ground state at 50% composition. This includes:
         -High temperature constant t runs from very low to very high chemical potential and very high to very low chemical potential
         -Cooling runs from the high temperature constant t runs
         -Low Temperature Expansion (LTE) runs
