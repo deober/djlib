@@ -125,7 +125,7 @@ def column_sort(matrix: np.ndarray, column_index: int) -> np.ndarray:
         matrix(numpy_array): mxn numpy array.
         column_index(int): Index of the column to sort by.
     """
-    column_index = int(column_index)
+    column_index = round(column_index)
     sorted_matrix = matrix[np.argsort(matrix[:, column_index])]
     return sorted_matrix
 
@@ -284,7 +284,7 @@ def format_slurm_job(
         else:
             delete_submit_script = ""
 
-        hours = int(m.ceil(hours))
+        hours = round(m.ceil(hours))
         s = template.format(
             jobname=jobname,
             rundir=output_dir,

@@ -310,8 +310,8 @@ def select_survivors(population, fitness):
     new_population = generate_population(population.shape[0], population.shape[1])
 
     # Preserve the top 50% of the population.
-    new_population[: int(len(ranked_population) / 2)] = ranked_population[
-        : int(len(ranked_population) / 2)
+    new_population[: round(len(ranked_population) / 2)] = ranked_population[
+        : round(len(ranked_population) / 2)
     ]
 
     return new_population

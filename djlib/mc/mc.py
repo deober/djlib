@@ -394,11 +394,11 @@ def read_mc_settings(settings_file: str) -> Tuple[np.ndarray, np.ndarray]:
     t_increment = settings["driver"]["incremental_conditions"]["temperature"]
 
     if mu_increment != 0:
-        mu_length = int(np.abs((mu_start - mu_stop) / mu_increment)) + 1
+        mu_length = round(np.abs((mu_start - mu_stop) / mu_increment)) + 1
     else:
         mu_length = 1
     if t_increment != 0:
-        t_length = int(np.abs((t_start - t_stop) / t_increment)) + 1
+        t_length = round(np.abs((t_start - t_stop) / t_increment)) + 1
     else:
         t_length = 1
 
@@ -1446,7 +1446,7 @@ def find_heating_cooling_crossing(
         T_diff = T_max - T_min
 
         # Create a linspace array with double the number of points as the difference between the min and max
-        T_linspace = np.linspace(T_min, T_max, 2 * int(T_diff))
+        T_linspace = np.linspace(T_min, T_max, 2 * round(T_diff))
 
         # Interpolate the heating and cooling runs to the linspace array
         heating_integrated_potential_interp = np.interp(
@@ -1573,7 +1573,7 @@ def find_constant_T_crossing(
     # Find the minimum and maximum chemical potentials, and create a linspace array between the minimum and maximum values incrementing by 0.001.
     mu_min = np.min([np.min(mu_1), np.min(mu_2)])
     mu_max = np.max([np.max(mu_1), np.max(mu_2)])
-    mu_diff = int(np.abs(mu_max - mu_min))
+    mu_diff = round(np.abs(mu_max - mu_min))
     mu_linspace = np.linspace(mu_min, mu_max, mu_diff * 1000)
 
     # Create a piecewise linear interpolation of the  semi grand canonical free energy vs chemical potential for each run using np.interp.

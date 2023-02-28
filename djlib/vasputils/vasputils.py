@@ -159,7 +159,7 @@ def parse_kpoints(kpoints):
             if linecount == 2 and "A" in line:
                 read_density = True
             if linecount == 3 and read_density == True:
-                kpoint_Rk = int(float(line.strip()))
+                kpoint_Rk = round(float(line.strip()))
             linecount += 1
     assert (
         kpoint_Rk != None
@@ -184,7 +184,7 @@ def parse_ibzkpts(ibz_file):
     with open(ibz_file) as f:
         for line in f:
             if linecount == 1:
-                kpoint_count = int(float(line.strip()))
+                kpoint_count = round(float(line.strip()))
                 break
             linecount += 1
     return kpoint_count
@@ -711,7 +711,7 @@ def kpoint_convergence(
     """
 
     for kpoint_density in kpoint_densities:
-        kpoint_density = int(kpoint_density)
+        kpoint_density = round(kpoint_density)
         print("Running kpoint density: %s" % kpoint_density)
         calc_dir = os.path.join(run_dir, "kpoint_density.%s" % kpoint_density)
         os.makedirs(calc_dir, exist_ok=True)
