@@ -61,11 +61,11 @@ def mc_status_updater(run_dir):
     Parameters
     ---------
     run_dir: str
-        Path to a casm monte carlo run directory. This directory should contain an mc_settings.json file specifying run conditions. 
-    
+        Path to a casm monte carlo run directory. This directory should contain an mc_settings.json file specifying run conditions.
+
     Returns
     -------
-    None. Writes and updates files. 
+    None. Writes and updates files.
     """
     status_file = os.path.join(run_dir, "status.json")
     settings_file = os.path.join(run_dir, "mc_settings.json")
@@ -98,7 +98,7 @@ def mc_status_updater(run_dir):
 
 def mc_run_creator(run_params: dict, run_dir: str):
     """
-    Creates a grand canonical monte carlo simulation directory, formats necessary settings files, 
+    Creates a grand canonical monte carlo simulation directory, formats necessary settings files,
     writes a status file and writes a run_info.json file, which contains run_params.
 
     Parameters
@@ -176,7 +176,7 @@ def mc_run_creator(run_params: dict, run_dir: str):
 
 def mc_lte_run_creator(run_params: dict, run_dir: str):
     """
-    Creates a grand canonical monte carlo simulation directory, formats necessary settings files, 
+    Creates a grand canonical monte carlo simulation directory, formats necessary settings files,
     writes a status file and writes a run_info.json file, which contains run_params.
 
     Parameters
@@ -296,15 +296,15 @@ def mc_run_parser(run_dir):
 def read_mc_results_file(
     results_file_path: str,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Function to parse mc results.json files, specifically from semi grand canonical 
+    """Function to parse mc results.json files, specifically from semi grand canonical
     simulations (Not LTE; there is a separate function for LTE simulations.)
 
     This function is obsoleted by the mc_run_parser function, which is intended to be passed to a djlib gridspace manager.
-    
+
     Parameters
     ----------
         results_file_path(str): Path to the results.json file for the given monte carlo simulation.
-    
+
     Returns
     -------
         x: np.ndarray
@@ -354,9 +354,6 @@ def read_lte_results(
     pot_eng: np.ndarray
         Vector of phi values (grand canonical potential energy)
     """
-    print(
-        "This function is obsoleted by the mc_run_parser function, which is intended to be passed to a djlib gridspace manager."
-    )
 
     with open(results_file_path) as f:
         results = json.load(f)
@@ -452,14 +449,13 @@ class lte_run:
         Function to parse lte results.json files.
     """
 
-    print(
-        "The LTE run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
-    )
-    print("Please see gridspace manager examples in the djlib examples directory.")
-
     def __init__(self, lte_dir):
         self.path = lte_dir
         self.read_lte_results()
+        print(
+            "The LTE run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+        )
+        print("Please see gridspace manager examples in the djlib examples directory.")
 
     def read_lte_results(self):
         results_file = os.path.join(self.path, "results.json")
@@ -490,11 +486,6 @@ class constant_t_run:
 
     """
 
-    print(
-        "The constant temperature run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
-    )
-    print("Please see gridspace manager examples in the djlib examples directory.")
-
     def __init__(self, const_t_dir):
         self.path = const_t_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -510,6 +501,10 @@ class constant_t_run:
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
         )
+        print(
+            "The constant temperature run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+        )
+        print("Please see gridspace manager examples in the djlib examples directory.")
 
     def integrate_constant_temp_grand_canonical(self):
         """Function to integrate across mu values at a constant temperature
@@ -556,11 +551,6 @@ class heating_run:
         Function to integrate the Grand Canonical Free Energy over varying temperature from the end state of a lte run; all at constant chemical potential.
     """
 
-    print(
-        "The heating run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
-    )
-    print("Please see gridspace manager examples in the djlib examples directory.")
-
     def __init__(self, heating_dir, lte_run):
         self.path = heating_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -577,6 +567,10 @@ class heating_run:
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
         )
+        print(
+            "The heating run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+        )
+        print("Please see gridspace manager examples in the djlib examples directory.")
 
     def get_lte_reference_energy(self, lte_run):
         mu_index = find(lte_run.mu, self.mu[0])
@@ -626,11 +620,6 @@ class cooling_run:
         Function to look up the lte reference energy at a given chemical potential, from a constant temperature run object.
     """
 
-    print(
-        "The cooling run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
-    )
-    print("Please see gridspace manager examples in the djlib examples directory.")
-
     def __init__(self, cooling_dir, constant_t_run):
         self.path = cooling_dir
         results_file_path = os.path.join(self.path, "results.json")
@@ -647,6 +636,10 @@ class cooling_run:
         self.superdupercell = read_superdupercell(
             os.path.join(self.path, "mc_settings.json")
         )
+        print(
+            "The cooling run class is obsoleted by using the gridspace manager class with associated functions in mc.py and propagation.py."
+        )
+        print("Please see gridspace manager examples in the djlib examples directory.")
 
     def get_constant_t_reference_energy(self, constant_t_run):
         mu_index = find(constant_t_run.mu, self.mu[0])
@@ -672,16 +665,16 @@ class cooling_run:
 
 def find_mc_cooling_lower_convex_hull(sgcmc_project_data_dictionary: dict):
     """Cooling runs can sometimes find new ground states. These manifest as new vertices in the lower convex hull of the cooling runs.
-    Finds the lower convex hulls of sgmcmc cooling runs and heating runs, and compares them. 
-    Also returns the lower convex hulls of the cooling and heating runs. For each point in each lower convex hull, 
-    returns the composition, formation energy, chemical potential and temperature at that point. 
+    Finds the lower convex hulls of sgmcmc cooling runs and heating runs, and compares them.
+    Also returns the lower convex hulls of the cooling and heating runs. For each point in each lower convex hull,
+    returns the composition, formation energy, chemical potential and temperature at that point.
 
     Parameters
     ----------
     sgcmc_project_data_dictionary : dict
-        Dictionary containing the data from all the sgmcmc runs in a project. 
+        Dictionary containing the data from all the sgmcmc runs in a project.
         Direct output of djlib.propagation.propagation.propagation_project_parser
-    
+
     Returns
     -------
     dict
@@ -1108,15 +1101,16 @@ def constant_T_integration(t_const_run_data_dictionary):
             0
         ] < 1e-4 or t_const_run_data_dictionary["<comp(a)>"][0] > (1 - 1e-4):
             k = 8.617333262145e-5  # eV/K
-            free_energy_reference = free_energy_reference + k * t_const_run_data_dictionary[
-                "T"
-            ][
-                0
-            ] * (
-                t_const_run_data_dictionary["<comp(a)>"][0]
-                * np.log(t_const_run_data_dictionary["<comp(a)>"][0])
-                + (1 - t_const_run_data_dictionary["<comp(a)>"][0])
-                * np.log(1 - t_const_run_data_dictionary["<comp(a)>"][0])
+            free_energy_reference = (
+                free_energy_reference
+                + k
+                * t_const_run_data_dictionary["T"][0]
+                * (
+                    t_const_run_data_dictionary["<comp(a)>"][0]
+                    * np.log(t_const_run_data_dictionary["<comp(a)>"][0])
+                    + (1 - t_const_run_data_dictionary["<comp(a)>"][0])
+                    * np.log(1 - t_const_run_data_dictionary["<comp(a)>"][0])
+                )
             )
 
     mu = np.array(t_const_run_data_dictionary["param_chem_pot(a)"])
@@ -1136,7 +1130,7 @@ def constant_chemical_potential_integration(
 ):
     """
     Integrates the grand canonical free energy for a constant chemical potential run in temperature-chemical potential space.
-    Requires a reference potential energy from a constant temperature run or LTE run at the same chemical potential 
+    Requires a reference potential energy from a constant temperature run or LTE run at the same chemical potential
     and initial temperature as the cooling run.
     Currently Assumes there is one parameterized chemical potential
 
@@ -1165,7 +1159,10 @@ def constant_chemical_potential_integration(
     # The first value of the semi grand canonical free energy is known, and is the integrated potential energy reference.
     sgcfe = (
         b[0] * integrated_potential_energy_reference
-        + cumulative_trapezoid(potential_energy, b,)
+        + cumulative_trapezoid(
+            potential_energy,
+            b,
+        )
     ) / b[1:]
 
     # Append integrated potential energy reference to the beginning of the array
@@ -1342,7 +1339,7 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
     Returns
     -------
     project_gcmc_data : dictionary
-        The same dictionary, with an added key "integrated_potential_energy" This is equal to the 
+        The same dictionary, with an added key "integrated_potential_energy" This is equal to the
         integrated grand canonical free energy at each calculated temperature and chemical potential point.
     """
 
@@ -1413,7 +1410,7 @@ def find_heating_cooling_crossing(
 ) -> Tuple[float, float, float, float]:
     """
     Finds the nearest temperature at which the heating and cooling runs cross each other.
-    Returns the temperature, composition (heating and cooling), semi grand canonical free energy ("integrated_potential_energy") 
+    Returns the temperature, composition (heating and cooling), semi grand canonical free energy ("integrated_potential_energy")
     at the crossing point. All returned values are linearly interpolated between calculated data points.
 
     Parameters
@@ -1422,7 +1419,7 @@ def find_heating_cooling_crossing(
         Dictionary containing the data from a heating run. (Taken directly from a results.json file output by casm monte)
     cooling_run_dictionary : dictionary
         Dictionary containing the data from a cooling run. (Taken directly from a results.json file output by casm monte)
-        
+
     Returns
     -------
     Tuple[crossing_Temperature:float,           The temperature at which the heating and cooling runs cross each other.
@@ -1613,20 +1610,20 @@ def find_constant_T_crossing(
 def order_disorder_crossing_points(project_gcmc_data: dict) -> List[dict]:
     """
     Calculates the points in (composition,Temperature) space where free energy curves cross, indicating an order-disorder transition.
-    Currently only works for a binary system.
+    Currently, only works for a binary system.
 
     Parameters
     ----------
     project_gcmc_data : dictionary
-        Dictionary containing the GCMC data for the project. This includes all four types of calculation paths: Constant Temperature, LTE, Heating and Cooling.
+        Dictionary containing the GCMC data for the project.
+        This includes all four types of calculation paths: Constant Temperature, LTE, Heating and Cooling.
 
     Returns
     -------
     crossing_points:list
-        List of dictionaries containing the temperature, composition, chemical potential and integrated grand canonical free energy at each order-disorder transition.
+        List of dictionaries containing the temperature, composition, chemical potential and integrated semi grand canonical free energy at each order-disorder transition.
         Also includes the path type that the transition was calculated from. Options are 'fixed_T' or 'fixed_chemical_potential'.
-        For fixed temperature paths, the crossing in (chemical_potential,energy) space has two corresponding compositions. Both are returned.
-        For fixed chemical potential paths, the crossing in (Temperature,energy) space has one corresponding composition.
+        For each crossing point, there is one temperature and two compositions. The temperature and both compositions are returned.
     """
     # Run full project integration on the data to ensure that all integrated free energies are calculated.
     project_gcmc_data = full_project_integration(project_gcmc_data)
@@ -1670,8 +1667,9 @@ def order_disorder_crossing_points(project_gcmc_data: dict) -> List[dict]:
     cooling_runs = project_gcmc_data["cooling"]
     fixed_chem_potential_runs = heating_runs + cooling_runs
 
+    # First, round all chemical potentials to 6 decimal places to avoid floating point errors
     fixed_chem_potential_chem_pots = np.unique(
-        [run["param_chem_pot(a)"][0] for run in fixed_chem_potential_runs]
+        [np.round(run["param_chem_pot(a)"][0], 6) for run in fixed_chem_potential_runs]
     )
     fixed_chem_potential_run_pairs = []
     for mu in fixed_chem_potential_chem_pots:
@@ -1679,10 +1677,38 @@ def order_disorder_crossing_points(project_gcmc_data: dict) -> List[dict]:
             [
                 run
                 for run in fixed_chem_potential_runs
-                if run["param_chem_pot(a)"][0] == mu
+                if np.isclose(run["param_chem_pot(a)"][0], mu)
             ]
         )
 
+    # It is possible for there to be more than one pair of heating-cooling runs at a given
+    # chemical potential. If this is the case, remove the duplicate runs from pairs.
+    for index, entry in enumerate(fixed_chem_potential_run_pairs):
+        if len(entry) != 2:
+            print(
+                "Pair of runs at chemical potential",
+                entry[0]["param_chem_pot(a)"][0],
+                "has",
+                len(entry),
+                "runs. Removing duplicates.",
+            )
+            if len(entry) > 2 and len(entry) % 2 == 0:
+                # There are likely two heating and two cooling runs at the same chemical potential.
+                # If two runs have the same chemical potential and first temperature,
+                # they are the same run. Remove one of the runs.
+                temporary_temperature_list = []
+                temporary_entry = []
+                for run in entry:
+                    if run["T"][0] not in temporary_temperature_list:
+                        temporary_temperature_list.append(run["T"][0])
+                        temporary_entry.append(run)
+                fixed_chem_potential_run_pairs[index] = temporary_entry
+            else:
+                print(
+                    "There are more than two runs at ",
+                    entry[0]["param_chem_pot(a)"][0],
+                    "and the number of runs is not even. Please check the data.",
+                )
     # Iterate through the pairs of fixed chemical potential runs and find the crossing points.
     # Append the crossing points to the list of crossing points as a dictionary.
     for pair in fixed_chem_potential_run_pairs:
