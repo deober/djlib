@@ -687,6 +687,7 @@ def kpoint_convergence(
     potcar_path: str,
     user_command: str,
     hours: int,
+    ntasks_per_node: int = 1,
 ) -> None:
     """
     Run a sweep of static vasp calculations for varying numbers of kpoints
@@ -704,6 +705,10 @@ def kpoint_convergence(
         Path to POSCAR file
     potcar_path: str
         Path to POTCAR file
+    hours: int
+        Number of hours to run each calculation for.
+    ntasks_per_node : int
+        Number of tasks to run per node. Default is 1.
 
     Returns:
     --------
@@ -731,6 +736,7 @@ Auto
             hours=hours,
             user_command=user_command,
             output_dir=calc_dir,
+            ntasks_per_node=ntasks_per_node,
         )
 
 
@@ -743,6 +749,7 @@ def encut_convergence(
     potcar_path: str,
     user_command: str,
     hours: int,
+    ntasks_per_node: int = 1,
 ) -> None:
     """Run a sweep of static vasp calculations for varying encut values. 
 
@@ -764,6 +771,8 @@ def encut_convergence(
         Command to run vasp.
     hours : int
         Number of hours to run calculation for.
+    ntasks_per_node : int
+        Number of tasks to run per node. Default is 1.
     
     Returns
     -------
@@ -787,6 +796,7 @@ def encut_convergence(
             hours=hours,
             user_command=user_command,
             output_dir=calc_dir,
+            ntasks_per_node=ntasks_per_node
         )
 
 
