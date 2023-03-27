@@ -248,7 +248,7 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
 
 
 def submit_slurm_job(run_dir: str, submit_script_name: str = "submit_slurm.sh"):
-    """Submits a job using the slurm job scheduler. 
+    """Submits a job using the slurm job scheduler.
     Parameters
     ----------
     run_dir : str
@@ -357,8 +357,10 @@ def analytic_posterior(
     label_covariance_matrix: np.ndarray,
     label_vec: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector, 
+    """Calculates the posterior distribution (mean and covariance matrix) given the weight mean vector,
     weight covariance matrix, target values vector, and target values covariance matrix.
+
+    Taken from Bishop Pattern Recognition and Machine Learning, 2006, p. 93
 
     Parameters
     ----------
