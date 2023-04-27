@@ -1018,8 +1018,10 @@ def ground_state_accuracy_fraction_correct(
 def gsa_fraction_correct_DFT_mu_window_binary(
     predicted_comp: np.ndarray,
     predicted_energies: np.ndarray,
+    predicted_corr: np.ndarray,
     true_comp: np.ndarray,
     true_energies: np.ndarray,
+    true_corr: np.ndarray,
 ) -> float:
     """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states. 
         The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
@@ -1032,10 +1034,14 @@ def gsa_fraction_correct_DFT_mu_window_binary(
         nx1 matrix of compositions, where n is the number of configurations.
     predicted_energies : np.ndarray
         Vector of n predicted formation energies.
+    predicted_corr : np.ndarray
+        n correlation vectors of k basis functions for the predicted (uncalculated) data.
     true_comp : np.ndarray
         nx1 matrix of compositions, where n is the number of configurations.
     true_energies : np.ndarray
         Vector of n "true" formation energies.
+    true_corr : np.ndarray
+        n correlation vectors of k basis functions for the true (DFT) data.
 
     Returns
     -------
@@ -1075,12 +1081,26 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     # Sort the true convex hull vertices by their compositions
     true_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
 
-    # Calculate the ground state accuracy metric
+    # Indices might not match between true and predicted data: correlation vectors are a better identifier.
+    # Find the indices of the true vertices in the predicted data by comparing the correlation vectors.
+    true_vertices_corr = true_corr[true_vertices[true_vertices_ordered_by_comp]]
+    predicted_vertices_corr = predicted_corr[predicted_vertices]
+
+    # Calculate the ground state accuracy metric:
     numerator = 0
-    for vertex_index in true_vertices_ordered_by_comp:
-        if true_vertices[vertex_index] in predicted_vertices:
-            numerator += true_chemical_potential_windows[vertex_index]
+    for true_vertex_index, true_vertex_corr_vector in enumerate(true_vertices_corr):
+        for predicted_vertex_corr_vector in predicted_vertices_corr:
+            if np.array_equal(true_vertex_corr_vector, predicted_vertex_corr_vector):
+                numerator += true_chemical_potential_windows[true_vertex_index]
+
     return numerator / np.sum(true_chemical_potential_windows)
+
+    # Calculate the ground state accuracy metric
+    # numerator = 0
+    # for vertex_index in true_vertices_ordered_by_comp:
+    #    if true_vertices[vertex_index] in predicted_vertices:
+    #        numerator += true_chemical_potential_windows[vertex_index]
+    # return numerator / np.sum(true_chemical_potential_windows)
 
 
 def gsa_fraction_correct_predicted_mu_window_binary(
