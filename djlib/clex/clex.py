@@ -765,6 +765,7 @@ def iteratively_prune_eci_by_importance_array(
     true_energies,
     fit_each_iteration: bool = False,
     sorter_function: Callable = None,
+    qhull_options: str = "",
 ) -> np.ndarray:
     """Iteratively prunes ECI by importance array.
 
@@ -818,7 +819,7 @@ def iteratively_prune_eci_by_importance_array(
             predicted_energy = corr @ pruned_eci
             predicted_energy_record.append(predicted_energy)
         rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
-        hull = thull.full_hull(compositions=comp, energies=predicted_energy)
+        hull = thull.full_hull(compositions=comp, energies=predicted_energy,qhull_options=qhull_options)
         vertices, _ = thull.lower_hull(hull)
         ground_state_indices.append(vertices)
     pruning_record = {
@@ -879,7 +880,7 @@ def stable_chemical_potential_windows_binary(hull: ConvexHull) -> np.ndarray:
 
 
 def ranking_by_stable_chemical_potential_window_binary(
-    compositions: np.ndarray, energies: np.ndarray
+    compositions: np.ndarray, energies: np.ndarray, qhull_options: str = ""
 ) -> np.ndarray:
     """Calculates the stable chemical potential window for each ECI, and returns the array of sorted indices.
 
@@ -894,7 +895,7 @@ def ranking_by_stable_chemical_potential_window_binary(
         Vector of ECI indices ranked from highest to lowest stable chemical potential window.
     """
     # Calculate the convex hull
-    hull = thull.full_hull(compositions, energies)
+    hull = thull.full_hull(compositions, energies, qhull_options=qhull_options)
     lower_hull_vertices, _ = thull.lower_hull(hull)
 
     # Sort the stable chemical potential windows by composition, and drop the first and last elements
@@ -942,6 +943,7 @@ def ground_state_accuracy_metric(
     composition_predicted: np.ndarray,
     energy_predicted: np.ndarray,
     true_ground_state_indices: np.ndarray,
+    qhull_options: str = "",
 ) -> float:
     """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction. 
         The denominator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull.
@@ -962,7 +964,7 @@ def ground_state_accuracy_metric(
         Ground state accuracy metric.
     """
     hull = thull.full_hull(
-        compositions=composition_predicted, energies=energy_predicted
+        compositions=composition_predicted, energies=energy_predicted, qhull_options=qhull_options
     )
     vertices, _ = thull.lower_hull(hull)
 
@@ -1022,6 +1024,7 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     true_comp: np.ndarray,
     true_energies: np.ndarray,
     true_corr: np.ndarray,
+    qhull_options: str = "",
 ) -> float:
     """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states. 
         The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
@@ -1050,10 +1053,10 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     """
     # Calculate the lower convex hull vertices for the predicted and true convex hulls
     predicted_hull = thull.full_hull(
-        compositions=predicted_comp, energies=predicted_energies
+        compositions=predicted_comp, energies=predicted_energies, qhull_options=qhull_options
     )
     predicted_vertices, _ = thull.lower_hull(predicted_hull)
-    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies)
+    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies, qhull_options=qhull_options)
     true_vertices, _ = thull.lower_hull(true_hull)
 
     # Calculate the slope windows for the true convex hull
@@ -1108,6 +1111,7 @@ def gsa_fraction_correct_predicted_mu_window_binary(
     predicted_energies: np.ndarray,
     true_comp: np.ndarray,
     true_energies: np.ndarray,
+    qhull_options: str = "",
 ) -> float:
     """
     Normalized sum over predicted chemical potential windows. 
@@ -1118,16 +1122,17 @@ def gsa_fraction_correct_predicted_mu_window_binary(
     """
     # Calculate the lower convex hull vertices for the predicted and true convex hulls
     predicted_hull = thull.full_hull(
-        compositions=predicted_comp, energies=predicted_energies
+        compositions=predicted_comp, energies=predicted_energies,qhull_options=qhull_options
     )
     predicted_vertices, _ = thull.lower_hull(predicted_hull)
-    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies)
+    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies, qhull_options=qhull_options)
     true_vertices, _ = thull.lower_hull(true_hull)
 
     # Form a convex hull object of the true ground state indices within the predicted data
     true_ground_staes_within_predicted = thull.full_hull(
         compositions=predicted_comp[true_vertices],
         energies=predicted_energies[true_vertices],
+        qhull_options=qhull_options,
     )
 
     # Calculate the slope windows for the predicted convex hull
@@ -1211,6 +1216,7 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
     composition_true: np.ndarray,
     energy_true: np.ndarray,
     n: int,
+    qhull_options: str = "",
 ) -> float:
     """Computes a scalar metric between [0,1] which measures the fraction of the top n stable configurations which are also ground states in DFT data. 1 is perfect accuracy.
         First, DFT-predicted ground state configurations are ranked by their stable chemical potential window. Only the top n of these configurations are considered in the accuracy metric. 
@@ -1239,7 +1245,7 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
     """
 
     # Calculate the true convex hull, find the vertices, and calculate the stable chemical potential windows for each vertex.
-    true_hull = thull.full_hull(compositions=composition_true, energies=energy_true)
+    true_hull = thull.full_hull(compositions=composition_true, energies=energy_true, qhull_options=qhull_options)
     true_vertices, _ = thull.lower_hull(true_hull)
     true_slopes = calculate_slopes(
         composition_true[true_vertices], energy_true[true_vertices]
