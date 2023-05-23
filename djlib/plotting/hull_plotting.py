@@ -115,6 +115,87 @@ def general_binary_convex_hull_plotter(
     fig.set_size_inches(15, 12)
     return fig
 
+def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formation_energies, dft_corr, over_comp, over_formation_energies, over_corr, dft_names=None, over_names=None):
+    '''
+    Plot the convex hull for the DFT data and the overenumerated data on the same plot. Gets spurious and missing ground states. Does matching via correlation matching (can't do name matching since CASM enumeration may number configurations differently)
+    - also editable cause you pass it an axis!
+    Inputs
+    ------
+        ax: matplotlib axis
+            axis to plot on
+        dft_comp: np.array
+            (n,1) array of DFT compositions
+        dft_formation_energies: np.array
+            (n,) array formation energies of DFT data
+        dft_corr: np.array
+            (n,k) array (n calculated configs, k correlation functions) correlation matrix of DFT configurations
+        over_comp: np.array
+            (m,1) array of overenumerated compositions
+        over_formation_energies: np.array
+            (m,) array formation energies predictions on the overenumerated data
+        over_corr: np.array
+            (m,k) array (m overenumerated configs, k correlation functions) correlation matrix of overenumerated configurations
+    Returns
+    -------
+        ax: matplotlib axis
+            axis of the convex hull plot
+    '''
+    # corr shape checks
+    print(dft_corr.shape, over_corr.shape)
+    assert dft_corr.shape[1] == over_corr.shape[1]
+    # calculate DFT hull & overenumerated hull
+    dft_hull = thull.full_hull(compositions=dft_comp, energies=dft_formation_energies)
+    dft_lower_hull_vertices, _dft = thull.lower_hull(dft_hull)
+    over_hull = thull.full_hull(compositions=over_comp, energies=over_formation_energies)
+    over_lower_hull_vertices, _over = thull.lower_hull(over_hull)
+    print('DFT hull vertices:', dft_lower_hull_vertices, '\nOverenumerated hull vertices:', over_lower_hull_vertices)
+    dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
+    over_lower_hull = dj.column_sort(over_hull.points[over_lower_hull_vertices], 0)
+
+    dft_hull_indices_in_overenumerated = []
+    over_hull_indices_in_dft = []
+    missing_indices = []
+    spurious_indices = []
+    correct_dft_predictions = []
+
+    for dft_index in dft_lower_hull_vertices:
+        dft_hull_indices_in_overenumerated.append(np.where(np.all(over_corr==dft_corr[dft_index],axis=1))[0][0])
+    for over_index in over_lower_hull_vertices:
+        # append the index of the overenumerated hull point if it's in the DFT data
+        if np.where(np.all(dft_corr==over_corr[over_index],axis=1))[0].shape[0] > 0:
+            over_hull_indices_in_dft.append(np.where(np.all(dft_corr==over_corr[over_index],axis=1))[0][0])
+        else:
+            spurious_indices.append(over_index)
+    for test_dft_index in dft_hull_indices_in_overenumerated:
+        # check if this index is on overenumerated hull, else add to missing indices
+        if test_dft_index not in over_lower_hull_vertices:
+            missing_indices.append(test_dft_index)
+        else:
+            correct_dft_predictions.append(test_dft_index)
+    
+    print("There are %i / %i DFT hull points on the overenumerated hull and %i missing and %i spurious ground states" % (len(correct_dft_predictions), len(dft_lower_hull_vertices), len(missing_indices), len(spurious_indices)))
+
+    # print the correct, missing, and spurious ground states
+    if dft_names is not None and over_names is not None:
+        print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices])
+    else:
+        print("Correct DFT hull points:", correct_dft_predictions, "\n", over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n", over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n", over_comp[spurious_indices])
+    
+    # scatter plot the remaining data
+    ax.scatter(dft_comp, dft_formation_energies, c='k', marker='1', label='DFT data',zorder=2)
+    ax.scatter(over_comp, over_formation_energies, c='r', marker='2', label='Clex predictions',zorder=1)
+    ax.plot(dft_lower_hull[:,0], dft_lower_hull[:,1], 'k--', marker='D', markersize=15,label='__nolegend__')
+    ax.plot(over_lower_hull[:,0], over_lower_hull[:,1], 'r:', marker='o',markersize=15,label='__no_legend__')
+    # plot spurious and missing ground states (scatter)
+    ax.scatter(over_comp[spurious_indices],over_formation_energies[spurious_indices],c='royalblue',s=230,marker='s',label='Spurious predictions')
+    ax.scatter(over_comp[missing_indices],over_formation_energies[missing_indices],c='limegreen',s=230,marker='s',label='Missing ground states (clex prediction)')
+    
+    plt.legend(fontsize=19, loc="best")
+    ax.set_xlabel('Composition', fontsize=30)
+    ax.set_ylabel('Formation energy (eV/atom)', fontsize=30)
+    ax.tick_params(axis='both', which='major', labelsize=25)
+
+    return ax
 
 def plot_stable_chemical_potential_windows_for_binary(
     compositions: np.ndarray,

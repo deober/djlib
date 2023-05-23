@@ -44,6 +44,36 @@ def regroup_dicts_by_keys(list_of_dictionaries: list) -> dict:
             data_collect[index].append(element_dict[key])
     return dict(zip(keys, data_collect))
 
+def ungroup_dicts_by_keys(dict_with_keys: dict) -> list:
+    """Ungroups property sorted data (as dict) to a list of dictionaries (by configuration). Essentially does the reverse of regroup_dicts_by_keys.
+    
+    Parameters
+    ----------
+    dict_with_keys: dict
+        Dictionary of all data grouped by keys (not grouped by configuraton)
+    
+    Returns
+    -------
+    list_of_dictionaries: list
+        List of dictionaries. Each dictionary has the same keys as the input dictionary, but only a single entry for each key (aka each dictionary represents a single configuration).
+
+    Notes
+    ------
+    This function assumes that each key in the dictionary is of the same length and will abort if this is not the case.
+    """
+    keys = dict_with_keys.keys()
+    # verify that the keys are all the same length
+    key_lengths = [len(dict_with_keys[key]) for key in keys]
+    if len(set(key_lengths)) != 1:
+        raise ValueError("All keys must be the same length")
+    list_of_dictionaries = []
+    for i in range(key_lengths[0]):
+        list_of_dictionaries.append({})
+    for key in keys:
+        for index, value in enumerate(dict_with_keys[key]):
+            list_of_dictionaries[index][key] = value
+    return list_of_dictionaries
+
 
 def casm_query_reader(casm_query_json_path="pass", casm_query_json_data=None):
     """Reads keys and values from casm query json dictionary.
