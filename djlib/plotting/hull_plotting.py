@@ -115,7 +115,7 @@ def general_binary_convex_hull_plotter(
     fig.set_size_inches(15, 12)
     return fig
 
-def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formation_energies, dft_corr, over_comp, over_formation_energies, over_corr, dft_names=None, over_names=None):
+def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formation_energies, dft_corr, over_comp, over_formation_energies, over_corr, dft_names=None, over_names=None, verbose=False):
     '''
     Plot the convex hull for the DFT data and the overenumerated data on the same plot. Gets spurious and missing ground states. Does matching via correlation matching (can't do name matching since CASM enumeration may number configurations differently)
     - also editable cause you pass it an axis!
@@ -132,9 +132,12 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
         over_comp: np.array
             (m,1) array of overenumerated compositions
         over_formation_energies: np.array
-            (m,) array formation energies predictions on the overenumerated data
+            (m,) array of formation energies predictions on the overenumerated data
         over_corr: np.array
             (m,k) array (m overenumerated configs, k correlation functions) correlation matrix of overenumerated configurations
+        verbose: bool
+            whether to print extra info (predicted hull distances, etc)
+            TODO: Implement the full range of features here
     Returns
     -------
         ax: matplotlib axis
@@ -148,7 +151,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     dft_lower_hull_vertices, _dft = thull.lower_hull(dft_hull)
     over_hull = thull.full_hull(compositions=over_comp, energies=over_formation_energies)
     over_lower_hull_vertices, _over = thull.lower_hull(over_hull)
-    print('DFT hull vertices:', dft_lower_hull_vertices, dft_comp[dft_lower_hull_vertices], '\nOverenumerated hull vertices:', over_lower_hull_vertices, over_comp[over_lower_hull_vertices])
+    print('DFT hull vertices:', dft_lower_hull_vertices, dft_comp[dft_lower_hull_vertices].flatten(), '\nOverenumerated hull vertices:', over_lower_hull_vertices, over_comp[over_lower_hull_vertices].flatten())
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
     over_lower_hull = dj.column_sort(over_hull.points[over_lower_hull_vertices], 0)
 
@@ -181,8 +184,17 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
 
     # print the correct, missing, and spurious ground states
     if dft_names is not None and over_names is not None:
-        print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices])
-        print("Spurious predictions that have already been calculated:", spurious_and_calculated_indices, "\n", over_names[spurious_and_calculated_indices], '\n', over_comp[spurious_and_calculated_indices], '\nEquivalent DFT indice:', [np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices])
+        print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions].flatten()), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices].flatten()), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices].flatten())
+        print("Spurious predictions that have already been calculated:", spurious_and_calculated_indices, "\n", over_names[spurious_and_calculated_indices], '\n', over_comp[spurious_and_calculated_indices], '\nEquivalent DFT indice:', np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices]).flatten())
+
+        if verbose:
+            # calculate DFT hull distances of the spurious structures and the clex hull distances of the DFT gs at the spurious predictions.
+            spurious_indices_in_dft = np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices])
+            dft_hull_distances = thull.lower_hull_distances(dft_comp,dft_formation_energies,dft_hull)
+            over_hull_distances = thull.lower_hull_distances(over_comp,over_formation_energies,over_hull)
+            print("DFT hull distances of spurious structures:", dft_hull_distances[spurious_indices_in_dft])
+            print("Clex hull distances of DFT gs at spurious predictions:", over_hull_distances[spurious_and_calculated_indices])
+
     else:
         print("Correct DFT hull points:", correct_dft_predictions, "\n", over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n", over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n", over_comp[spurious_indices])
     
