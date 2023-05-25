@@ -877,12 +877,10 @@ def run_cooling_from_const_temperature(
     )
     # for each mu value, start a cooling run with the condition.# final state as the initial state (condition indexing starts at 0)
     for mu in mu_values:
-
         # Set up run directory
         run_name = "mu_%.4f_%.4f_T_%d_%d" % (mu, mu, temperature_values[0], temp_final)
         current_dir = os.path.join(mc_cooling_dir, run_name)
         if os.path.isfile(os.path.join(current_dir, "results.json")) == False:
-
             os.makedirs(current_dir, exist_ok=True)
             os.chdir(current_dir)
 
@@ -962,7 +960,6 @@ def run_heating(
     """
 
     for mu_value in mu_values:
-
         run_name = "mu_%.4f_%.4f_T_%d_%d" % (mu_value, mu_value, temp_init, temp_final)
         current_dir = os.path.join(mc_heating_dir, run_name)
 
@@ -1556,10 +1553,21 @@ def find_constant_T_crossing(
     """
 
     # Assert that the chemical potentials are the same
-    assert np.allclose(
+    # TODO: This will fail if the chemical potentials are not exactly the same, though that is not necessary. We just need to have the
+    # chemical potential ranges overlap.
+    if not np.allclose(
         np.sort(constant_T_dict_1["param_chem_pot(a)"]),
         np.sort(constant_T_dict_2["param_chem_pot(a)"]),
-    ), "Chemical potentials do not match"
+    ):
+        print(
+            "Chemical potential arrays between the two constant T runs are not identical."
+        )
+        print(
+            "It is possible that the chemical potential arrays have overlapping values. If the values overlap, it is still not guaranteed that the two runs will cross each other."
+        )
+        print(
+            "The program will continue, but the results may be incorrect. Please examine carefully."
+        )
 
     # Ensure that all data is sorted by chemical potential
     mu_1 = np.array(constant_T_dict_1["param_chem_pot(a)"])[
