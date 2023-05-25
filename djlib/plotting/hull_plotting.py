@@ -148,7 +148,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     dft_lower_hull_vertices, _dft = thull.lower_hull(dft_hull)
     over_hull = thull.full_hull(compositions=over_comp, energies=over_formation_energies)
     over_lower_hull_vertices, _over = thull.lower_hull(over_hull)
-    print('DFT hull vertices:', dft_lower_hull_vertices, '\nOverenumerated hull vertices:', over_lower_hull_vertices)
+    print('DFT hull vertices:', dft_lower_hull_vertices, dft_comp[dft_lower_hull_vertices], '\nOverenumerated hull vertices:', over_lower_hull_vertices, over_comp[over_lower_hull_vertices])
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
     over_lower_hull = dj.column_sort(over_hull.points[over_lower_hull_vertices], 0)
 
@@ -156,6 +156,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     over_hull_indices_in_dft = []
     missing_indices = []
     spurious_indices = []
+    spurious_and_calculated_indices = []
     correct_dft_predictions = []
 
     for dft_index in dft_lower_hull_vertices:
@@ -164,6 +165,9 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
         # append the index of the overenumerated hull point if it's in the DFT data
         if np.where(np.all(dft_corr==over_corr[over_index],axis=1))[0].shape[0] > 0:
             over_hull_indices_in_dft.append(np.where(np.all(dft_corr==over_corr[over_index],axis=1))[0][0])
+            if np.where(np.all(dft_corr==over_corr[over_index],axis=1))[0][0] not in dft_lower_hull_vertices:
+                spurious_indices.append(over_index)
+                spurious_and_calculated_indices.append(over_index)
         else:
             spurious_indices.append(over_index)
     for test_dft_index in dft_hull_indices_in_overenumerated:
@@ -178,6 +182,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     # print the correct, missing, and spurious ground states
     if dft_names is not None and over_names is not None:
         print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices])
+        print("Spurious predictions that have already been calculated:", spurious_and_calculated_indices, "\n", over_names[spurious_and_calculated_indices], '\n', over_comp[spurious_and_calculated_indices], '\nEquivalent DFT indice:', [np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices])
     else:
         print("Correct DFT hull points:", correct_dft_predictions, "\n", over_comp[correct_dft_predictions]), print("Missing DFT hull points:", missing_indices, "\n", over_comp[missing_indices]), print("Spurious overenumerated hull points:", spurious_indices, "\n", over_comp[spurious_indices])
     
@@ -188,6 +193,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     ax.plot(over_lower_hull[:,0], over_lower_hull[:,1], 'r:', marker='o',markersize=15,label='__no_legend__')
     # plot spurious and missing ground states (scatter)
     ax.scatter(over_comp[spurious_indices],over_formation_energies[spurious_indices],c='royalblue',s=230,marker='s',label='Spurious predictions')
+    ax.scatter(over_comp[spurious_and_calculated_indices],over_formation_energies[spurious_and_calculated_indices],c='royalblue',s=280,marker='p',label='Spurious predictions (already calculated)')
     ax.scatter(over_comp[missing_indices],over_formation_energies[missing_indices],c='limegreen',s=230,marker='s',label='Missing ground states (clex prediction)')
     
     plt.legend(fontsize=19, loc="best")
