@@ -567,7 +567,6 @@ def kfold_analysis(kfold_dir: str) -> dict:
     for run_dir in kfold_subdirs:
         if os.path.isdir(run_dir):
             if os.path.isfile(os.path.join(run_dir, "results.pkl")):
-
                 run_data = bayes_train_test_analysis(run_dir)
                 train_rms_values.append(np.mean(run_data["training_rms"]))
                 test_rms_values.append(np.mean(run_data["testing_rms"]))
@@ -662,7 +661,6 @@ def calculate_hulldist_corr(
     hulldist_corr = np.zeros(corr.shape)
 
     for config_index in list(range(corr.shape[0])):
-
         # Find the simplex that contains the current configuration's composition, and find the hull energy for that composition
         relevant_simplex_index, hull_energy = thull.lower_hull_simplex_containing(
             compositions=comp[config_index].reshape(1, -1),
@@ -715,9 +713,9 @@ def variance_mean_ratio_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
 
 
 def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.ndarray:
-    """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance. 
-       The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI). 
-       This vector is then ranked from lowest to highest and returned. 
+    """Runs Principal Component Analysis on the ECI Posterior distribution, then computes the normalized inverse of the pca explained variance.
+       The PCA contributing the top (explained_variance_tolerance) of the normalized inverse explained variance are summed. This produces a vector of length k (Number of ECI).
+       This vector is then ranked from lowest to highest and returned.
 
     Parameters
     ----------
@@ -740,13 +738,13 @@ def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.nd
 
 
 def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit()) -> np.ndarray:
-    """Sorts the ECI by variance mean ratio, and returns the array of sorted indices. 
+    """Sorts the ECI by variance mean ratio, and returns the array of sorted indices.
 
     Parameters
     ----------
     bayesian_ridge_fit : sklearn.linear_model.BayesianRidge.fit()
         Bayesian Ridge fit object.
-    
+
     Returns
     -------
     eci_ranking : np.ndarray
@@ -784,8 +782,8 @@ def iteratively_prune_eci_by_importance_array(
     fit_each_iteration : bool, optional
         Whether to fit the model after each iteration, by default False
     sorter_function : Callable, optional
-        Function to sort the ECI by; must accept a BayesianRidge.fit() object, and return an array of indices. None by default. 
-    
+        Function to sort the ECI by; must accept a BayesianRidge.fit() object, and return an array of indices. None by default.
+
 
     Returns
     -------
@@ -808,9 +806,9 @@ def iteratively_prune_eci_by_importance_array(
             bayesian_ridge_corr = bayesian_ridge_corr[
                 :, br_prune_order_indices.astype(bool)
             ]
-            bayesian_ridge_fit = BayesianRidge(fit_intercept=False,).fit(
-                bayesian_ridge_corr, true_energies
-            )
+            bayesian_ridge_fit = BayesianRidge(
+                fit_intercept=False,
+            ).fit(bayesian_ridge_corr, true_energies)
 
             predicted_energy = bayesian_ridge_corr @ bayesian_ridge_fit.coef_
             predicted_energy_record.append(predicted_energy)
@@ -819,7 +817,9 @@ def iteratively_prune_eci_by_importance_array(
             predicted_energy = corr @ pruned_eci
             predicted_energy_record.append(predicted_energy)
         rmse.append(np.sqrt(mean_squared_error(true_energies, predicted_energy)))
-        hull = thull.full_hull(compositions=comp, energies=predicted_energy,qhull_options=qhull_options)
+        hull = thull.full_hull(
+            compositions=comp, energies=predicted_energy, qhull_options=qhull_options
+        )
         vertices, _ = thull.lower_hull(hull)
         ground_state_indices.append(vertices)
     pruning_record = {
@@ -833,14 +833,14 @@ def iteratively_prune_eci_by_importance_array(
 
 def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
     """Calculates the slope for each line segment in a series of connected points.
-    
+
     Parameters:
     -----------
     x_coords: np.ndarray
         Array of x coordinates.
     y_coords: np.ndarray
         Array of y coordinates.
-    
+
     Returns:
     --------
     slopes: np.ndarray
@@ -859,19 +859,19 @@ def calculate_slopes(x_coords: np.ndarray, y_coords: np.ndarray):
 
 def stable_chemical_potential_windows_binary(hull: ConvexHull) -> np.ndarray:
     """Takes a convex hull and returns the stable chemical potential windows of the lower convex hull, excluding the end states.
-    
+
     Parameters
     ----------
     hull: ConvexHull
         A convex hull object.
-    
+
     Returns
     -------
     windows: np.ndarray
-        An array of scalars representing the magnitude of the stable chemical potential windows. 
+        An array of scalars representing the magnitude of the stable chemical potential windows.
         Returned in order of increasing composition.
-        End state chemical potential windows are not included. 
-    
+        End state chemical potential windows are not included.
+
     """
     lower_hull_vertices, _ = thull.lower_hull(hull)
     p = hull.points[lower_hull_vertices]
@@ -919,8 +919,8 @@ def upscale_eci_vector(ecis: np.ndarray, mask: np.ndarray):
         Vector of ECI values.
     mask : np.ndarray
         Vector of Booleans, where True indicates the ECI is included in the vector. Number of True should equal the length of the ECI vector. Otherwise, the function will return an error.
-    
-    Returns 
+
+    Returns
     -------
     ecis_upscaled : np.ndarray
         Vector of ECI values, upscaled to the original size.
@@ -942,10 +942,13 @@ def upscale_eci_vector(ecis: np.ndarray, mask: np.ndarray):
 def ground_state_accuracy_metric(
     composition_predicted: np.ndarray,
     energy_predicted: np.ndarray,
-    true_ground_state_indices: np.ndarray,
+    predicted_corr: np.ndarray,
+    true_comp: np.ndarray,
+    true_energy: np.ndarray,
+    true_corr: np.ndarray,
     qhull_options: str = "",
 ) -> float:
-    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction. 
+    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction.
         The denominator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull.
         The numerator is the sum across the stable chemical potential windows (slopes) for each configuration predicted on the convex hull, which are ALSO ground states in DFT data.
 
@@ -955,66 +958,129 @@ def ground_state_accuracy_metric(
         nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
     energy_predicted : np.ndarray
         nx1 matrix of predicted formation energies.
-    true_ground_state_indices : np.ndarray
-        nx1 matrix of true ground state indices.
+    true_comp : np.ndarray
+        nxm matrix of true compositions, where n is the number of configurations and m is the number of composition axes.
+    true_energies : np.ndarray
+        nx1 matrix of true formation energies.
 
     Returns
     -------
     float
         Ground state accuracy metric.
     """
-    hull = thull.full_hull(
-        compositions=composition_predicted, energies=energy_predicted, qhull_options=qhull_options
+    predicted_hull = thull.full_hull(
+        compositions=composition_predicted,
+        energies=energy_predicted,
+        qhull_options=qhull_options,
     )
-    vertices, _ = thull.lower_hull(hull)
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energy, qhull_options=qhull_options
+    )
+    true_vertices, _ = thull.lower_hull(true_hull)
 
     slopes = calculate_slopes(
-        composition_predicted[vertices], energy_predicted[vertices]
+        composition_predicted[predicted_vertices], energy_predicted[predicted_vertices]
     )
     stable_chem_pot_windows = [
         slopes[i + 1] - slopes[i] for i in range(len(slopes) - 1)
     ]
 
     # End states will always be on the convex hull and have an infinite stable chemical potential window. Exclude these from the
-    vertices = np.sort(vertices)[2:]
+    predicted_vertices = np.sort(predicted_vertices)[2:]
+    true_vertices = np.sort(true_vertices)[2:]
 
-    vertex_indices_ordered_by_comp = np.argsort(
-        np.ravel(composition_predicted[vertices])
+    predicted_vertex_indices_ordered_by_comp = np.argsort(
+        np.ravel(composition_predicted[predicted_vertices])
     )
+    true_vertex_indices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # Indices might not match between predicted and true data sets. Correlations are a better identifier of configurations.
+    predicted_vertex_correlations = predicted_corr[
+        predicted_vertices[predicted_vertex_indices_ordered_by_comp]
+    ]
+    true_vertex_correlations = true_corr[
+        true_vertices[true_vertex_indices_ordered_by_comp]
+    ]
 
     numerator = 0
-    for vertex_index in vertex_indices_ordered_by_comp:
-        if vertices[vertex_index] in true_ground_state_indices:
-            numerator += stable_chem_pot_windows[vertex_index]
-
+    for true_corr_vector in true_vertex_correlations:
+        for predicted_corr_index, predicted_corr_vector in enumerate(
+            predicted_vertex_correlations
+        ):
+            if np.array_equal(predicted_corr_vector, true_corr_vector):
+                numerator += stable_chem_pot_windows[predicted_corr_index]
     return numerator / np.sum(stable_chem_pot_windows)
 
 
-def ground_state_accuracy_fraction_correct(
-    predicted_ground_state_indices, true_ground_state_indices
+def fraction_correct(
+    predicted_comp: np.ndarray,
+    predicted_energies: np.ndarray,
+    predicted_corr: np.ndarray,
+    true_comp: np.ndarray,
+    true_energies: np.ndarray,
+    true_corr: np.ndarray,
+    qhull_options: str = "",
 ) -> float:
-    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy. 
+    """Computes a scalar ground state accuracy metric. The metric varies between [0,1], where 1 is perfect accuracy.
         The denominator is the number of ground state configurations predicted by DFT.
         The numerator is the number of predicted ground state configurations which are ALSO ground states predicted by DFT.
 
     Parameters
     ----------
-    predicted_ground_state_indices : np.ndarray
-        1D array of predicted ground state indices.
-    true_ground_state_indices : np.ndarray
-        1D array of true ground state indices.
+    predicted_comp : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    predicted_energies : np.ndarray
+        nx1 matrix of predicted formation energies.
+    predicted_corr : np.ndarray
+        nxk matrix of predicted correlations, where n is the number of configurations and k is the number of correlation axes.
+    true_comp : np.ndarray
+        nxm matrix of true compositions, where n is the number of configurations and m is the number of composition axes.
+    true_energies : np.ndarray
+        nx1 matrix of true formation energies.
+    true_corr : np.ndarray
+        nxk matrix of true correlations, where n is the number of configurations and k is the number of correlation axes.
+
 
     Returns
     -------
     float
         Ground state accuracy metric, between 0 and 1. 1 is perfect accuracy.
     """
-    numerator = 0
-    for vertex_index in predicted_ground_state_indices:
-        if vertex_index in true_ground_state_indices:
-            numerator += 1
 
-    return numerator / len(true_ground_state_indices)
+    predicted_hull = thull.full_hull(
+        compositions=predicted_comp,
+        energies=predicted_energies,
+        qhull_options=qhull_options,
+    )
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energies, qhull_options=qhull_options
+    )
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    predicted_vertex_indices_ordered_by_comp = np.argsort(
+        np.ravel(predicted_comp[predicted_vertices])
+    )
+    true_vertex_indices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # Indices might not match between predicted and true data sets. Correlations are a better identifier of configurations.
+    predicted_vertex_correlations = predicted_corr[
+        predicted_vertices[predicted_vertex_indices_ordered_by_comp]
+    ]
+    true_vertex_correlations = true_corr[
+        true_vertices[true_vertex_indices_ordered_by_comp]
+    ]
+
+    # Calculate the fraction of correct ground states
+    numerator = 0
+    for true_corr_vector in true_vertex_correlations:
+        for predicted_corr_vector in predicted_vertex_correlations:
+            if np.array_equal(predicted_corr_vector, true_corr_vector):
+                numerator += 1
+    return numerator / true_vertex_correlations.shape[0]
 
 
 def gsa_fraction_correct_DFT_mu_window_binary(
@@ -1026,7 +1092,7 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     true_corr: np.ndarray,
     qhull_options: str = "",
 ) -> float:
-    """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states. 
+    """Normalized sum over DFT-predicted stable chemical potential windows for all configurations on the convex hull, excluding ground states.
         The denominator is the sum across the DFT-determined stable chemical potential windows (slopes) for each configuration on the convex hull, excluding ground states.
         The numerator is the sum across the stable chemical potential windows (slopes) for each configuration that is predicted (by both cluster expansion AND DFT) to be on the convex hull, excluding ground states.
         The metric varies between [0,1], where 1 is perfect accuracy. The metric is a fraction.
@@ -1053,10 +1119,14 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     """
     # Calculate the lower convex hull vertices for the predicted and true convex hulls
     predicted_hull = thull.full_hull(
-        compositions=predicted_comp, energies=predicted_energies, qhull_options=qhull_options
+        compositions=predicted_comp,
+        energies=predicted_energies,
+        qhull_options=qhull_options,
     )
     predicted_vertices, _ = thull.lower_hull(predicted_hull)
-    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies, qhull_options=qhull_options)
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energies, qhull_options=qhull_options
+    )
     true_vertices, _ = thull.lower_hull(true_hull)
 
     # Calculate the slope windows for the true convex hull
@@ -1098,34 +1168,122 @@ def gsa_fraction_correct_DFT_mu_window_binary(
 
     return numerator / np.sum(true_chemical_potential_windows)
 
-    # Calculate the ground state accuracy metric
-    # numerator = 0
-    # for vertex_index in true_vertices_ordered_by_comp:
-    #    if true_vertices[vertex_index] in predicted_vertices:
-    #        numerator += true_chemical_potential_windows[vertex_index]
-    # return numerator / np.sum(true_chemical_potential_windows)
-
 
 def gsa_fraction_correct_predicted_mu_window_binary(
     predicted_comp: np.ndarray,
     predicted_energies: np.ndarray,
+    predicted_corr: np.ndarray,
     true_comp: np.ndarray,
     true_energies: np.ndarray,
+    true_corr: np.ndarray,
     qhull_options: str = "",
 ) -> float:
-    """
-    Normalized sum over predicted chemical potential windows. 
-    The numerator sums across chemical potential windows (slope change across a convex hull vertex) of the predicted convex hull. A chemical potential window is only included if its corresponding configuration is also on the true convex hull.
-    The denominator sums across the PREDICTED slope windows of data points that are considered the true ground states of the system. 
-    Unlike the numerator, the denominator does not require that the configurations lie on the predicted convex hull. It is simply a collection of slope windows across the 'true' ground states of the system. 
-    Because the end states have unbounded chemical potential windows, they are excluded from this metric entirely. 
+
+    """Sum normalized sum over predicted chemical potential stability windows.
+
+    Parameters
+    ----------
+    predicted_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    predicted_energies : np.ndarray
+        Vector of n predicted formation energies.
+    predicted_corr : np.ndarray
+        n correlation vectors of k basis functions for the predicted (uncalculated) data.
+    true_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    true_energies : np.ndarray
+        Vector of n "true" formation energies.
+    true_corr : np.ndarray
+        n correlation vectors of k basis functions for the true (DFT) data.
+
+    Returns
+    -------
+    float
+        Ground state accuracy metric, between [0,1]. 1 is perfect accuracy.
     """
     # Calculate the lower convex hull vertices for the predicted and true convex hulls
     predicted_hull = thull.full_hull(
-        compositions=predicted_comp, energies=predicted_energies,qhull_options=qhull_options
+        compositions=predicted_comp,
+        energies=predicted_energies,
+        qhull_options=qhull_options,
     )
     predicted_vertices, _ = thull.lower_hull(predicted_hull)
-    true_hull = thull.full_hull(compositions=true_comp, energies=true_energies, qhull_options=qhull_options)
+
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energies, qhull_options=qhull_options
+    )
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    # Calculate the slope windows for the true convex hull
+    predicted_chemical_potential_windows = stable_chemical_potential_windows_binary(
+        predicted_hull
+    )
+
+    # The end state structures with composition 0 and 1 will always be on the convex hull. However, they are not useful for this metric.
+    # Check the compositions of the true and predicted convex hull vertices.
+    # If the compositions of any of the vertices are 0 or 1, delete them from the array.
+    true_indices_to_remove = np.union1d(
+        np.where(true_comp[true_vertices] == 0),
+        np.where(true_comp[true_vertices] == 1),
+    )
+    true_vertices = np.delete(true_vertices, true_indices_to_remove)
+    del true_indices_to_remove
+    predicted_energies_to_remove = np.union1d(
+        np.where(predicted_comp[predicted_vertices] == 0),
+        np.where(predicted_comp[predicted_vertices] == 1),
+    )
+    predicted_vertices = np.delete(predicted_vertices, predicted_energies_to_remove)
+
+    # Sort the predicted convex hull vertices by their compositions
+    predicted_vertices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # Indices might not match between true and predicted data: correlation vectors are a better identifier.
+    # Find the indices of the predicted vertices in the true data by comparing the correlation vectors.
+    predicted_vertices_corr = predicted_corr[
+        predicted_vertices[predicted_vertices_ordered_by_comp]
+    ]
+    true_vertices_corr = true_corr[true_vertices]
+
+    # Calculate the ground state accuracy metric:
+    numerator = 0
+    for predicted_vertex_index, predicted_vertex_corr_vector in enumerate(
+        predicted_vertices_corr
+    ):
+        for true_vertex_corr_vector in true_vertices_corr:
+            if np.array_equal(predicted_vertex_corr_vector, true_vertex_corr_vector):
+                numerator += predicted_chemical_potential_windows[
+                    predicted_vertex_index
+                ]
+
+    return numerator / np.sum(predicted_chemical_potential_windows)
+
+
+def fraction_correct_weighted_predicted_stability_of_DFT_ground_states(
+    predicted_comp: np.ndarray,
+    predicted_energies: np.ndarray,
+    predicted_corr: np.ndarray,
+    true_comp: np.ndarray,
+    true_energies: np.ndarray,
+    true_corr: np.ndarray,
+    qhull_options: str = "",
+) -> float:
+    """
+    Normalized sum over predicted chemical potential windows.
+    The numerator sums across chemical potential windows (slope change across a convex hull vertex) of the predicted convex hull. A chemical potential window is only included if its corresponding configuration is also on the true convex hull.
+    The denominator sums across the PREDICTED slope windows of data points that are considered the true ground states of the system.
+    Unlike the numerator, the denominator does not require that the configurations lie on the predicted convex hull. It is simply a collection of slope windows across the 'true' ground states of the system.
+    Because the end states have unbounded chemical potential windows, they are excluded from this metric entirely.
+    """
+    # Calculate the lower convex hull vertices for the predicted and true convex hulls
+    predicted_hull = thull.full_hull(
+        compositions=predicted_comp,
+        energies=predicted_energies,
+        qhull_options=qhull_options,
+    )
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energies, qhull_options=qhull_options
+    )
     true_vertices, _ = thull.lower_hull(true_hull)
 
     # Form a convex hull object of the true ground state indices within the predicted data
@@ -1139,8 +1297,8 @@ def gsa_fraction_correct_predicted_mu_window_binary(
     predicted_chemical_potential_windows = stable_chemical_potential_windows_binary(
         predicted_hull
     )
-    chem_pot_windows_of_true_slice_of_predictions = stable_chemical_potential_windows_binary(
-        true_ground_staes_within_predicted
+    chem_pot_windows_of_true_slice_of_predictions = (
+        stable_chemical_potential_windows_binary(true_ground_staes_within_predicted)
     )
 
     # Sort the true convex hull vertices by their compositions
@@ -1160,33 +1318,88 @@ def gsa_fraction_correct_predicted_mu_window_binary(
             predicted_vertices, np.where(predicted_vertices == 1)
         )
 
-    # Calculate the ground state accuracy metric
+    # Indices might not match between true and predicted data: correlation vectors are a better identifier.
+    # Find the indices of the true vertices in the predicted data by comparing the correlation vectors.
+    true_vertices_corr = true_corr[true_vertices[true_vertices_ordered_by_comp]]
+    predicted_vertices_corr = predicted_corr[predicted_vertices]
+
+    # Calculate the ground state accuracy metric:
     numerator = 0
-    for vertex_index in true_vertices_ordered_by_comp:
-        if true_vertices[vertex_index] in predicted_vertices:
-            numerator += predicted_chemical_potential_windows[vertex_index]
+    for true_vertex_index, true_vertex_corr_vector in enumerate(true_vertices_corr):
+        for predicted_vertex_corr_vector in predicted_vertices_corr:
+            if np.array_equal(true_vertex_corr_vector, predicted_vertex_corr_vector):
+                numerator += predicted_chemical_potential_windows[true_vertex_index]
     return numerator / np.sum(chem_pot_windows_of_true_slice_of_predictions)
 
 
-def gsa_number_incorrect(predicted_ground_state_indices, true_ground_state_indices):
-    """Returns the number of incorrectly predicted ground state indices
+def fraction_spurious(
+    predicted_comp: np.ndarray,
+    predicted_energies: np.ndarray,
+    predicted_corr: np.ndarray,
+    true_comp: np.ndarray,
+    true_energies: np.ndarray,
+    true_corr: np.ndarray,
+    qhull_options: str = "",
+) -> float:
+    """Returns the fraction of predicted ground states that are not true ground states.
 
     Parameters
     ----------
-    predicted_ground_state_indices : np.ndarray
-        1D array of predicted ground state indices.
-    true_ground_state_indices : np.ndarray
-        1D array of true ground state indices.
+    predicted_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    predicted_energies : np.ndarray
+        Vector of n predicted formation energies.
+    predicted_corr : np.ndarray
+        n correlation vectors of k basis functions for the predicted (uncalculated) data.
+    true_comp : np.ndarray
+        nx1 matrix of compositions, where n is the number of configurations.
+    true_energies : np.ndarray
+        Vector of n "true" formation energies.
+    true_corr : np.ndarray
+        n correlation vectors of k basis functions for the true (DFT) data.
 
     Returns
     -------
-    int
-        Number of incorrectly predicted ground state indices
+    float
+        Ground state accuracy metric, between [0,1]. 1 is perfect accuracy.
     """
-    return np.setdiff1d(predicted_ground_state_indices, true_ground_state_indices).shape
+    predicted_hull = thull.full_hull(
+        compositions=predicted_comp,
+        energies=predicted_energies,
+        qhull_options=qhull_options,
+    )
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+
+    true_hull = thull.full_hull(
+        compositions=true_comp, energies=true_energies, qhull_options=qhull_options
+    )
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    predicted_vertex_indices_ordered_by_comp = np.argsort(
+        np.ravel(predicted_comp[predicted_vertices])
+    )
+    true_vertex_indices_ordered_by_comp = np.argsort(np.ravel(true_comp[true_vertices]))
+
+    # Indices might not match between predicted and true data sets. Correlations are a better identifier of configurations.
+    predicted_vertex_correlations = predicted_corr[
+        predicted_vertices[predicted_vertex_indices_ordered_by_comp]
+    ]
+    true_vertex_correlations = true_corr[
+        true_vertices[true_vertex_indices_ordered_by_comp]
+    ]
+
+    numerator = 0
+    for true_corr_vector in true_vertex_correlations:
+        predicted_in_true = False
+        for predicted_corr_vector in predicted_vertex_correlations:
+            if np.array_equal(predicted_corr_vector, true_corr_vector):
+                predicted_in_true = True
+        if not predicted_in_true:
+            numerator += 1
+    return numerator / predicted_vertex_correlations.shape[0]
 
 
-def gsa_fraction_intersection_over_union(
+def fraction_intersection_over_union(
     predicted_ground_state_indices, true_ground_state_indices
 ):
     """Normalized fraction of the set intersection over the set union of the predicted and true ground state indices.
@@ -1219,10 +1432,10 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
     qhull_options: str = "",
 ) -> float:
     """Computes a scalar metric between [0,1] which measures the fraction of the top n stable configurations which are also ground states in DFT data. 1 is perfect accuracy.
-        First, DFT-predicted ground state configurations are ranked by their stable chemical potential window. Only the top n of these configurations are considered in the accuracy metric. 
+        First, DFT-predicted ground state configurations are ranked by their stable chemical potential window. Only the top n of these configurations are considered in the accuracy metric.
         The numerator is the number of elements in the set intersection between the predicted ground states and the top n DFT predicted ground states.
         The denominator is n (the number of configurations considered in the accuracy metric).
-        
+
 
     Parameters
     ----------
@@ -1231,12 +1444,12 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
     composition_true : np.ndarray
         nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
     energy_true : np.ndarray
-        nx1 matrix of true formation energies.  
+        nx1 matrix of true formation energies.
     n:int
-        Number of DFT-predicted ground state configurations to compare agains in the ground state accuracy metric. 
-        Configurations with the largest stable chemical potential window are chose first. 
-        By the construction of the convex hull, end states will always be predicted. Therefore, end states are never included in the metric. 
-    
+        Number of DFT-predicted ground state configurations to compare agains in the ground state accuracy metric.
+        Configurations with the largest stable chemical potential window are chose first.
+        By the construction of the convex hull, end states will always be predicted. Therefore, end states are never included in the metric.
+
 
     Returns
     -------
@@ -1245,7 +1458,9 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
     """
 
     # Calculate the true convex hull, find the vertices, and calculate the stable chemical potential windows for each vertex.
-    true_hull = thull.full_hull(compositions=composition_true, energies=energy_true, qhull_options=qhull_options)
+    true_hull = thull.full_hull(
+        compositions=composition_true, energies=energy_true, qhull_options=qhull_options
+    )
     true_vertices, _ = thull.lower_hull(true_hull)
     true_slopes = calculate_slopes(
         composition_true[true_vertices], energy_true[true_vertices]
