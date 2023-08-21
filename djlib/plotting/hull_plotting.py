@@ -276,6 +276,6 @@ def plot_stable_chemical_potential_windows_for_binary(
     ax.set_xlabel("Composition X", fontsize=21)
     ax.set_ylabel("Chemical Potential (eV)", fontsize=21)
 
-    ax.set_xticks(fontsize=21)
-    ax.set_yticks(fontsize=21)
+    # set tick font size to 21
+    ax.tick_params(axis="both", which="major", labelsize=21)
     return ax
