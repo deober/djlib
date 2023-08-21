@@ -272,10 +272,10 @@ def plot_stable_chemical_potential_windows_for_binary(
     if show_legend:
         ax.legend(fontsize=21)
 
-    ax.xlim([0, 1])
-    ax.xlabel("Composition X", fontsize=21)
-    ax.ylabel("Chemical Potential (eV)", fontsize=21)
+    ax.set_xlim([0, 1])
+    ax.set_xlabel("Composition X", fontsize=21)
+    ax.set_ylabel("Chemical Potential (eV)", fontsize=21)
 
-    ax.xticks(fontsize=21)
-    ax.yticks(fontsize=21)
+    ax.set_xticks(fontsize=21)
+    ax.set_yticks(fontsize=21)
     return ax
