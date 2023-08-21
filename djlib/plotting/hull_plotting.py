@@ -222,15 +222,17 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     return ax
 
 def plot_stable_chemical_potential_windows_for_binary(
+    ax : matplotlib.axes.Axes,
     compositions: np.ndarray,
     energies: np.ndarray,
     names: np.ndarray,
     show_legend: bool = True,
-) -> matplotlib.figure.Figure:
-    """Takes composit   ions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
+) -> matplotlib.axes.Axes:
+    """Takes compositions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
 
     Parameters
     ----------
+    ax: matplotlib.axes.Axes
     compositions: numpy.ndarray
         Vector of compositions. Assumes a binary system, so compositions must be a 1D vector.
     energies: numpy.ndarray
@@ -240,10 +242,10 @@ def plot_stable_chemical_potential_windows_for_binary(
     
     Returns
     -------
-    matplotlib.figure.Figure
-        Figure object containing the plot.
+    matplotlib.axes.Axes
+        The matplotlib axes object that was passed in, updated with chemical potential windows plot.
     """
-
+    print("Function has been updated to take a matplotlib axis object as an argument. Please update your code accordingly.")
     # Get the convex hull
     hull = thull.full_hull(compositions, energies)
     lower_hull_vertices = thull.lower_hull(hull)[0]
@@ -260,7 +262,7 @@ def plot_stable_chemical_potential_windows_for_binary(
     lower_hull_vertices = lower_hull_vertices[sorting_indices]
 
     for index, element in enumerate(lower_hull_vertices):
-        plt.plot(
+        ax.plot(
             np.ravel([compositions[element], compositions[element]]),
             np.ravel(slope_windows[index]),
             marker="o",
@@ -268,13 +270,12 @@ def plot_stable_chemical_potential_windows_for_binary(
             label=names[element],
         )
     if show_legend:
-        plt.legend(fontsize=21)
+        ax.legend(fontsize=21)
 
-    plt.xlim([0, 1])
-    plt.xlabel("Composition X", fontsize=21)
-    plt.ylabel("Chemical Potential (eV)", fontsize=21)
+    ax.xlim([0, 1])
+    ax.xlabel("Composition X", fontsize=21)
+    ax.ylabel("Chemical Potential (eV)", fontsize=21)
 
-    plt.xticks(fontsize=21)
-    plt.yticks(fontsize=21)
-    fig = plt.gcf()
-    return fig
+    ax.xticks(fontsize=21)
+    ax.yticks(fontsize=21)
+    return ax
