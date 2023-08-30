@@ -1164,8 +1164,9 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     for true_vertex_index, true_vertex_corr_vector in enumerate(true_vertices_corr):
         for predicted_vertex_corr_vector in predicted_vertices_corr:
             if np.array_equal(true_vertex_corr_vector, predicted_vertex_corr_vector):
+                #print("Match found.") #TODO: Debug
                 numerator += true_chemical_potential_windows[true_vertex_index]
-
+                # TODO: there is a bug with the above line indexing out of bounds in certain scenarios
     return numerator / np.sum(true_chemical_potential_windows)
 
 
