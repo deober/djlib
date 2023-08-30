@@ -53,7 +53,9 @@ def general_binary_convex_hull_plotter(
         predicted_lower_hull_vertices = thull.lower_hull(predicted_hull)[0]
         # Also, check the set difference between the two lower hulls
         spurious = np.setdiff1d(predicted_lower_hull_vertices, dft_lower_hull_vertices)
-
+        missing = np.setdiff1d(dft_lower_hull_vertices, predicted_lower_hull_vertices)
+        
+        # plot spurious predictions
         if len(spurious) > 0:
             ax.scatter(
                 composition[spurious],
@@ -68,6 +70,22 @@ def general_binary_convex_hull_plotter(
                 print("Index", "Composition")
                 for index in spurious:
                     print(index, composition[index])
+        # plot missing ground states
+        if len(missing) > 0:
+            ax.scatter(
+                composition[missing],
+                predicted_energies[missing],
+                color="limegreen",
+                marker="s",
+                label="Missing Ground State Predictions",
+                s=400,
+            )
+            if print_extra_info:
+                print("Missing ground states:")
+                print("Index", "Composition")
+                for index in missing:
+                    print(index, composition[index])
+            
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
     if any(predicted_energies):
