@@ -698,7 +698,7 @@ def find_mc_cooling_lower_convex_hull(sgcmc_project_data_dictionary: dict):
         cooling_formation_energies.append(
             cooling_run["<formation_energy>"][np.argmin(cooling_run["T"])]
         )
-        cooling_chemical_potentials.append(cooling_run["mu"])
+        cooling_chemical_potentials.append(cooling_run["param_chem_pot(a)"])
         cooling_temperatures.append(cooling_run["T"][np.argmin(cooling_run["T"])])
 
     cooling_compositions = np.array(cooling_compositions)
