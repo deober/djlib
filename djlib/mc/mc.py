@@ -9,6 +9,7 @@ import djlib.djlib as dj
 from typing import List, Tuple, Dict
 import copy
 import thermocore.geometry.hull as thull
+import pandas as pd
 
 mc_lib_dir = pathlib.Path(__file__).parent.resolve()
 
@@ -1740,3 +1741,86 @@ def order_disorder_crossing_points(project_gcmc_data: dict) -> List[dict]:
     # TODO: This function currently returns predicted crossing points that are interpolated from the data.
     # If it is necessary to only use actual calculated points, this can be done using the "find_crossing_composition" function in this module.
     return crossing_points
+
+
+def load_updated_data_to_pandas_dataframe(updated_data, run_offset_index=False):
+    """
+    Takes the dictionary of Monte Carlo data (for a single set of Monte Carlo) and returns a pandas dataframe with the following columns:
+    
+    T: Temperature
+    param_chem_pot(a): Chemical potential
+    comp(a)_heating: Composition of the heating run at the given T and mu
+    comp(a)_cooling: Composition of the cooling run at the given T and mu
+    comp(a)_T_const_lr: Composition of the T_const run at the given T and mu, where the T_const run is run from left to right (increasing mu)
+    comp(a)_T_const_rl: Composition of the T_const run at the given T and mu, where the T_const run is run from right to left (decreasing mu)
+    phi_heating: Integrated potential energy of the heating run at the given T and mu
+    phi_cooling: Integrated potential energy of the cooling run at the given T and mu
+    phi_T_const_lr: Integrated potential energy of the T_const run at the given T and mu, where the T_const run is run from left to right (increasing mu)
+    phi_T_const_rl: Integrated potential energy of the T_const run at the given T and mu, where the T_const run is run from right to left (decreasing mu)
+    phi_lowest: Lowest integrated potential energy of all four methods at the given T and mu
+    method: Method that has the lowest integrated potential energy at the given T and mu
+
+    Parameters
+    ----------
+
+    updated_data : dictionary
+        Dictionary of Monte Carlo data (for a single set of Monte Carlo) - Should contain the integrated potential energy for each run
+    run_offset_index : int, optional
+        The index of the T_const runs that separates the left->right runs from the right-> left runs. If not provided, the default is half the length of the T_const runs.
+
+    Returns
+    -------
+
+    phi_data : pandas dataframe
+        Dataframe containing the data from the Monte Carlo data dictionary, with the columns described above.
+    """
+
+    if not run_offset_index:
+        run_offset_index = int(len(updated_data['T_const'])/2)
+    print(run_offset_index)
+
+    phi_data = pd.DataFrame()
+    T_range = updated_data['heating'][0]['T']
+    mu_range = updated_data['T_const'][run_offset_index]['param_chem_pot(a)']
+    for i,T in enumerate(T_range):
+        if updated_data['T_const'][i]['T'][0] == T and updated_data['T_const'][i+run_offset_index]['T'][0] == T:
+            for j,mu in enumerate(mu_range):
+                # find the value of phi (integrated_chemical_potential) for each method at the given T and mu
+                if updated_data['heating'][j]['T'][i] == T:
+                    phi_heating = updated_data['heating'][j]['integrated_potential_energy'][i]
+                else:
+                    print("Didn't match T for heating ", T, updated_data['heating'][j]['T'][i])
+                if updated_data['cooling'][j]['T'][len(T_range)-1-i] == T:
+                    phi_cooling = updated_data['cooling'][j]['integrated_potential_energy'][len(T_range)-1-i]
+                else:
+                    print("Didn't match T for cooling ", T, updated_data['cooling'][j]['T'][len(T_range)-1-i])
+                # TODO: Make this smart and actually have it figure out which direction the t_const_runs are going instead of assuming it R->L at lower indices and vice versa
+                if updated_data['T_const'][i]['param_chem_pot(a)'][len(mu_range)-1-j] == mu:
+                    phi_T_const_rl = updated_data['T_const'][i]['integrated_potential_energy'][len(mu_range)-1-j]
+                else:
+                    print("Didn't match mu for T_const_rl ", mu, updated_data['T_const'][i]['param_chem_pot(a)'][len(mu_range)-1-j])
+                if updated_data['T_const'][i+run_offset_index]['param_chem_pot(a)'][j] == mu:
+                    phi_T_const_lr = updated_data['T_const'][i+run_offset_index]['integrated_potential_energy'][j]
+                else:
+                    print("Didn't match mu for T_const_lr ", mu, updated_data['T_const'][i+run_offset_index]['param_chem_pot(a)'][j])
+                # get method that has lowest phi
+                phi_min = min(phi_heating, phi_cooling, phi_T_const_lr, phi_T_const_rl)
+                method = 'heating' if phi_min == phi_heating else 'cooling' if phi_min == phi_cooling else 'T_const_lr' if phi_min == phi_T_const_lr else 'T_const_rl'
+                temp_dict = {'T': T, 
+                            'param_chem_pot(a)': mu,
+                            'comp(a)_heating': updated_data['heating'][j]['<comp(a)>'][i], 
+                            'comp(a)_cooling': updated_data['cooling'][j]['<comp(a)>'][len(T_range)-1-i], 
+                            'comp(a)_T_const_lr': updated_data['T_const'][i+run_offset_index]['<comp(a)>'][j], 
+                            'comp(a)_T_const_rl': updated_data['T_const'][i]['<comp(a)>'][len(mu_range)-1-j], 
+                            'phi_heating': phi_heating, 
+                            'phi_cooling': phi_cooling, 
+                            'phi_T_const_lr': phi_T_const_lr, 
+                            'phi_T_const_rl': phi_T_const_rl, 
+                            'phi_lowest': phi_min,
+                            'method': method
+                            }
+                phi_data = phi_data.append(temp_dict, ignore_index=True)
+        else:
+            print("Didn't match T for T_const ", T, updated_data['T_const'][i]['T'][0], updated_data['T_const'][i+run_offset_index]['T'][0])
+        
+    return phi_data
