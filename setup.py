@@ -8,12 +8,9 @@ setup(
     license="MIT License",
     packages=["djlib", "djlib.casmcalls", "djlib.clex", "djlib.mc", "djlib.vasputils","djlib.propagation", "djlib.plotting"],
     install_requires=[
-        "httpstan",
         "numpy",
-        "pystan",
         "scikit-learn>=1.0",
-        "scipy>=1.7.1",
-        "arviz",
+        "scipy>=1.7.1"
     ],
     include_package_data=True,
 )
