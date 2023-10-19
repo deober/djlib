@@ -10,7 +10,8 @@ setup(
     install_requires=[
         "numpy",
         "scikit-learn>=1.0",
-        "scipy>=1.7.1"
+        "scipy>=1.7.1",
+        "seaborn"
     ],
     include_package_data=True,
 )
