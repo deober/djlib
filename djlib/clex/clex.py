@@ -1178,7 +1178,6 @@ def gsa_fraction_correct_predicted_mu_window_binary(
     true_corr: np.ndarray,
     qhull_options: str = "",
 ) -> float:
-
     """Sum normalized sum over predicted chemical potential stability windows.
 
     Parameters
@@ -1389,12 +1388,12 @@ def fraction_spurious(
     ]
 
     numerator = 0
-    for true_corr_vector in true_vertex_correlations:
-        predicted_in_true = False
-        for predicted_corr_vector in predicted_vertex_correlations:
+    for predicted_corr_vector in predicted_vertex_correlations:
+        true_in_predicted = False
+        for true_corr_vector in true_vertex_correlations:
             if np.array_equal(predicted_corr_vector, true_corr_vector):
-                predicted_in_true = True
-        if not predicted_in_true:
+                true_in_predicted = True
+        if not true_in_predicted:
             numerator += 1
     return numerator / predicted_vertex_correlations.shape[0]
 
