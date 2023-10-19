@@ -9,26 +9,34 @@ import djlib.clex.clex as cl
 
 
 def general_binary_convex_hull_plotter(
+    ax: matplotlib.axes.Axes,
     composition: np.ndarray,
     true_energies: np.ndarray,
     predicted_energies=[None],
     print_extra_info: bool = False,
-) -> matplotlib.figure.Figure:
+) -> matplotlib.axes.Axes:
     """Plots a 2D convex hull for any 2D dataset. Can optionally include predicted energies to compare true and predicted formation energies and conved hulls.
 
     Parameters:
     -----------
+    ax: matplotlib.axes.Axes
+        The matplotlib axes object to plot on.
     composition: numpy.ndarray
         Vector of composition values, same length as true_energies.
     true_energies: numpy.ndarray
         Vector of formation energies. Required.
     predicted_energies: numpy.ndarray
         None by default. If a vector of energies are provided, it must be the same length as composition. RMSE score will be reported.
+
+    Returns:
+    --------    
+    matplotlib.axes.Axes
+        The matplotlib axes object that was passed in, updated with convex hull plot.
     """
 
     predicted_color = "red"
     predicted_label = "Predicted Energies"
-    plt.scatter(
+    ax.scatter(
         composition, true_energies, color="k", marker="1", label='"True" Energies'
     )
     dft_hull = thull.full_hull(compositions=composition, energies=true_energies)
@@ -45,9 +53,11 @@ def general_binary_convex_hull_plotter(
         predicted_lower_hull_vertices = thull.lower_hull(predicted_hull)[0]
         # Also, check the set difference between the two lower hulls
         spurious = np.setdiff1d(predicted_lower_hull_vertices, dft_lower_hull_vertices)
-
+        missing = np.setdiff1d(dft_lower_hull_vertices, predicted_lower_hull_vertices)
+        
+        # plot spurious predictions
         if len(spurious) > 0:
-            plt.scatter(
+            ax.scatter(
                 composition[spurious],
                 predicted_energies[spurious],
                 color="royalblue",
@@ -60,6 +70,22 @@ def general_binary_convex_hull_plotter(
                 print("Index", "Composition")
                 for index in spurious:
                     print(index, composition[index])
+        # plot missing ground states
+        if len(missing) > 0:
+            ax.scatter(
+                composition[missing],
+                predicted_energies[missing],
+                color="limegreen",
+                marker="s",
+                label="Missing Ground State Predictions",
+                s=400,
+            )
+            if print_extra_info:
+                print("Missing ground states:")
+                print("Index", "Composition")
+                for index in missing:
+                    print(index, composition[index])
+            
     dft_lower_hull = dj.column_sort(dft_hull.points[dft_lower_hull_vertices], 0)
 
     if any(predicted_energies):
@@ -76,7 +102,7 @@ def general_binary_convex_hull_plotter(
         for index in dft_lower_hull_vertices:
             print(index, composition[index])
     if any(predicted_energies):
-        plt.plot(
+        ax.plot(
             predicted_lower_hull[:, 0],
             predicted_lower_hull[:, 1],
             marker="D",
@@ -89,7 +115,7 @@ def general_binary_convex_hull_plotter(
             for index in predicted_lower_hull_vertices:
                 print(index, composition[index])
     if any(predicted_energies):
-        plt.scatter(
+        ax.scatter(
             composition,
             predicted_energies,
             color="red",
@@ -98,22 +124,19 @@ def general_binary_convex_hull_plotter(
         )
 
         rmse = np.sqrt(mean_squared_error(true_energies, predicted_energies))
-        plt.text(
+        ax.text(
             min(composition),
             0.9 * min(np.concatenate((true_energies, predicted_energies))),
-            "RMSE: " + str(rmse) + " eV",
+            "RMSE: " + str(rmse) + " eV/prim",
             fontsize=19,
         )
 
-    plt.xlabel("Composition X", fontsize=21)
-    plt.ylabel("Formation Energy per Primitive Cell (eV)", fontsize=21)
     plt.legend(fontsize=19, loc="upper right")
-    plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
-
-    fig = plt.gcf()
-    fig.set_size_inches(15, 12)
-    return fig
+    ax.set_xlabel('Composition X', fontsize=21)
+    ax.set_ylabel("Formation Energy per Primitive Cell (eV/prim)", fontsize=21)
+    ax.tick_params(axis='both', which='major', labelsize=18)
+    
+    return ax
 
 def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formation_energies, dft_corr, over_comp, over_formation_energies, over_corr, dft_names=None, over_names=None, verbose=False):
     '''
@@ -222,15 +245,17 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     return ax
 
 def plot_stable_chemical_potential_windows_for_binary(
+    ax : matplotlib.axes.Axes,
     compositions: np.ndarray,
     energies: np.ndarray,
     names: np.ndarray,
     show_legend: bool = True,
-) -> matplotlib.figure.Figure:
-    """Takes composit   ions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
+) -> matplotlib.axes.Axes:
+    """Takes compositions, formation energies and names of elements and plots the stable chemical potential windows for a binary system.
 
     Parameters
     ----------
+    ax: matplotlib.axes.Axes
     compositions: numpy.ndarray
         Vector of compositions. Assumes a binary system, so compositions must be a 1D vector.
     energies: numpy.ndarray
@@ -240,10 +265,10 @@ def plot_stable_chemical_potential_windows_for_binary(
     
     Returns
     -------
-    matplotlib.figure.Figure
-        Figure object containing the plot.
+    matplotlib.axes.Axes
+        The matplotlib axes object that was passed in, updated with chemical potential windows plot.
     """
-
+    print("Function has been updated to take a matplotlib axis object as an argument. Please update your code accordingly.")
     # Get the convex hull
     hull = thull.full_hull(compositions, energies)
     lower_hull_vertices = thull.lower_hull(hull)[0]
@@ -260,7 +285,7 @@ def plot_stable_chemical_potential_windows_for_binary(
     lower_hull_vertices = lower_hull_vertices[sorting_indices]
 
     for index, element in enumerate(lower_hull_vertices):
-        plt.plot(
+        ax.plot(
             np.ravel([compositions[element], compositions[element]]),
             np.ravel(slope_windows[index]),
             marker="o",
@@ -268,13 +293,12 @@ def plot_stable_chemical_potential_windows_for_binary(
             label=names[element],
         )
     if show_legend:
-        plt.legend(fontsize=21)
+        ax.legend(fontsize=21)
 
-    plt.xlim([0, 1])
-    plt.xlabel("Composition X", fontsize=21)
-    plt.ylabel("Chemical Potential (eV)", fontsize=21)
+    ax.set_xlim([0, 1])
+    ax.set_xlabel("Composition X", fontsize=21)
+    ax.set_ylabel("Chemical Potential (eV)", fontsize=21)
 
-    plt.xticks(fontsize=21)
-    plt.yticks(fontsize=21)
-    fig = plt.gcf()
-    return fig
+    # set tick font size to 21
+    ax.tick_params(axis="both", which="major", labelsize=21)
+    return ax
