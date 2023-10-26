@@ -1377,6 +1377,9 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
             project_gcmc_data["heating"][run_index], reference_energy
         )
 
+        # Also, calculate and append the gibbs free energy to each run directory
+        project_gcmc_data["heating"][run_index]["gibbs"] = project_gcmc_data["heating"][run_index]["integrated_potential_energy"] + np.array(project_gcmc_data["heating"][run_index]["param_chem_pot(a)"]) * np.array(project_gcmc_data["heating"][run_index]["<comp(a)>"])
+
     # Iterate through all cooling runs, look up the constant temperature reference dictionary to find the reference potential energy, integrate the grand canonical free energy, and append the integrated potential energy to each run dictionary.
     for run_index in range(len(project_gcmc_data["cooling"])):
         # Find the chemical potential, and the starting temperature of the cooling run
@@ -1399,6 +1402,8 @@ def full_project_integration(project_gcmc_data: dict) -> dict:
         ] = constant_chemical_potential_integration(
             project_gcmc_data["cooling"][run_index], reference_energy
         )
+        # Also, calculate and append the gibbs free energy to each run directory
+        project_gcmc_data["cooling"][run_index]["gibbs"] = project_gcmc_data["cooling"][run_index]["integrated_potential_energy"] + np.array(project_gcmc_data["cooling"][run_index]["param_chem_pot(a)"]) * np.array(project_gcmc_data["cooling"][run_index]["<comp(a)>"])
 
     return project_gcmc_data
 
