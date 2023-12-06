@@ -93,7 +93,7 @@ def general_binary_convex_hull_plotter(
             predicted_hull.points[predicted_lower_hull_vertices], 0
         )
 
-    plt.plot(
+    ax.plot(
         dft_lower_hull[:, 0], dft_lower_hull[:, 1], marker="D", markersize=15, color="k"
     )
     if print_extra_info:
@@ -131,7 +131,7 @@ def general_binary_convex_hull_plotter(
             fontsize=19,
         )
 
-    plt.legend(fontsize=19, loc="upper right")
+    ax.legend(fontsize=19, loc="upper right")
     ax.set_xlabel('Composition X', fontsize=21)
     ax.set_ylabel("Formation Energy per Primitive Cell (eV/prim)", fontsize=21)
     ax.tick_params(axis='both', which='major', labelsize=18)
@@ -241,7 +241,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     ax.scatter(over_comp[spurious_and_calculated_indices],over_formation_energies[spurious_and_calculated_indices],c='royalblue',s=280,marker='p',label='Spurious predictions (already calculated)')
     ax.scatter(over_comp[missing_indices],over_formation_energies[missing_indices],c='limegreen',s=230,marker='s',label='Missing ground states (clex prediction)')
     
-    plt.legend(fontsize=19, loc="best")
+    ax.legend(fontsize=19, loc="best")
     ax.set_xlabel('Composition', fontsize=30)
     ax.set_ylabel('Formation energy (eV/atom)', fontsize=30)
     ax.tick_params(axis='both', which='major', labelsize=25)
