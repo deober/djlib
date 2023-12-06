@@ -209,11 +209,11 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
 
     # print the correct, missing, and spurious ground states
     if dft_names is not None and over_names is not None:
-        print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions].flatten()), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices].flatten()), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices].flatten())
         if verbose:
+            print("Correct DFT hull points:", correct_dft_predictions, "\n", over_names[correct_dft_predictions], '\n', over_comp[correct_dft_predictions].flatten()), print("Missing DFT hull points:", missing_indices, "\n",  over_names[missing_indices], '\n',over_comp[missing_indices].flatten()), print("Spurious overenumerated hull points:", spurious_indices, "\n",  over_names[spurious_indices], '\n', over_comp[spurious_indices].flatten())
+            
             print("Spurious predictions that have already been calculated:", spurious_and_calculated_indices, "\n", over_names[spurious_and_calculated_indices], '\n', over_comp[spurious_and_calculated_indices], '\nEquivalent DFT indice:', np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices]).flatten())
 
-        if verbose:
             # calculate DFT hull distances of the spurious structures and the clex hull distances of the DFT gs at the spurious predictions.
             spurious_indices_in_dft = np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices])
             dft_hull_distances = thull.lower_hull_distances(dft_comp,dft_formation_energies,dft_hull)
