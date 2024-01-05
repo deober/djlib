@@ -14,7 +14,6 @@ import thermocore.geometry.hull as thull
 import pathlib
 from warnings import warn
 from typing import Callable, List, Tuple, Sequence
-import stan
 from sklearn.decomposition import PCA
 from sklearn.linear_model import BayesianRidge
 
@@ -604,9 +603,6 @@ def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
     rhat_tolerance: float
         Value to compare rhat metrics against. Default is 1.05
 
-
-
-
     Returns:
     --------
     rhat_summary: dict{
@@ -1014,6 +1010,79 @@ def ground_state_accuracy_metric(
     return numerator / np.sum(stable_chem_pot_windows)
 
 
+def spurious_and_missing_ground_states_by_correlations(
+    true_comps: np.ndarray,
+    true_energies: np.array,
+    true_corr: np.array,
+    true_names: np.ndarray,
+    predicted_comps: np.array,
+    predicted_energies: np.array,
+    predicted_names: np.ndarray,
+    predicted_corr,
+) -> tuple:
+    """
+    Parameters
+    ----------
+    true_comps : np.ndarray
+        nxm matrix of compositions for calculated structures, where n is the number of configurations and m is the number of composition axes.
+    true_energies : np.ndarray
+        Vector  of n calculated formation energies.
+    true_corr : np.ndarray
+        nxk matrix of correlations for calculated structures, where n is the number of configurations and k is the number of ECI.
+    true_names : np.ndarray
+        Vector of n names for calculated structures.
+    predicted_comps : np.ndarray
+        pxm matrix of compositions for uncalculated structures, where p is the number of configurations and m is the number of composition axes.
+    predicted_energies : np.ndarray
+        Vector of p predicted formation energies.
+    predicted_corr : np.ndarray
+        pxk matrix of correlations for uncalculated structures, where p is the number of configurations and k is the number of ECI.
+    predicted_names : np.ndarray
+        Vector of p names for uncalculated structures.
+
+    Returns
+    -------
+    tuple[list[int], list[str], list[int], list[str]]
+        Returns a tuple in the following order:
+        spurious ground state indices - indices in predicted energies which break the hull
+        spurious ground state names - names of configs in predicted energies which break the hull
+        missing ground state indices - indices in true energies which do not show up in the predicted hull
+            but should
+        missing ground state names - names of configs in true energies which do not show up in the
+            predicted hull but should
+    """
+    # Find the convex hull of "true" data
+    true_hull = thull.full_hull(true_comps, true_energies)
+    true_vertices, _ = thull.lower_hull(true_hull)
+
+    # Find the convex hull of "predicted" data
+    predicted_hull = thull.full_hull(predicted_comps, predicted_energies)
+    predicted_vertices, _ = thull.lower_hull(predicted_hull)
+
+    # Compare predicted ground states to true ground states.
+    # Any predicted ground states which are not true ground states are spurious.
+    spurious_indices_in_uncalculated = []
+    for predicted_vertex in predicted_vertices:
+        predicted_corr_vector = predicted_corr[predicted_vertex]
+        if not np.any(np.all(predicted_corr_vector == true_corr, axis=1)):
+            spurious_indices_in_uncalculated.append(predicted_vertex)
+
+    # Compare true ground states to predicted ground states.
+    # Any true ground states which are not predicted ground states are missing.
+    missing_indices_in_calculated = []
+    for true_vertex in true_vertices:
+        true_corr_vector = true_corr[true_vertex]
+        if not np.any(np.all(true_corr_vector == predicted_corr, axis=1)):
+            missing_indices_in_calculated.append(true_vertex)
+
+    return (
+        spurious_indices_in_uncalculated.tolist(),
+        predicted_names[spurious_indices_in_uncalculated].tolist(),
+        missing_indices_in_calculated,
+        true_names[missing_indices_in_calculated].tolist(),
+    )
+
+
 def fraction_correct(
     predicted_comp: np.ndarray,
     predicted_energies: np.ndarray,
@@ -1164,7 +1233,7 @@ def gsa_fraction_correct_DFT_mu_window_binary(
     for true_vertex_index, true_vertex_corr_vector in enumerate(true_vertices_corr):
         for predicted_vertex_corr_vector in predicted_vertices_corr:
             if np.array_equal(true_vertex_corr_vector, predicted_vertex_corr_vector):
-                #print("Match found.") #TODO: Debug
+                # print("Match found.") #TODO: Debug
                 numerator += true_chemical_potential_windows[true_vertex_index]
                 # TODO: there is a bug with the above line indexing out of bounds in certain scenarios
     return numerator / np.sum(true_chemical_potential_windows)
