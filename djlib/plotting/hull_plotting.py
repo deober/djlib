@@ -215,7 +215,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
             print("Spurious predictions that have already been calculated:", spurious_and_calculated_indices, "\n", over_names[spurious_and_calculated_indices], '\n', over_comp[spurious_and_calculated_indices], '\nEquivalent DFT indice:', np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices]).flatten())
 
             # calculate DFT hull distances of the spurious structures and the clex hull distances of the DFT gs at the spurious predictions.
-            spurious_indices_in_dft = np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices])
+            spurious_indices_in_dft = np.array([np.where(np.all(dft_corr==over_corr[idx],axis=1))[0][0] for idx in spurious_and_calculated_indices],dtype=int)
             dft_hull_distances = thull.lower_hull_distances(dft_comp,dft_formation_energies,dft_hull)
             over_hull_distances = thull.lower_hull_distances(over_comp,over_formation_energies,over_hull)
             # get dft hull indices in overenumerated for the spurious compositions
@@ -223,7 +223,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
             for dft_index in dft_hull_indices_in_overenumerated:
                 if over_comp[dft_index] in over_comp[spurious_indices]:
                     dft_gs_at_spurious_comp_indices_in_overenumerated.append(dft_index)
-            dft_gs_at_spurious_comp_indices_in_overenumerated = np.array(dft_gs_at_spurious_comp_indices_in_overenumerated)
+            dft_gs_at_spurious_comp_indices_in_overenumerated = np.array(dft_gs_at_spurious_comp_indices_in_overenumerated,dtype=int)
             print("DFT hull distances of spurious structures:", dft_hull_distances[spurious_indices_in_dft])
             print("Clex hull distances of DFT gs at spurious predictions:", over_hull_distances[dft_gs_at_spurious_comp_indices_in_overenumerated])
 
