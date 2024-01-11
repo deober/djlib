@@ -243,7 +243,7 @@ def binary_convex_hull_plotter_dft_and_overenumeration(ax, dft_comp, dft_formati
     
     ax.legend(fontsize=19, loc="best")
     ax.set_xlabel('Composition', fontsize=30)
-    ax.set_ylabel('Formation energy (eV/atom)', fontsize=30)
+    ax.set_ylabel('Formation energy (eV/prim)', fontsize=30)
     ax.tick_params(axis='both', which='major', labelsize=25)
 
     return ax
