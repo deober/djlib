@@ -127,7 +127,7 @@ def general_binary_convex_hull_plotter(
         ax.text(
             min(composition),
             0.9 * min(np.concatenate((true_energies, predicted_energies))),
-            "RMSE: " + str(rmse) + " eV/prim",
+            "RMSE: " + '%s' % float('%.2g' % rmse) + " eV/prim",
             fontsize=19,
         )
 
