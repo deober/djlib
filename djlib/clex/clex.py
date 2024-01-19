@@ -1018,7 +1018,7 @@ def spurious_and_missing_ground_states_by_correlations(
     predicted_comps: np.array,
     predicted_energies: np.array,
     predicted_names: np.ndarray,
-    predicted_corr,
+    predicted_corr: np.array,
 ) -> tuple:
     """
     Parameters
@@ -1064,7 +1064,13 @@ def spurious_and_missing_ground_states_by_correlations(
     spurious_indices_in_uncalculated = []
     for predicted_vertex in predicted_vertices:
         predicted_corr_vector = predicted_corr[predicted_vertex]
-        if not np.any(np.all(predicted_corr_vector == true_corr, axis=1)):
+        matched_corrs = False
+        for true_vertex in true_vertices:
+            true_corr_vector = true_corr[true_vertex]
+            if np.allclose(predicted_corr_vector, true_corr_vector):
+                matched_corrs = True
+                break
+        if not matched_corrs:
             spurious_indices_in_uncalculated.append(predicted_vertex)
 
     # Compare true ground states to predicted ground states.
@@ -1072,11 +1078,15 @@ def spurious_and_missing_ground_states_by_correlations(
     missing_indices_in_calculated = []
     for true_vertex in true_vertices:
         true_corr_vector = true_corr[true_vertex]
-        if not np.any(np.all(true_corr_vector == predicted_corr, axis=1)):
+        matched_corrs = False
+        for predicted_vertex in predicted_vertices:
+            if np.allclose(true_corr_vector, predicted_corr[predicted_vertex]):
+                matched_corrs = True
+                break
+        if not matched_corrs:
             missing_indices_in_calculated.append(true_vertex)
-
     return (
-        spurious_indices_in_uncalculated.tolist(),
+        spurious_indices_in_uncalculated,
         predicted_names[spurious_indices_in_uncalculated].tolist(),
         missing_indices_in_calculated,
         true_names[missing_indices_in_calculated].tolist(),
