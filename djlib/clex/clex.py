@@ -1569,3 +1569,33 @@ def ground_state_accuracy_fraction_of_top_n_stable_configurations(
             numerator += 1
 
     return numerator / n
+
+
+def slope_accuracy_metric(
+    x1: np.array, y1: np.array, x2: np.array, y2: np.array
+) -> float:
+    """Takes in two sets of x and y coordinates, (from two different binary convex hulls with the SAME GROUND STATE SET), and returns
+    the rmse of the slopes of the two sets of coordinates.
+    Parameters
+    ----------
+    x1 : np.array
+        x coordinates of the first set of points.
+    y1 : np.array
+        y coordinates of the first set of points.
+    x2 : np.array
+        x coordinates of the second set of points.
+    y2 : np.array
+        y coordinates of the second set of points.
+
+    Returns
+    -------
+    float
+        Root mean squared error of the slopes of the two sets of coordinates.
+        NOTE: Internal function calls to calculate slope will sort the x and y coordinates by x, so returned values will be sorted by x regardless of input order.
+    """
+
+    # For now, don't normalize
+    # Later, maybe normalize by the rmse of true hull and the line connecting end states
+    slopes1 = calculate_slopes(x1, y1)
+    slopes2 = calculate_slopes(x2, y2)
+    return mean_squared_error(slopes1, slopes2, squared=False)
