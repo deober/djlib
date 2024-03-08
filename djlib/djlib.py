@@ -44,14 +44,15 @@ def regroup_dicts_by_keys(list_of_dictionaries: list) -> dict:
             data_collect[index].append(element_dict[key])
     return dict(zip(keys, data_collect))
 
+
 def ungroup_dicts_by_keys(dict_with_keys: dict) -> list:
     """Ungroups property sorted data (as dict) to a list of dictionaries (by configuration). Essentially does the reverse of regroup_dicts_by_keys.
-    
+
     Parameters
     ----------
     dict_with_keys: dict
         Dictionary of all data grouped by keys (not grouped by configuraton)
-    
+
     Returns
     -------
     list_of_dictionaries: list
@@ -251,7 +252,6 @@ def move_calctype_dirs(casm_root_dir: str, calctype="default"):
         configs = glob(os.path.join(scel, "*"))
 
         for config in configs:
-
             if os.path.isdir(
                 os.path.join(config, "%s/%s" % (calctype_string, calctype_string))
             ):
@@ -544,7 +544,6 @@ class gridspace_manager:
         run_submitter: callable = None,
         grid_params: dict = None,  # list of dictionary, each dictionary corresponds to a run
     ) -> None:
-
         self.data = None
         self.origin_dir = origin_dir
         self.namer = namer
@@ -565,7 +564,6 @@ class gridspace_manager:
             except:
                 print("failed to parse: ", dir)
         self.data = [entry for entry in self.data if entry is not None]
-        # self.data = regroup_dicts_by_keys(self.data)
 
     def format_run_dirs(self) -> None:
         for entry in self.grid_params:
@@ -591,3 +589,65 @@ class gridspace_manager:
                 self.run_submitter(dir)
             except:
                 print("Failed to run: ", dir)
+
+
+def cartesian_to_n_sphere(x):
+    """
+    Converts n-dimensional Cartesian coordinates to n-sphere coordinates.
+    Parameters
+    ----------
+    x : array_like
+        Matrix of shape (m,n) where m is the number of points and n is the number of dimensions.
+    Returns
+    -------
+    n_sphere_coords : array_like
+        Matrix of shape (m,n) where the first element (index 0) is the radius, elements of indices 1 to n-2 are the polar angles [0,\pi], and the last element (index n-1)
+        is the azimuthal angle [0,2\pi).
+    """
+    r = np.linalg.norm(x, axis=1, keepdims=True)  # Radius is the Euclidean norm
+    thetas = np.zeros((x.shape[0], x.shape[1] - 1))  # preallocate theta values
+
+    for i in range(thetas.shape[1]):
+        if i < thetas.shape[1] - 1:
+            arg1 = np.linalg.norm(x[:, i + 1 :], axis=1)
+            thetas[:, i] = np.arctan2(arg1, x[:, i])
+        else:
+            thetas[:, i] = np.arctan2(x[:, i + 1], x[:, i])
+    return np.hstack((r, thetas))
+
+
+def n_sphere_to_cartesian(n_sphere_coords):
+    """
+    Converts n-sphere coordinates to n-dimensional Cartesian coordinates.
+    Parameters
+    ----------
+    n_sphere_coords : array_like
+        Matrix of shape (m,n), with m points and n dimensions. The first element (index 0) is the radius,
+        elements of indices 1 to n-2 are the polar angles [0,\pi], and the last element (index n-1)
+        is the azimuthal angle [0,2\pi).
+    Returns
+    -------
+    x : array_like
+        Matrix of shape (m,n) where m is the number of points and n is the number of dimensions.
+    """
+    r = n_sphere_coords[:, 0]
+    thetas = n_sphere_coords[:, 1:]
+
+    x = np.zeros(
+        (n_sphere_coords.shape[0], n_sphere_coords.shape[1])
+    )  # preallocate x values
+    for i in range(
+        n_sphere_coords.shape[1]
+    ):  # iterate over each dimension, populating the x values
+
+        if i < thetas.shape[1]:
+            if i == 0:
+                x[:, i] = r * np.cos(thetas[:, i])
+            else:
+                x[:, i] = (
+                    r * np.prod(np.sin(thetas[:, :i]), axis=1) * np.cos(thetas[:, i])
+                )
+        else:
+            x[:, i] = r * np.prod(np.sin(thetas[:, :i]), axis=1)
+
+    return x
