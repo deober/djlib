@@ -693,8 +693,6 @@ def edge_finder_binary_search(
         midpoint = (lower_bound + upper_bound) / 2
         # If the midpoint is within the tolerance, return it
         if upper_bound - lower_bound < tolerance:
-            print("The binary search converged after", i, "iterations.")
-            print("The boundary is at", midpoint * direction_vector)
             return {
                 "boundary_vector": np.squeeze(midpoint * direction_vector),
                 "inside_vectors": inside,
