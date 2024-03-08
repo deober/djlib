@@ -651,3 +651,71 @@ def n_sphere_to_cartesian(n_sphere_coords):
             x[:, i] = r * np.prod(np.sin(thetas[:, :i]), axis=1)
 
     return x
+
+
+def edge_finder_binary_search(
+    direction_vector, oracle_function, tolerance, max_iterations, relevant_length_scale
+) -> np.ndarray:
+    """Searches for the edge of a polytope boundary along a given direction vector using binary search.
+    The boundary is defined as where the oracle function changes from True to False.
+    Parameters
+    ----------
+    direction_vector : array_like
+        The direction vector to search along by scaling.
+    oracle_function : function
+        A function that takes a single argument, a 1D array_like object (the scaled direction_vector), and returns a boolean value.
+    tolerance : float
+        The desired tolerance for the edge location. The boundary will be at direction_vector*optimal_scaling +[0, tolerance].
+    max_iterations : int
+        The maximum number of iterations to perform, in case the binary search does not converge.
+    relevant_length_scale : float
+        The length scale of the problem, used to set the initial search bounds.
+    Returns
+    -------
+    """
+    inside = []
+    outside = []
+    # initialize the search bounds
+    lower_bound = 0
+    upper_bound = relevant_length_scale
+
+    # Scale the direction vector by the upper bound until the oracle function returns False
+    while oracle_function(direction_vector * upper_bound):
+        upper_bound *= 2
+        if upper_bound > 1e5:
+            raise ValueError(
+                "The upper bound is larger than 1e5. The oracle function may not be working properly."
+            )
+
+    # Perform the binary search
+    for i in range(max_iterations):
+        # Compute the midpoint
+        midpoint = (lower_bound + upper_bound) / 2
+        # If the midpoint is within the tolerance, return it
+        if upper_bound - lower_bound < tolerance:
+            print("The binary search converged after", i, "iterations.")
+            print("The boundary is at", midpoint * direction_vector)
+            return {
+                "boundary_vector": np.squeeze(midpoint * direction_vector),
+                "inside_vectors": inside,
+                "outside_vectors": outside,
+            }
+
+        # If the midpoint is within the tolerance, return it
+        if oracle_function(direction_vector * midpoint):
+            lower_bound = midpoint
+            inside.append(midpoint * direction_vector)
+        else:
+            upper_bound = midpoint
+            outside.append(midpoint * direction_vector)
+    # If the binary search does not converge, return the midpoint as the boundary scale , and send a message that the search did not converge
+    print(
+        "The binary search did not converge after",
+        max_iterations,
+        "iterations. Reported boundary is at the final midpoint.",
+    )
+    return {
+        "boundary_vector": np.squeeze(midpoint * direction_vector),
+        "inside_vectors": inside,
+        "outside_vectors": outside,
+    }
