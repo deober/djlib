@@ -1599,3 +1599,38 @@ def slope_accuracy_metric(
     slopes1 = calculate_slopes(x1, y1)
     slopes2 = calculate_slopes(x2, y2)
     return mean_squared_error(slopes1, slopes2, squared=False)
+
+
+def ground_state_chempot_phase_boundaries(
+    composition: np.ndarray, energy: np.ndarray
+) -> np.ndarray:
+    """Given a set of coordinates in composition, energy space, finds the chemical potential stability window boundaries.
+
+    Currently, the boundaries are not sorted and their association with particular ground states is not tracked. This will be added.
+
+    Parameters
+    ----------
+    composition : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    energy : np.ndarray
+        nx1 matrix of formation energies.
+
+    Returns
+    -------
+    np.ndarray
+        lxm matrix of chemical potential stability window boundaries, where l is the number of boundaries and m is the number of composition axes.
+    """
+
+    # Compute the lower convex hull of the data to get simplex plane normals (boundary vectors)
+    hull = thull.full_hull(compositions=composition, energies=energy)
+    vertices, simplices = thull.lower_hull(hull)
+    normals = hull.equations[simplices][:, :-1]
+
+    # Project the normals onto the negative energy unit vector to give their actual slope analogues
+    negative_energy_unit_vector = np.zeros(normals.shape[1])
+    negative_energy_unit_vector[-1] = -1
+    projection_magnitudes = np.dot(normals, negative_energy_unit_vector)
+
+    projected_normals = normals / projection_magnitudes[:, np.newaxis]
+
+    return projected_normals
