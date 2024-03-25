@@ -235,144 +235,6 @@ def find_proposed_ground_states(
     return proposed_ground_states_indices
 
 
-def stan_model_formatter(
-    eci_variance_is_fixed: bool,
-    model_variance_is_fixed: bool,
-    eci_parameters: list,
-    model_parameters: list,
-    start_stop_indices: list,
-) -> str:
-    """Formats the Stan model for use in the Stan Fit class.
-    Parameters:
-    -----------
-    eci_variance_is_fixed: bool
-        If True, the function will not create any eci variance variables.
-        If False, the function will create eci variance variables.
-    model_variance_is_fixed: bool
-        If True, the function will not create any model variance variables.
-        If False, the function will create model variance variables.
-    eci_parameters: list
-        A list of ECI parameters; each element is a string.
-    model_parameters: list
-        A list of model parameters; each element is a string.
-    start_stop_indices: list
-        list start and stop indices to divide configurations into groups with different model variances.
-        Each element is a list of two integers.
-
-    Returns:
-    --------
-    stan_model_template: str
-        Formatted Stan model template, ready to be passed to the Stan Fit class.
-
-
-    Notes:
-    ------
-    eci_parameters:
-        If eci_variance_is_fixed == True, each element should describe the prior distribution for ECI. If only one element is provided, it will be used as the prior for all ECI.
-        If eci_variance_is_fixed == False, each element should describe the hyperdistribution for the ECI variance.
-        If only one element is provided, it will be used as the prior for all ECI.
-        Otherwise, there should be one element for each ECI.
-        example: eci_variance_is_fixed==True: ['~ normal(0, #)']
-        example: eci_variance_is_fixed==False: ['~ gamma(1, #)']
-    model_parameters:
-        If model_variance_is_fixed == True, each element should be a string of a number quantifying the model variance.
-        If model_variance_is_fixed == False, each element should be a string of a hyperparameter for the model variance.
-        If only one element is provided, it will be used as the prior for all model variances.
-        If more than one element is provided, the user must specify start-stop indices, denoting the range of energies to use for each model variance parameter.
-
-
-    """
-
-    assert all(type(x) == str for x in eci_parameters)
-    assert all(type(x) == str for x in model_parameters)
-
-    # Template parameters section
-    parameters_string = "\t" + "vector[K] eci;\n"
-    if eci_variance_is_fixed == False:
-        parameters_string += "\t" + "vector<lower=0>[K] eci_variance;\n"
-    if model_variance_is_fixed == False:
-        parameters_string += "\t" + "vector<lower=0>[n_configs] sigma;"
-
-    # Template model section
-    model_string = ""
-    optimize_eci_miultiply = False
-    optimize_model_multiply = False
-    if len(eci_parameters) == 1:
-        # Assign ECI in a for loop with the same prior.
-        optimize_eci_miultiply = True
-    if len(model_parameters) == 1:
-        # Use a single model variance for all configurations, allowing for a matrix multiply
-        optimize_model_multiply = True
-
-    if optimize_eci_miultiply:
-        # If all ECI priors are the same
-        model_string += """for (k in 1:K){\n"""
-        if eci_variance_is_fixed:
-            model_string += "\t\t" + "eci[k] " + eci_parameters[0] + ";\n\t}\n"
-        else:
-            model_string += "\t\t" + "eci_variance[k] " + eci_parameters[0] + ";\n"
-            model_string += "\t\t" + "eci[k] ~ normal(0,eci_variance[k]);\n\t}\n"
-    else:
-        # If ECI priors are different
-        if eci_variance_is_fixed:
-            for i, parameter in enumerate(eci_parameters):
-                model_string += "\t" + "eci[{i}] ".format(i=i + 1) + parameter + ";\n"
-        else:
-            for i, parameter in enumerate(eci_parameters):
-                model_string += (
-                    "\t\t" + "eci_variance[{i}] ".format(i=i + 1) + parameter + ";\n"
-                )
-                model_string += (
-                    "\t\t"
-                    + "eci[{i}] ~ normal(0,eci_variance[{i}]);\n\t}\n".format(i=i + 1)
-                )
-
-    if optimize_model_multiply:
-        # If there is only one model variance sigma^2
-        if model_variance_is_fixed:
-            model_string += "\t" + "real sigma = " + str(model_parameters[0]) + ";\n"
-        else:
-            model_string += "\t" + "sigma " + model_parameters[0] + ";\n"
-        model_string += "\t" + "energies ~ normal(corr * eci, sigma);\n"
-    else:
-        # If there are multiple model variances
-        if model_variance_is_fixed:
-            for sigma_index, start_stop in enumerate(start_stop_indices):
-                model_string += (
-                    "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}]*eci, {sigma}) ".format(
-                        start=start_stop[0],
-                        stop=start_stop[1],
-                        sigma=model_parameters[sigma_index],
-                    )
-                    + ";\n"
-                )
-        else:
-            for sigma_index, model_param in enumerate(model_parameters):
-                model_string += (
-                    "sigma[{sigma_index}] ".format(sigma_index=sigma_index + 1)
-                    + model_param
-                    + ";\n"
-                )
-            for sigma_index, start_stop in enumerate(start_stop_indices):
-                model_string += (
-                    "energies[{start}:{stop}] ~ normal(corr[{start}:{stop}}]*eci, sigma[{sigma_index}]) ".format(
-                        start=start_stop[0],
-                        stop=start_stop[1],
-                        sigma_index=sigma_index + 1,
-                    )
-                    + ";\n"
-                )
-    # Load template from templates directory
-    clex_lib_dir = pathlib.Path(__file__).parent.resolve()
-    templates = os.path.join(clex_lib_dir, "../templates")
-
-    with open(os.path.join(templates, "stan_model_template.txt"), "r") as f:
-        template = Template(f.read())
-    return template.substitute(
-        formatted_parameters=parameters_string, formatted_model=model_string
-    )
-
-
 def format_stan_executable_script(
     data_file: str,
     stan_model_file: str,
@@ -541,93 +403,6 @@ def bayes_train_test_analysis(run_dir: str) -> dict:
     return kfold_data
 
 
-def kfold_analysis(kfold_dir: str) -> dict:
-    """Collects statistics across k fits.
-
-    Parameters:
-    -----------
-    kfold_dir: str
-        Path to directory containing the k bayesian calibration runs as subdirectories.
-
-    Returns:
-    --------
-    train_rms: np.array
-        Average training rms value for each of the k fitting runs.
-    test_rms: np.array
-        Average testing rms value for each of the k fitting runs.
-    """
-    train_rms_values = []
-    test_rms_values = []
-    eci_mean_testing_rms = []
-    eci_mean = None
-    invalid_rhat_tally = []
-
-    kfold_subdirs = glob(os.path.join(kfold_dir, "*"))
-    for run_dir in kfold_subdirs:
-        if os.path.isdir(run_dir):
-            if os.path.isfile(os.path.join(run_dir, "results.pkl")):
-                run_data = bayes_train_test_analysis(run_dir)
-                train_rms_values.append(np.mean(run_data["training_rms"]))
-                test_rms_values.append(np.mean(run_data["testing_rms"]))
-                eci_mean_testing_rms.append(run_data["eci_mean_testing_rms"])
-                if type(eci_mean) == type(None):
-                    eci_mean = run_data["eci_means"]
-                else:
-                    eci_mean = (eci_mean + run_data["eci_means"]) / 2
-                with open(os.path.join(run_dir, "results.pkl"), "rb") as f:
-                    results = pickle.load(f)
-                    rhat_check_results = rhat_check(results)
-                    invalid_rhat_tally.append(rhat_check_results["total_count"])
-                with open(os.path.join(run_dir, "run_info.json"), "r") as f:
-                    run_info = json.load(f)
-                    run_info["rhat_summary"] = rhat_check_results
-                with open(os.path.join(run_dir, "run_info.json"), "w") as f:
-                    json.dump(run_info, f)
-    eci_mean_testing_rms = np.mean(np.array(eci_mean_testing_rms), axis=0)
-    return {
-        "train_rms": train_rms_values,
-        "test_rms": test_rms_values,
-        "eci_mean_testing_rms": eci_mean_testing_rms,
-        "kfold_avg_eci_mean": eci_mean,
-        "invalid_rhat_tally": invalid_rhat_tally,
-    }
-
-
-def rhat_check(posterior_fit_object: stan.fit.Fit, rhat_tolerance=1.05) -> dict:
-    """Counts the number of stan parameters with rha values greater than the provided rhat_tolerance.
-
-    Parameters:
-    -----------
-    posterior_fit_object: stan.fit.Fit
-        Posterior fit object from stan.
-    rhat_tolerance: float
-        Value to compare rhat metrics against. Default is 1.05
-
-    Returns:
-    --------
-    rhat_summary: dict{
-        total_count: int
-            total number of parameters above rhat_tolerance.
-        *_count: int
-            Number of parameters in parameter vector * which are above the rhat tolerance. * is representative of a posterior parameter vector.
-    }
-
-    Notes:
-    ------
-    The rhat metric describes sampling convergence across the posterior distribution. Rhat values greater than 1.05 indicate that those parameters are not reasonably converged. Rhat below 1.05 is okay, but closer to 1.0 indicates better convergence.
-    """
-    rhat = ar.rhat(posterior_fit_object)
-    rhat_keys = list(rhat.keys())
-    total_count = 0
-    rhat_summary = {}
-    for key in rhat_keys:
-        tally = np.count_nonzero(rhat[key] > rhat_tolerance)
-        rhat_summary[key + "_count"] = tally
-        total_count += tally
-    rhat_summary["total_count"] = total_count
-    return rhat_summary
-
-
 def calculate_hulldist_corr(
     corr: np.ndarray, comp: np.ndarray, formation_energy: np.ndarray
 ) -> np.ndarray:
@@ -733,7 +508,7 @@ def principal_component_analysis_eci_ranking(posterior_eci: np.ndarray) -> np.nd
     return pca_explained_variance_ranking
 
 
-def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit()) -> np.ndarray:
+def vmr_bayesian_ridge(bayesian_ridge_fit: BayesianRidge.fit) -> np.ndarray:
     """Sorts the ECI by variance mean ratio, and returns the array of sorted indices.
 
     Parameters
@@ -1717,7 +1492,7 @@ def in_cone_currying(
     return in_cone
 
 
-def metropolis_mc(
+def metropolis_mc_in_cone(
     initial_site,
     scale,
     num_outer_loops,
