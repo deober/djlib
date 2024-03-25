@@ -1634,3 +1634,239 @@ def ground_state_chempot_phase_boundaries(
     projected_normals = normals / projection_magnitudes[:, np.newaxis]
 
     return projected_normals
+
+
+def in_cone_currying(
+    composition_calculated: np.ndarray,
+    correlations_calculated: np.ndarray,
+    energies_calculated: np.ndarray,
+    composition_uncalculated: np.ndarray,
+    correlations_uncalculated: np.ndarray,
+):
+    """Takes in composition, correlation, and energy data and returns a function that can be used to check if an ECI vector is in the correct ground state cone.
+
+    Parameters
+    ----------
+    composition_calculated : np.ndarray
+        nxm matrix of compositions, where n is the number of configurations and m is the number of composition axes.
+    correlations_calculated : np.ndarray
+        nxk matrix of correlations, where n is the number of configurations and k is the number of correlation dimensions.
+        Should be the smallest number of correlations that can describe the data and replicate ground states.
+    energies_calculated : np.ndarray
+        nx1 matrix of formation energies.
+    composition_uncalculated : np.ndarray
+        pxm matrix of compositions, where p is the number of configurations and m is the number of composition axes.
+    correlations_uncalculated : np.ndarray
+        pxk matrix of correlations, where p is the number of configurations and k is the number of correlation dimensions.
+
+    Returns
+    -------
+    function
+        A function that takes in an ECI vector and returns a boolean indicating whether the ECI vector is in the correct ground state cone.
+    """
+
+    true_hull = thull.full_hull(composition_calculated, energies_calculated)
+    true_vertices, _ = thull.lower_hull(true_hull)
+    corrs_of_true_vertices = correlations_calculated[true_vertices]
+
+    def in_cone(proposed_eci: np.ndarray) -> bool:
+        """
+        Takes a proposed ECI vector, returns True if the ECI vector is inside the ground state cone, False otherwise.
+        """
+        # Find the convex hull of "predicted" data
+        predicted_hull = thull.full_hull(
+            composition_uncalculated, correlations_uncalculated @ proposed_eci
+        )
+        predicted_vertices, _ = thull.lower_hull(predicted_hull)
+
+        # Compare predicted ground states to true ground states.
+        # Any predicted ground states which are not true ground states are spurious.
+        spurious_indices_in_uncalculated = []
+        for predicted_vertex in predicted_vertices:
+            predicted_corr_vector = correlations_uncalculated[predicted_vertex]
+            matched_corrs = False
+            for true_corr_vector in corrs_of_true_vertices:
+                if np.allclose(predicted_corr_vector, true_corr_vector):
+                    matched_corrs = True
+                    break
+            if not matched_corrs:
+                spurious_indices_in_uncalculated.append(predicted_vertex)
+
+        # Compare true ground states to predicted ground states.
+        # Any true ground states which are not predicted ground states are missing.
+        missing_indices_in_calculated = []
+        for index, true_corr_vector in enumerate(corrs_of_true_vertices):
+            matched_corrs = False
+            for predicted_vertex in predicted_vertices:
+                if np.allclose(
+                    true_corr_vector, correlations_uncalculated[predicted_vertex]
+                ):
+                    matched_corrs = True
+                    break
+            if not matched_corrs:
+                missing_indices_in_calculated.append(true_vertices[index])
+
+        if (
+            len(missing_indices_in_calculated) == 0
+            and len(spurious_indices_in_uncalculated) == 0
+        ):
+            return True
+        else:
+            return False
+
+    return in_cone
+
+
+def metropolis_mc(
+    initial_site,
+    scale,
+    num_outer_loops,
+    steps_per_loop,
+    scaling_up,
+    scaling_down,
+    x_calc,
+    comp_calc,
+    t,
+    x_uncalc,
+    comp_uncalc,
+    likelihood_stddev,
+    verbose=False,
+):
+    """
+    Metropolis Monte Carlo algorithm for sampling the cone posterior distribution.
+
+    Parameters
+    ----------
+    initial_site : array_like
+        Initial vector for the Monte Carlo sampling. Should be very close to the optimal solution within the eci cone.
+    scale : float
+        The scale of the random walk; the standard deviation of the gaussian distribution around the current site.
+    num_outer_loops : int
+        The number of outer loops in the Metropolis Monte Carlo algorithm.
+        One average eci vector is provided for each loop, and step size is adjusted each loop.
+    steps_per_loop : int
+        The number of MC samples taken within a loop.
+    scaling_up : float
+        The scaling factor for the step size when the acceptance rate is too high. Should be greater than 1.
+    scaling_down : float
+        The scaling factor for the step size when the acceptance rate is too low. Should be less than 1.
+    x_calc : array_like
+        Correlation matrix for calculated structures. Should be the smallest possible dimensionality.
+    comp_calc : array_like
+        Composition array for calculated structures.
+    t : float
+        Observed formation energies, or whatever the target property is.
+    x_uncalc : array_like
+        Correlation matrix for uncalculated structures. Should be the smallest possible dimensionality.
+    comp_uncalc : array_like
+        Composition array for uncalculated structures.
+    likelihood_stddev : float
+        The standard deviation of the likelihood function- a good estimate is the rmse of ordinary least squares regression.
+
+
+
+    Returns
+    -------
+    returns a dictionary with the following keys:
+        "eci" : the average eci vector for each loop, stored as row vectors.
+        "cone_hit_rate": A vector; each element is the fraction of MC samples within the cone for each loop.
+        "acceptance_rate" : A vector. Fraction of accepted samples for each loop, with respect to the number of samples within the cone.
+        "step_size": A vector. The step size for each loop.
+        "rmse": A vector. The root mean squared error of the predicted formation energies for each loop.
+    """
+    beta = 1 / likelihood_stddev**2
+    if verbose:
+        print("beta: ", beta)
+    # Initialize the output dictionary
+    output = {
+        "eci": [],
+        "cone_hit_rate": [],
+        "acceptance_rate": [],
+        "step_size": [],
+        "rmse": [],
+    }
+
+    # Template the in_cone function with the calculated and uncalculated data
+    in_cone_fast = in_cone_currying(
+        composition_calculated=comp_calc,
+        correlations_calculated=x_calc,
+        energies_calculated=t,
+        composition_uncalculated=comp_uncalc,
+        correlations_uncalculated=x_uncalc,
+    )
+
+    # Initialize the current site
+    current_site = np.array(initial_site)
+    current_calc_prediction = x_calc @ current_site
+    current_l2_norm = np.power(np.linalg.norm(t - current_calc_prediction), 2)
+    step_size = scale
+
+    for loop_index in range(num_outer_loops):
+        # Initialize the number of samples within the cone
+        in_cone_count = 0
+        # Initialize the number of accepted samples
+        accepted_count = 0
+
+        for step_count in range(steps_per_loop):
+            # Generate a random step
+            step = np.random.normal(0, step_size, current_site.shape)
+            # Propose a new site
+            new_site = current_site + step
+
+            # check that the new site is within the cone
+            if in_cone_fast(new_site):
+                in_cone_count += 1
+                # Calculate the likelihood of the new site
+                new_prediction_calc = x_calc @ new_site
+                proposed_l2_norm = np.power(np.linalg.norm(t - new_prediction_calc), 2)
+                # Calculate the acceptance probability
+
+                acceptance_exponential = np.exp(
+                    -beta * (proposed_l2_norm - current_l2_norm)
+                )
+                acceptance_probability = min(1, acceptance_exponential)
+                # print("acceptance probability: ", acceptance_probability)
+                # Generate a random number
+                random_number = np.random.uniform(0, 1)
+                # Accept the new site if the random number is less than the acceptance probability
+                if random_number < acceptance_probability:
+                    current_site = new_site
+                    accepted_count += 1
+                    # Add the eci vector to the sum
+                    current_l2_norm = proposed_l2_norm
+
+        # Calculate the average eci vector
+        last_eci_rmse = mean_squared_error(t, x_calc @ current_site, squared=False)
+
+        # Calculate the cone hit rate
+        cone_hit_rate = in_cone_count / steps_per_loop
+        # Calculate the acceptance rate
+        acceptance_rate = accepted_count / in_cone_count
+        # Store the results in the output dictionary
+        output["eci"].append(current_site.tolist())
+        output["cone_hit_rate"].append(cone_hit_rate)
+        output["acceptance_rate"].append(acceptance_rate)
+        output["step_size"].append(step_size)
+        output["rmse"].append(last_eci_rmse)
+
+        if verbose:
+            print(
+                "loop index: ",
+                loop_index,
+                "cone hit rate: ",
+                cone_hit_rate,
+                " acceptance rate: ",
+                acceptance_rate,
+                " step size: ",
+                step_size,
+                " rmse: ",
+                last_eci_rmse,
+            )
+
+        # Adjust the step size
+        if acceptance_rate * cone_hit_rate < 0.25:
+            step_size *= scaling_down
+        elif acceptance_rate * cone_hit_rate > 0.3:
+            step_size *= scaling_up
+
+    return output
