@@ -42,7 +42,8 @@
       },
       { 
         "quantity" : "comp_n"
-      }
+      },
+	  {"quantity":"corr"}
     ],
     "storage" : {
       "write_observations" : false,
